@@ -18,6 +18,13 @@ namespace pokersoc_connect
       var cs = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
       Conn = new SqliteConnection(cs);
       Conn.Open();
+
+      // Durable journaling + crash safety by default
+      using (var cmd = Conn.CreateCommand())
+      {
+        cmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;";
+        cmd.ExecuteNonQuery();
+      }
     }
 
     public static void Close()
@@ -26,18 +33,12 @@ namespace pokersoc_connect
       Conn = null;
     }
 
-    /// <summary>
-    /// Try to find an embedded resource by file name suffix (case-insensitive).
-    /// Example: "schema.sql" -> "pokersoc_connect.schema.sql"
-    /// </summary>
+    /// Find an embedded resource by file name suffix (case-insensitive).
     public static string? FindResourceName(Assembly asm, string fileName)
     {
       var want = fileName.ToLowerInvariant();
       foreach (var name in asm.GetManifestResourceNames())
-      {
-        if (name.ToLowerInvariant().EndsWith(want))
-          return name;
-      }
+        if (name.ToLowerInvariant().EndsWith(want)) return name;
       return null;
     }
 
@@ -47,39 +48,28 @@ namespace pokersoc_connect
         ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
       using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
       var sql = reader.ReadToEnd();
-
       ApplySqlStatements(sql);
     }
 
-    /// <summary>
-    /// Apply multiple SQL statements safely, one by one.
-    /// Splits on ';' that end a statement (very simple splitter).
-    /// </summary>
+    /// Split and apply multiple SQL statements safely (schema file).
     private static void ApplySqlStatements(string sql)
     {
       if (Conn == null) throw new InvalidOperationException("Database not open.");
-      // Normalize line endings
       sql = sql.Replace("\r\n", "\n");
 
-      // Split on semicolons at end of line/statement.
-      // This is a simple splitter—adequate for schema files without tricky strings/procs.
       var parts = Regex.Split(sql, @";\s*(\n|$)", RegexOptions.Multiline);
       foreach (var raw in parts)
       {
         var stmt = raw.Trim();
         if (string.IsNullOrEmpty(stmt)) continue;
-        // Ignore pure comments
         if (stmt.StartsWith("--") || stmt.StartsWith("/*")) continue;
 
         using var cmd = Conn.CreateCommand();
         cmd.CommandText = stmt + ";";
-        try
-        {
-          cmd.ExecuteNonQuery();
-        }
+        try { cmd.ExecuteNonQuery(); }
         catch (Exception ex)
         {
-          var preview = stmt.Length > 200 ? stmt.Substring(0, 200) + "..." : stmt;
+          var preview = stmt.Length > 200 ? stmt[..200] + "..." : stmt;
           throw new InvalidOperationException($"Schema statement failed:\n{preview}\n\n{ex.Message}", ex);
         }
       }
@@ -102,21 +92,37 @@ namespace pokersoc_connect
       cmd.ExecuteNonQuery();
     }
 
-    public static long ScalarLong(string sql, params (string, object?)[] p)
+    // ---------------- Transactions & helpers ----------------
+
+    public static void InTransaction(Action<SqliteTransaction> body)
+    {
+      using var tx = Conn!.BeginTransaction();
+      try { body(tx); tx.Commit(); }
+      catch { try { tx.Rollback(); } catch {} throw; }
+    }
+
+    // With-transaction overloads
+    public static int Exec(string sql, SqliteTransaction? tx, params (string, object?)[] p)
     {
       using var cmd = Conn!.CreateCommand();
+      cmd.Transaction = tx;
+      cmd.CommandText = sql;
+      foreach (var (k, v) in p) cmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
+      return cmd.ExecuteNonQuery();
+    }
+
+    public static long ScalarLong(string sql, SqliteTransaction? tx, params (string, object?)[] p)
+    {
+      using var cmd = Conn!.CreateCommand();
+      cmd.Transaction = tx;
       cmd.CommandText = sql;
       foreach (var (k, v) in p) cmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
       return Convert.ToInt64(cmd.ExecuteScalar() ?? 0);
     }
 
-    public static int Exec(string sql, params (string, object?)[] p)
-    {
-      using var cmd = Conn!.CreateCommand();
-      cmd.CommandText = sql;
-      foreach (var (k, v) in p) cmd.Parameters.AddWithValue(k, v ?? DBNull.Value);
-      return cmd.ExecuteNonQuery();
-    }
+    // Original convenience overloads (no transaction)
+    public static int Exec(string sql, params (string, object?)[] p) => Exec(sql, null, p);
+    public static long ScalarLong(string sql, params (string, object?)[] p) => ScalarLong(sql, null, p);
 
     public static DataTable Query(string sql, params (string, object?)[] p)
     {

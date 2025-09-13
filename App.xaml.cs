@@ -16,7 +16,7 @@ namespace pokersoc_connect
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
-      // Surface *all* exceptions
+      // Surface any exceptions instead of silent exits
       AppDomain.CurrentDomain.UnhandledException += (s, ex) =>
       {
         var text = ex.ExceptionObject?.ToString() ?? "Unknown unhandled exception.";
@@ -38,12 +38,12 @@ namespace pokersoc_connect
 
       try
       {
-        // IMPORTANT: prevent WPF auto-shutdown when StartWindow closes
+        // IMPORTANT: don't auto-shutdown when StartWindow closes
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         var start = new StartWindow();
         var ok = start.ShowDialog() == true;
-        Log($"StartWindow result: ok={ok}, path='{start.SelectedPath}'");
+        Log($"StartWindow: ok={ok}, path='{start.SelectedPath}'");
 
         if (!ok || string.IsNullOrWhiteSpace(start.SelectedPath))
         {
@@ -64,7 +64,7 @@ namespace pokersoc_connect
         Database.EnsureSchemaFromResource(asm, resName);
         Database.SeedDefaultSessionIfEmpty();
 
-        // Create and show MainWindow, THEN enable normal shutdown
+        // Show main window, then hand shutdown control back to WPF
         var mw = new MainWindow
         {
           Title = $"pokersoc-connect — {Path.GetFileName(path)}"
@@ -72,7 +72,7 @@ namespace pokersoc_connect
         MainWindow = mw;
         mw.Show();
 
-        ShutdownMode = ShutdownMode.OnMainWindowClose; // hand control back to WPF
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
         Log("Startup complete.");
       }
       catch (Exception ex)
