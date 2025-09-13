@@ -1,0 +1,43 @@
+# C/C++ artifacts
+*.o
+*.obj
+*.lo
+*.la
+*.al
+*.libs
+*.gch
+*.pch
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.out
+*.app
+
+# CMake / Ninja
+/build*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# Qt
+*.pro.user
+*.qmake.stash
+*.qmake.cache
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local data
+/data/
