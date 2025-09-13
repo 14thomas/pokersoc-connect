@@ -1,43 +1,23 @@
-# C/C++ artifacts
-*.o
-*.obj
-*.lo
-*.la
-*.al
-*.libs
-*.gch
-*.pch
-*.so
-*.dylib
-*.dll
-*.a
-*.lib
-*.exe
-*.out
-*.app
+# Build output
+bin/
+obj/
+*.user
+*.suo
 
-# CMake / Ninja
-/build*/
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-*.ninja
-*.ninja_deps
-*.ninja_log
+# VS Code
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 
-# Qt
-*.pro.user
-*.qmake.stash
-*.qmake.cache
+# NuGet
+*.nupkg
+packages/
+*.snupkg
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Logs
+*.log
 
-# Local data
-/data/
+# SQLite session files
+*.sqlite
+*.db
+*.cgd

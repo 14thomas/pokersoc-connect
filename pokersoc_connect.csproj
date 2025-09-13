@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Keep identifiers legal (no dash in assembly/namespace) -->
+    <AssemblyName>pokersoc_connect</AssemblyName>
+    <RootNamespace>pokersoc_connect</RootNamespace>
+
+    <!-- High DPI nice-to-have -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
+  </ItemGroup>
+
+  <!-- Embed schema into the assembly so it always exists -->
+  <ItemGroup>
+    <EmbeddedResource Include="schema.sql" />
+  </ItemGroup>
+
+</Project>

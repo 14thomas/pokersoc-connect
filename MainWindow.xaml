@@ -1,0 +1,27 @@
+<Window x:Class="pokersoc_connect.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="pokersoc-connect" Height="480" Width="900" WindowStartupLocation="CenterScreen">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <Button Content="Buy-in" Click="BuyIn_Click"/>
+      <Button Content="Cash-out" Click="CashOut_Click" Margin="8,0,0,0"/>
+      <TextBox x:Name="ScanBox" Width="220" Margin="16,0,0,0" VerticalContentAlignment="Center"
+               PlaceholderText="Scan member #" KeyDown="ScanBox_KeyDown"/>
+    </StackPanel>
+
+    <DataGrid x:Name="TxGrid" Grid.Row="1" AutoGenerateColumns="True" IsReadOnly="True"/>
+
+    <StatusBar Grid.Row="2" Margin="0,8,0,0">
+      <StatusBarItem>
+        <TextBlock x:Name="StatusText" Text="Ready."/>
+      </StatusBarItem>
+    </StatusBar>
+  </Grid>
+</Window>
