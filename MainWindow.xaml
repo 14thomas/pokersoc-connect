@@ -9,15 +9,26 @@
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <StackPanel Orientation="Horizontal" Spacing="8">
-      <Button Content="Buy-in" Click="BuyIn_Click"/>
-      <Button Content="Cash-out" Click="CashOut_Click" Margin="8,0,0,0"/>
-      <TextBox x:Name="ScanBox" Width="220" Margin="16,0,0,0" VerticalContentAlignment="Center"
-               PlaceholderText="Scan member #" KeyDown="ScanBox_KeyDown"/>
+    <!-- Top bar -->
+    <StackPanel Orientation="Horizontal">
+      <Button Content="Buy-in" Click="BuyIn_Click" Margin="0,0,8,0"/>
+      <Button Content="Cash-out" Click="CashOut_Click" Margin="0,0,16,0"/>
+      <TextBox x:Name="ScanBox"
+               Width="220"
+               VerticalContentAlignment="Center"
+               ToolTip="Scan member #"
+               Margin="0,0,0,0"/>
+      <!-- (Optional) simple hint label -->
+      <!--<TextBlock Text="Scan member #" Foreground="Gray" Margin="8,3,0,0"/>-->
     </StackPanel>
 
-    <DataGrid x:Name="TxGrid" Grid.Row="1" AutoGenerateColumns="True" IsReadOnly="True"/>
+    <!-- Transactions grid -->
+    <DataGrid x:Name="TxGrid"
+              Grid.Row="1"
+              AutoGenerateColumns="True"
+              IsReadOnly="True"/>
 
+    <!-- Status bar -->
     <StatusBar Grid.Row="2" Margin="0,8,0,0">
       <StatusBarItem>
         <TextBlock x:Name="StatusText" Text="Ready."/>
