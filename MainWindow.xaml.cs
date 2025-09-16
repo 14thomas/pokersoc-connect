@@ -19,7 +19,7 @@ namespace pokersoc_connect
       InitializeComponent();
       ShowTransactions();
       RefreshTransactions();
-      RefreshCashbox(); // show zeros even before a session
+      RefreshCashbox(); // render zeros even if DB empty
     }
 
     // ===== Screen switching =====
@@ -40,26 +40,24 @@ namespace pokersoc_connect
     // ===== Activity: Buy-in inline =====
     private void BuyIn_Click(object sender, RoutedEventArgs e)
     {
-      if (Database.Conn is null) { MessageBox.Show(this, "Open a session first."); return; }
+      if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
       var view = new BuyInView();
       view.Cancelled += (_, __) => ShowTransactions();
       view.Confirmed += (_, args) =>
       {
-        var member = args.MemberNumber;
-        var cashAmt = args.TotalCents / 100.0;
+        var playerId = args.MemberNumber;               // scanned id IS the primary key
+        var cashAmt  = args.TotalCents / 100.0;
         var chipsAmt = cashAmt;
 
         Database.InTransaction(tx =>
         {
-          EnsurePlayer(member, tx);
-          var pid = PlayerIdByMember(member, tx);
-          var sid = LatestSessionId(tx);
+          EnsurePlayer(playerId, tx);
 
           Database.Exec(
-            "INSERT INTO transactions(session_id, player_id, type, cash_amt, chips_amt, method, staff) " +
-            "VALUES ($s,$p,'BUYIN',$cash,$chips,'Cash','Dealer')",
-            tx, ("$s", sid), ("$p", pid), ("$cash", cashAmt), ("$chips", chipsAmt)
+            "INSERT INTO transactions(player_id, type, cash_amt, chips_amt, method, staff) " +
+            "VALUES ($p,'BUYIN',$cash,$chips,'Cash','Dealer')",
+            tx, ("$p", playerId), ("$cash", cashAmt), ("$chips", chipsAmt)
           );
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
 
@@ -67,16 +65,16 @@ namespace pokersoc_connect
           foreach (var kv in args.DenomCounts.Where(kv => kv.Value > 0))
           {
             Database.Exec(
-              "INSERT INTO cashbox_movements(session_id, denom_cents, delta_qty, reason, player_id, tx_id) " +
-              "VALUES ($s, $d, $q, 'BUYIN', $p, $tx)",
-              tx, ("$s", sid), ("$d", kv.Key), ("$q", kv.Value), ("$p", pid), ("$tx", txId)
+              "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+              "VALUES ($d, $q, 'BUYIN', $p, $tx)",
+              tx, ("$d", kv.Key), ("$q", kv.Value), ("$p", playerId), ("$tx", txId)
             );
           }
         });
 
         RefreshTransactions();
         RefreshCashbox();
-        StatusText.Text = $"Buy-in recorded for {member} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
+        StatusText.Text = $"Buy-in recorded for {playerId} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
         ShowTransactions();
       };
 
@@ -86,26 +84,24 @@ namespace pokersoc_connect
     // ===== Activity: Cash-out inline =====
     private void CashOut_Click(object sender, RoutedEventArgs e)
     {
-      if (Database.Conn is null) { MessageBox.Show(this, "Open a session first."); return; }
+      if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
       var view = new CashOutView();
       view.Back += (_, __) => ShowTransactions();
       view.Confirmed += (_, args) =>
       {
-        var member = args.MemberNumber;
-        var cashAmt = args.TotalCents / 100.0;
+        var playerId = args.MemberNumber;               // scanned id IS the primary key
+        var cashAmt  = args.TotalCents / 100.0;
         var chipsAmt = cashAmt;
 
         Database.InTransaction(tx =>
         {
-          EnsurePlayer(member, tx);
-          var pid = PlayerIdByMember(member, tx);
-          var sid = LatestSessionId(tx);
+          EnsurePlayer(playerId, tx);
 
           Database.Exec(
-            "INSERT INTO transactions(session_id, player_id, type, cash_amt, chips_amt, method, staff) " +
-            "VALUES ($s,$p,'CASHOUT',$cash,$chips,'Cash','Dealer')",
-            tx, ("$s", sid), ("$p", pid), ("$cash", cashAmt), ("$chips", chipsAmt)
+            "INSERT INTO transactions(player_id, type, cash_amt, chips_amt, method, staff) " +
+            "VALUES ($p,'CASHOUT',$cash,$chips,'Cash','Dealer')",
+            tx, ("$p", playerId), ("$cash", cashAmt), ("$chips", chipsAmt)
           );
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
 
@@ -113,16 +109,16 @@ namespace pokersoc_connect
           foreach (var kv in args.PayoutPlan.Where(kv => kv.Value > 0))
           {
             Database.Exec(
-              "INSERT INTO cashbox_movements(session_id, denom_cents, delta_qty, reason, player_id, tx_id) " +
-              "VALUES ($s, $d, $q, 'CASHOUT', $p, $tx)",
-              tx, ("$s", sid), ("$d", kv.Key), ("$q", -kv.Value), ("$p", pid), ("$tx", txId)
+              "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+              "VALUES ($d, $q, 'CASHOUT', $p, $tx)",
+              tx, ("$d", kv.Key), ("$q", -kv.Value), ("$p", playerId), ("$tx", txId)
             );
           }
         });
 
         RefreshTransactions();
         RefreshCashbox();
-        StatusText.Text = $"Cash-out paid to {member} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
+        StatusText.Text = $"Cash-out paid to {playerId} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
         ShowTransactions();
       };
 
@@ -132,18 +128,11 @@ namespace pokersoc_connect
     // ===== Cashbox: Add Float (additive) =====
     private void AddFloat_Click(object? sender, RoutedEventArgs e)
     {
-      if (Database.Conn is null) { MessageBox.Show(this, "Open a session first."); return; }
+      if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
-      var sid = Database.ScalarLong("SELECT session_id FROM sessions ORDER BY session_id DESC LIMIT 1");
+      var preset = new Dictionary<int,int>  // zeros (we ADD cash in)
+      { {5,0},{10,0},{20,0},{50,0},{100,0},{200,0},{500,0},{1000,0},{2000,0},{5000,0},{10000,0} };
 
-      // zeros preset – we are adding money in
-      var preset = new Dictionary<int,int>
-      {
-        { 5,0 },{10,0},{20,0},{50,0},
-        {100,0},{200,0},{500,0},{1000,0},{2000,0},{5000,0},{10000,0}
-      };
-
-      // use your existing touch float editor dialog
       var dlg = new FloatWindow(preset) { Owner = this };
       if (dlg.ShowDialog() != true) return;
 
@@ -153,9 +142,9 @@ namespace pokersoc_connect
         {
           if (kv.Value <= 0) continue;
           Database.Exec(
-            "INSERT INTO cashbox_movements(session_id, denom_cents, delta_qty, reason, player_id, tx_id) " +
-            "VALUES ($s, $d, $q, 'FLOAT_ADD', NULL, NULL)",
-            tx, ("$s", sid), ("$d", kv.Key), ("$q", kv.Value)
+            "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+            "VALUES ($d, $q, 'FLOAT_ADD', NULL, NULL)",
+            tx, ("$d", kv.Key), ("$q", kv.Value)
           );
         }
       });
@@ -175,7 +164,7 @@ namespace pokersoc_connect
     private void RefreshTransactions()
     {
       var dt = Database.Query(
-        "SELECT tx_id, time, type, player_id, session_id, cash_amt, chips_amt, method, staff " +
+        "SELECT tx_id, time, type, player_id, cash_amt, chips_amt, method, staff " +
         "FROM transactions ORDER BY tx_id DESC");
       TxGrid.ItemsSource = dt.DefaultView;
     }
@@ -189,7 +178,7 @@ namespace pokersoc_connect
 
     private void RefreshCashbox()
     {
-      // Always build rows (show zeros if no DB/session)
+      // Always build rows (show zeros if no DB)
       var counts = AllDenoms.ToDictionary(d => d, d => 0);
       string? err = null;
 
@@ -197,28 +186,22 @@ namespace pokersoc_connect
       {
         if (Database.Conn != null)
         {
-          long sid = Database.ScalarLong("SELECT session_id FROM sessions ORDER BY session_id DESC LIMIT 1");
-          if (sid > 0)
+          // baseline
+          var floatDt = Database.Query("SELECT denom_cents, qty FROM cashbox_float");
+          foreach (DataRow r in floatDt.Rows)
           {
-            // baseline (optional)
-            var floatDt = Database.Query("SELECT denom_cents, qty FROM cashbox_float WHERE session_id=$s", ("$s", sid));
-            foreach (DataRow r in floatDt.Rows)
-            {
-              int d = Convert.ToInt32(r["denom_cents"]);
-              int q = Convert.ToInt32(r["qty"]);
-              if (counts.ContainsKey(d)) counts[d] += q;
-            }
+            int d = Convert.ToInt32(r["denom_cents"]);
+            int q = Convert.ToInt32(r["qty"]);
+            if (counts.ContainsKey(d)) counts[d] += q;
+          }
 
-            // movements (buy-in +, cash-out -, float_add +)
-            var movDt = Database.Query(
-              "SELECT denom_cents, COALESCE(SUM(delta_qty),0) AS qty " +
-              "FROM cashbox_movements WHERE session_id=$s GROUP BY denom_cents", ("$s", sid));
-            foreach (DataRow r in movDt.Rows)
-            {
-              int d = Convert.ToInt32(r["denom_cents"]);
-              int q = Convert.ToInt32(r["qty"]);
-              if (counts.ContainsKey(d)) counts[d] += q;
-            }
+          // movements
+          var movDt = Database.Query("SELECT denom_cents, COALESCE(SUM(delta_qty),0) AS qty FROM cashbox_movements GROUP BY denom_cents");
+          foreach (DataRow r in movDt.Rows)
+          {
+            int d = Convert.ToInt32(r["denom_cents"]);
+            int q = Convert.ToInt32(r["qty"]);
+            if (counts.ContainsKey(d)) counts[d] += q;
           }
         }
       }
@@ -260,18 +243,19 @@ namespace pokersoc_connect
     }
 
     // ===== helpers =====
-    private void EnsurePlayer(string member, SqliteTransaction? tx)
+    private void EnsurePlayer(string playerId, SqliteTransaction? tx)
     {
+      // Upsert a minimal player row so FK succeeds
       Database.Exec(
-        "INSERT OR IGNORE INTO players(member_no, first_name, last_name, display_name) VALUES ($m,'New','Player',$m)",
-        tx, ("$m", member)
+        "INSERT OR IGNORE INTO players(player_id, first_name, last_name, display_name) " +
+        "VALUES ($id,'','','')",
+        tx, ("$id", playerId)
+      );
+      // Optional: keep display_name in sync if empty
+      Database.Exec(
+        "UPDATE players SET display_name = COALESCE(NULLIF(display_name,''), $id) WHERE player_id=$id",
+        tx, ("$id", playerId)
       );
     }
-
-    private long LatestSessionId(SqliteTransaction? tx)
-      => Database.ScalarLong("SELECT session_id FROM sessions ORDER BY session_id DESC LIMIT 1", tx);
-
-    private long PlayerIdByMember(string member, SqliteTransaction? tx)
-      => Database.ScalarLong("SELECT player_id FROM players WHERE member_no=$m", tx, ("$m", member));
   }
 }

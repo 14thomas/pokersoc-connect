@@ -38,12 +38,11 @@ namespace pokersoc_connect.Views
     private void LoadAvailableFromDb()
     {
       _available.Clear();
-      var sid = Database.ScalarLong("SELECT session_id FROM sessions ORDER BY session_id DESC LIMIT 1");
 
-      var f = Database.Query("SELECT denom_cents, qty FROM cashbox_float WHERE session_id=$s", ("$s", sid));
+      var f = Database.Query("SELECT denom_cents, qty FROM cashbox_float");
       foreach (DataRow r in f.Rows) _available[Convert.ToInt32(r["denom_cents"])] = Convert.ToInt32(r["qty"]);
 
-      var m = Database.Query("SELECT denom_cents, SUM(delta_qty) AS qty FROM cashbox_movements WHERE session_id=$s GROUP BY denom_cents", ("$s", sid));
+      var m = Database.Query("SELECT denom_cents, SUM(delta_qty) AS qty FROM cashbox_movements GROUP BY denom_cents");
       foreach (DataRow r in m.Rows)
       {
         var d = Convert.ToInt32(r["denom_cents"]);
