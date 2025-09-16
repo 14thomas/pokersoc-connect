@@ -1,23 +1,39 @@
 <Window x:Class="pokersoc_connect.StartWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="pokersoc-connect — Start" Height="220" Width="420"
-        WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
+        Title="pokersoc-connect - Start"
+        WindowStartupLocation="CenterScreen"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="CanMinimize"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        MinWidth="520">
   <Grid Margin="16">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <StackPanel>
-      <TextBlock Text="pokersoc-connect" FontSize="22" FontWeight="Bold"/>
-      <TextBlock Text="Start a new cash game session or open an existing one." Margin="0,6,0,0"/>
+      <TextBlock Text="pokersoc-connect" FontSize="28" FontWeight="Bold"/>
+      <TextBlock Text="Start a new cash game session or open an existing one."
+                 Margin="0,8,0,0"/>
     </StackPanel>
 
-    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Vertical" Width="220">
-      <Button Content="New Session..." Margin="0,4,0,4" Click="New_Click"/>
-      <Button Content="Open Session..." Margin="0,4,0,4" Click="Open_Click"/>
+    <StackPanel Grid.Row="1"
+                Orientation="Vertical"
+                HorizontalAlignment="Center"
+                Margin="0,16,0,16">
+      <Button x:Name="NewBtn"
+              Content="New Session..."
+              Width="320"
+              Margin="0,0,0,10"
+              Click="New_Click"/>
+      <Button x:Name="OpenBtn"
+              Content="Open Session..."
+              Width="320"
+              Click="Open_Click"/>
     </StackPanel>
 
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">

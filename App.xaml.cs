@@ -62,6 +62,7 @@ namespace pokersoc_connect
         var resName = Database.FindResourceName(asm, "schema.sql")
                      ?? throw new InvalidOperationException("Embedded resource 'schema.sql' not found.");
         Database.EnsureSchemaFromResource(asm, resName);
+        Database.EnsureCashboxTables();
         Database.SeedDefaultSessionIfEmpty();
 
         // Show main window, then hand shutdown control back to WPF

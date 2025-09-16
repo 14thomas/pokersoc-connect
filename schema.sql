@@ -50,3 +50,24 @@ FROM players p
 JOIN transactions t ON t.player_id = p.player_id
 JOIN sessions s     ON s.session_id = t.session_id
 GROUP BY p.player_id, s.session_id;
+
+-- NEW: starting float per denomination (per session)
+CREATE TABLE IF NOT EXISTS cashbox_float (
+  session_id   INTEGER NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+  denom_cents  INTEGER NOT NULL,     -- e.g. 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000
+  qty          INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (session_id, denom_cents)
+);
+
+-- NEW: movements into/out of the cashbox per denomination
+CREATE TABLE IF NOT EXISTS cashbox_movements (
+  move_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id   INTEGER NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+  time         TEXT DEFAULT CURRENT_TIMESTAMP,
+  denom_cents  INTEGER NOT NULL,
+  delta_qty    INTEGER NOT NULL,     -- + for cash in (e.g., buy-ins), - for cash out
+  reason       TEXT NOT NULL,        -- 'BUYIN','CASHOUT','ADJUST','FLOAT_SET'
+  player_id    INTEGER,
+  tx_id        INTEGER,
+  notes        TEXT
+);

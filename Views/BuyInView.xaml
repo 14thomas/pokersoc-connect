@@ -1,0 +1,147 @@
+<UserControl x:Class="pokersoc_connect.Views.BuyInView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Resources>
+
+    <Style x:Key="CoinButtonStyle" TargetType="Button">
+      <Setter Property="Width" Value="110"/>
+      <Setter Property="Height" Value="110"/>
+      <Setter Property="Margin" Value="10"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Grid>
+              <Ellipse>
+                <Ellipse.Fill>
+                  <RadialGradientBrush GradientOrigin="0.35,0.35">
+                    <GradientStop Color="#FFF5F5F5" Offset="0"/>
+                    <GradientStop Color="#FFD0D0D0" Offset="1"/>
+                  </RadialGradientBrush>
+                </Ellipse.Fill>
+              </Ellipse>
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                TextElement.FontWeight="Bold" TextElement.FontSize="28"/>
+              <Border x:Name="Badge" Background="#DD2E7D32" CornerRadius="12"
+                      HorizontalAlignment="Right" VerticalAlignment="Top"
+                      Margin="0,8,8,0" Padding="8,3" Visibility="Collapsed">
+                <TextBlock x:Name="BadgeText" Foreground="White" FontWeight="Bold" FontSize="16"/>
+              </Border>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="GoldCoinButtonStyle" TargetType="Button" BasedOn="{StaticResource CoinButtonStyle}">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Grid>
+              <Ellipse>
+                <Ellipse.Fill>
+                  <RadialGradientBrush GradientOrigin="0.35,0.35">
+                    <GradientStop Color="#FFFFF7CC" Offset="0"/>
+                    <GradientStop Color="#FFDEBF3E" Offset="1"/>
+                  </RadialGradientBrush>
+                </Ellipse.Fill>
+              </Ellipse>
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                TextElement.FontWeight="Bold" TextElement.FontSize="28"/>
+              <Border x:Name="Badge" Background="#DD2E7D32" CornerRadius="12"
+                      HorizontalAlignment="Right" VerticalAlignment="Top"
+                      Margin="0,8,8,0" Padding="8,3" Visibility="Collapsed">
+                <TextBlock x:Name="BadgeText" Foreground="White" FontWeight="Bold" FontSize="16"/>
+              </Border>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="NoteButtonStyle" TargetType="Button">
+      <Setter Property="Width" Value="180"/>
+      <Setter Property="Height" Value="100"/>
+      <Setter Property="Margin" Value="10"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Grid>
+              <Border CornerRadius="10" BorderThickness="2" BorderBrush="#AA333333">
+                <Border.Background>
+                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#FFF4F4F4" Offset="0"/>
+                    <GradientStop Color="#FFE0E0E0" Offset="1"/>
+                  </LinearGradientBrush>
+                </Border.Background>
+              </Border>
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                TextElement.FontWeight="Bold" TextElement.FontSize="30"/>
+              <Border x:Name="Badge" Background="#DD2E7D32" CornerRadius="12"
+                      HorizontalAlignment="Right" VerticalAlignment="Top"
+                      Margin="0,8,8,0" Padding="8,3" Visibility="Collapsed">
+                <TextBlock x:Name="BadgeText" Foreground="White" FontWeight="Bold" FontSize="16"/>
+              </Border>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+  </UserControl.Resources>
+
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+      <TextBlock Text="Scan member #:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+      <TextBox x:Name="ScanBox" Width="260" VerticalContentAlignment="Center" KeyDown="ScanBox_KeyDown"/>
+      <Button Content="Clear" Margin="10,0,0,0" Click="ClearScan_Click"/>
+    </StackPanel>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <GroupBox Header="Coins">
+        <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Button x:Name="B5"    Style="{StaticResource CoinButtonStyle}" Tag="5"    Click="Denom_Click"><TextBlock>5c</TextBlock></Button>
+          <Button x:Name="B10"   Style="{StaticResource CoinButtonStyle}" Tag="10"   Click="Denom_Click"><TextBlock>10c</TextBlock></Button>
+          <Button x:Name="B20"   Style="{StaticResource CoinButtonStyle}" Tag="20"   Click="Denom_Click"><TextBlock>20c</TextBlock></Button>
+          <Button x:Name="B50"   Style="{StaticResource CoinButtonStyle}" Tag="50"   Click="Denom_Click"><TextBlock>50c</TextBlock></Button>
+          <Button x:Name="B100"  Style="{StaticResource GoldCoinButtonStyle}" Tag="100"  Click="Denom_Click"><TextBlock>$1</TextBlock></Button>
+          <Button x:Name="B200"  Style="{StaticResource GoldCoinButtonStyle}" Tag="200"  Click="Denom_Click"><TextBlock>$2</TextBlock></Button>
+        </WrapPanel>
+      </GroupBox>
+
+      <GroupBox Header="Notes" Grid.Column="1">
+        <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Button x:Name="B500"   Style="{StaticResource NoteButtonStyle}" Tag="500"   Click="Denom_Click" Background="#FFCDA9E5"><TextBlock>$5</TextBlock></Button>
+          <Button x:Name="B1000"  Style="{StaticResource NoteButtonStyle}" Tag="1000"  Click="Denom_Click" Background="#FFAED5F2"><TextBlock>$10</TextBlock></Button>
+          <Button x:Name="B2000"  Style="{StaticResource NoteButtonStyle}" Tag="2000"  Click="Denom_Click" Background="#FFF6B0A7"><TextBlock>$20</TextBlock></Button>
+          <Button x:Name="B5000"  Style="{StaticResource NoteButtonStyle}" Tag="5000"  Click="Denom_Click" Background="#FFF7E89A"><TextBlock>$50</TextBlock></Button>
+          <Button x:Name="B10000" Style="{StaticResource NoteButtonStyle}" Tag="10000" Click="Denom_Click" Background="#FFBFE7C0"><TextBlock>$100</TextBlock></Button>
+        </WrapPanel>
+      </GroupBox>
+    </Grid>
+
+    <DockPanel Grid.Row="2" LastChildFill="False" Margin="0,16,0,0">
+      <TextBlock x:Name="TotalText" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" DockPanel.Dock="Left" Text="$0.00"/>
+      <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+        <ToggleButton x:Name="X1"  Content="×1"  IsChecked="True" Margin="0,0,6,0" Width="70" Click="Multiplier_Click"/>
+        <ToggleButton x:Name="X5"  Content="×5"               Margin="0,0,6,0" Width="70" Click="Multiplier_Click"/>
+        <ToggleButton x:Name="X10" Content="×10"              Margin="0,0,16,0" Width="80" Click="Multiplier_Click"/>
+
+        <Button Content="Undo"    Margin="0,0,8,0" Click="Undo_Click"/>
+        <Button Content="Clear"   Margin="0,0,8,0" Click="Clear_Click"/>
+        <Button Content="Cancel"  Margin="0,0,8,0" Click="Cancel_Click"/>
+        <Button Content="Confirm" Margin="0,0,0,0" Click="Confirm_Click"/>
+      </StackPanel>
+    </DockPanel>
+  </Grid>
+</UserControl>
