@@ -14,6 +14,7 @@ namespace pokersoc_connect.Views
     public event EventHandler<CashOutConfirmedEventArgs>? Confirmed;
     public event EventHandler? Back;
 
+    // Your chip set only
     private readonly Dictionary<int,int> _chipCounts = new()
       { {5,0},{25,0},{100,0},{200,0},{500,0},{2500,0},{10000,0} };
 
@@ -22,7 +23,7 @@ namespace pokersoc_connect.Views
 
     private readonly Dictionary<int,int> _available = new();
     private readonly Dictionary<int,int> _payout = new();
-    private static readonly int[] DenomsDesc = { 10000,5000,2000,1000,500,200,100,50,20,10,5 };
+    private static readonly int[] DenomsDesc = { 10000,2500,500,200,100,25,5 };
 
     public string MemberNumber => ScanBox.Text.Trim();
     public int TotalCents => _chipCounts.Sum(kv => kv.Key * kv.Value);
@@ -109,9 +110,7 @@ namespace pokersoc_connect.Views
         ChangeGrid.ItemsSource = plan.OrderByDescending(kv => kv.Key)
           .Select(kv => new {
             Denomination = kv.Key switch {
-              5=>"5c",10=>"10c",20=>"20c",50=>"50c",
-              100=>"$1",200=>"$2",500=>"$5",1000=>"$10",
-              2000=>"$20",5000=>"$50",10000=>"$100", _=>$"{kv.Key}c"
+              5=>"5c",25=>"25c",100=>"$1",200=>"$2",500=>"$5",2500=>"$25",10000=>"$100", _=>$"{kv.Key}c"
             },
             Count = kv.Value,
             Value = (kv.Key*kv.Value/100.0).ToString("C", culture)
@@ -176,7 +175,12 @@ namespace pokersoc_connect.Views
         MessageBox.Show("No payout planned.");
         return;
       }
-      Confirmed?.Invoke(this, new CashOutConfirmedEventArgs(MemberNumber, new Dictionary<int,int>(_payout), TotalCents));
+      // Pass both chips turned in AND cash payout plan
+      Confirmed?.Invoke(this, new CashOutConfirmedEventArgs(
+        MemberNumber,
+        new Dictionary<int,int>(_payout),              // cash plan
+        new Dictionary<int,int>(_chipCounts),          // chips turned in
+        TotalCents));
     }
 
     private void ScanBox_KeyDown(object sender, KeyEventArgs e)
@@ -188,9 +192,13 @@ namespace pokersoc_connect.Views
   public sealed class CashOutConfirmedEventArgs : EventArgs
   {
     public string MemberNumber { get; }
-    public Dictionary<int,int> PayoutPlan { get; }
+    public Dictionary<int,int> PayoutPlan { get; }   // cash paid out (AU denoms)
+    public Dictionary<int,int> ChipsIn { get; }      // chips turned in
     public int TotalCents { get; }
-    public CashOutConfirmedEventArgs(string member, Dictionary<int,int> plan, int totalCents)
-      => (MemberNumber, PayoutPlan, TotalCents) = (member, plan, totalCents);
+    public CashOutConfirmedEventArgs(string member,
+                                     Dictionary<int,int> plan,
+                                     Dictionary<int,int> chipsIn,
+                                     int totalCents)
+      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents) = (member, plan, chipsIn, totalCents);
   }
 }

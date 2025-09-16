@@ -1,73 +1,46 @@
 PRAGMA foreign_keys = ON;
 
+-- Players: scanned barcode/member number is the primary key
 CREATE TABLE IF NOT EXISTS players (
-  player_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-  member_no    TEXT UNIQUE,
-  first_name   TEXT NOT NULL,
-  last_name    TEXT NOT NULL,
-  display_name TEXT,
+  player_id    TEXT PRIMARY KEY,          -- barcode you scan
+  display_name TEXT NOT NULL,
+  first_name   TEXT,
+  last_name    TEXT,
   phone        TEXT,
   notes        TEXT,
   status       TEXT DEFAULT 'Active',
   created_at   TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
-  session_id  INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL,
-  date        TEXT NOT NULL,
-  venue       TEXT,
-  game        TEXT,
-  currency    TEXT DEFAULT 'AUD',
-  open_time   TEXT,
-  close_time  TEXT,
-  notes       TEXT
-);
-
+-- Transactions: only cash_amt is stored (chips == cash)
 CREATE TABLE IF NOT EXISTS transactions (
-  tx_id       INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id  INTEGER NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
-  table_id    INTEGER,
-  player_id   INTEGER NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
-  type        TEXT NOT NULL CHECK (type IN ('BUYIN','CASHOUT')),
+  tx_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  time      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  type      TEXT NOT NULL CHECK (type IN ('BUYIN','CASHOUT')),
+  player_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+  cash_amt  REAL NOT NULL,
+  method    TEXT,
+  staff     TEXT,
+  notes     TEXT
+);
+
+-- Starting float for each denomination (per DB/session)
+CREATE TABLE IF NOT EXISTS cashbox_float (
+  denom_cents INTEGER PRIMARY KEY,        -- 5,10,20,50,...,10000
+  qty         INTEGER NOT NULL DEFAULT 0
+);
+
+-- Movements of cash into/out of the cashbox by denomination
+CREATE TABLE IF NOT EXISTS cashbox_movements (
+  move_id     INTEGER PRIMARY KEY AUTOINCREMENT,
   time        TEXT DEFAULT CURRENT_TIMESTAMP,
-  cash_amt    REAL NOT NULL,
-  chips_amt   REAL NOT NULL,
-  method      TEXT,
-  staff       TEXT,
+  denom_cents INTEGER NOT NULL,
+  delta_qty   INTEGER NOT NULL,           -- + in, - out
+  reason      TEXT NOT NULL,              -- 'BUYIN','CASHOUT','ADJUST','FLOAT_ADD'
+  player_id   TEXT,                       -- optional
+  tx_id       INTEGER,                    -- optional link to transactions(tx_id)
   notes       TEXT
 );
 
-CREATE VIEW IF NOT EXISTS player_session_balances AS
-SELECT
-  p.player_id,
-  s.session_id,
-  p.display_name,
-  s.name AS session_name,
-  SUM(CASE WHEN t.type='BUYIN'  THEN  t.chips_amt ELSE -t.chips_amt END) AS chips_delta,
-  SUM(CASE WHEN t.type='BUYIN'  THEN  t.cash_amt  ELSE -t.cash_amt  END) AS cash_delta
-FROM players p
-JOIN transactions t ON t.player_id = p.player_id
-JOIN sessions s     ON s.session_id = t.session_id
-GROUP BY p.player_id, s.session_id;
-
--- NEW: starting float per denomination (per session)
-CREATE TABLE IF NOT EXISTS cashbox_float (
-  session_id   INTEGER NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
-  denom_cents  INTEGER NOT NULL,     -- e.g. 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000
-  qty          INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (session_id, denom_cents)
-);
-
--- NEW: movements into/out of the cashbox per denomination
-CREATE TABLE IF NOT EXISTS cashbox_movements (
-  move_id      INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id   INTEGER NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
-  time         TEXT DEFAULT CURRENT_TIMESTAMP,
-  denom_cents  INTEGER NOT NULL,
-  delta_qty    INTEGER NOT NULL,     -- + for cash in (e.g., buy-ins), - for cash out
-  reason       TEXT NOT NULL,        -- 'BUYIN','CASHOUT','ADJUST','FLOAT_SET'
-  player_id    INTEGER,
-  tx_id        INTEGER,
-  notes        TEXT
-);
+CREATE INDEX IF NOT EXISTS idx_tx_player_time ON transactions(player_id, time);
+CREATE INDEX IF NOT EXISTS idx_moves_denom_time ON cashbox_movements(denom_cents, time);

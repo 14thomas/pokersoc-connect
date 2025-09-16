@@ -4,7 +4,9 @@
              ShutdownMode="OnMainWindowClose">
   <Application.Resources>
 
-    <!-- Touch-friendly defaults -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+    <!-- (Optional) Your touch-friendly styles -->
     <Style TargetType="Button">
       <Setter Property="FontSize" Value="18"/>
       <Setter Property="Padding" Value="14,10"/>

@@ -12,14 +12,16 @@ namespace pokersoc_connect
 {
   public partial class MainWindow : Window
   {
-    private static readonly int[] AllDenoms = { 5,10,20,50,100,200,500,1000,2000,5000,10000 };
+    // Only the denominations you actually have (chips + plaques + cash notes/coins used)
+    private static readonly int[] AllDenoms = { 5, 25, 100, 200, 500, 2500, 10000 };
 
     public MainWindow()
     {
       InitializeComponent();
       ShowTransactions();
-      RefreshTransactions();
-      RefreshCashbox(); // render zeros even if DB empty
+      RefreshActivity();
+      RefreshCashbox();
+      TxGrid.MouseDoubleClick += TxGrid_MouseDoubleClick;
     }
 
     // ===== Screen switching =====
@@ -46,22 +48,21 @@ namespace pokersoc_connect
       view.Cancelled += (_, __) => ShowTransactions();
       view.Confirmed += (_, args) =>
       {
-        var playerId = args.MemberNumber;               // scanned id IS the primary key
+        var playerId = args.MemberNumber;
         var cashAmt  = args.TotalCents / 100.0;
-        var chipsAmt = cashAmt;
 
         Database.InTransaction(tx =>
         {
           EnsurePlayer(playerId, tx);
 
           Database.Exec(
-            "INSERT INTO transactions(player_id, type, cash_amt, chips_amt, method, staff) " +
-            "VALUES ($p,'BUYIN',$cash,$chips,'Cash','Dealer')",
-            tx, ("$p", playerId), ("$cash", cashAmt), ("$chips", chipsAmt)
+            "INSERT INTO transactions(player_id, type, cash_amt, method, staff) " +
+            "VALUES ($p, 'BUYIN', $cash, 'Cash', 'Dealer')",
+            tx, ("$p", playerId), ("$cash", cashAmt)
           );
+
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
 
-          // money enters cashbox as positive movement
           foreach (var kv in args.DenomCounts.Where(kv => kv.Value > 0))
           {
             Database.Exec(
@@ -72,7 +73,7 @@ namespace pokersoc_connect
           }
         });
 
-        RefreshTransactions();
+        RefreshActivity();
         RefreshCashbox();
         StatusText.Text = $"Buy-in recorded for {playerId} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
         ShowTransactions();
@@ -90,22 +91,22 @@ namespace pokersoc_connect
       view.Back += (_, __) => ShowTransactions();
       view.Confirmed += (_, args) =>
       {
-        var playerId = args.MemberNumber;               // scanned id IS the primary key
+        var playerId = args.MemberNumber;
         var cashAmt  = args.TotalCents / 100.0;
-        var chipsAmt = cashAmt;
 
         Database.InTransaction(tx =>
         {
           EnsurePlayer(playerId, tx);
 
           Database.Exec(
-            "INSERT INTO transactions(player_id, type, cash_amt, chips_amt, method, staff) " +
-            "VALUES ($p,'CASHOUT',$cash,$chips,'Cash','Dealer')",
-            tx, ("$p", playerId), ("$cash", cashAmt), ("$chips", chipsAmt)
+            "INSERT INTO transactions(player_id, type, cash_amt, method, staff) " +
+            "VALUES ($p, 'CASHOUT', $cash, 'Cash', 'Dealer')",
+            tx, ("$p", playerId), ("$cash", cashAmt)
           );
+
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
 
-          // cash leaves cashbox as negative movement
+          // 1) Record cash paid out (negative qty in cashbox)
           foreach (var kv in args.PayoutPlan.Where(kv => kv.Value > 0))
           {
             Database.Exec(
@@ -114,9 +115,19 @@ namespace pokersoc_connect
               tx, ("$d", kv.Key), ("$q", -kv.Value), ("$p", playerId), ("$tx", txId)
             );
           }
+
+          // 2) Record chips turned in (store per tx so we can show the colour breakdown)
+          foreach (var kv in args.ChipsIn.Where(kv => kv.Value > 0))
+          {
+            Database.Exec(
+              "INSERT INTO tx_chips(tx_id, denom_cents, qty) VALUES ($tx, $d, $q) " +
+              "ON CONFLICT(tx_id, denom_cents) DO UPDATE SET qty = qty + EXCLUDED.qty",
+              tx, ("$tx", txId), ("$d", kv.Key), ("$q", kv.Value)
+            );
+          }
         });
 
-        RefreshTransactions();
+        RefreshActivity();
         RefreshCashbox();
         StatusText.Text = $"Cash-out paid to {playerId} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
         ShowTransactions();
@@ -130,25 +141,25 @@ namespace pokersoc_connect
     {
       if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
-      var preset = new Dictionary<int,int>  // zeros (we ADD cash in)
-      { {5,0},{10,0},{20,0},{50,0},{100,0},{200,0},{500,0},{1000,0},{2000,0},{5000,0},{10000,0} };
-
+      var preset = AllDenoms.ToDictionary(d => d, d => 0);
       var dlg = new FloatWindow(preset) { Owner = this };
       if (dlg.ShowDialog() != true) return;
 
       Database.InTransaction(tx =>
       {
+        var batchId = Guid.NewGuid().ToString("N");
         foreach (var kv in dlg.Counts)
         {
           if (kv.Value <= 0) continue;
           Database.Exec(
-            "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
-            "VALUES ($d, $q, 'FLOAT_ADD', NULL, NULL)",
-            tx, ("$d", kv.Key), ("$q", kv.Value)
+            "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, batch_id) " +
+            "VALUES ($d, $q, 'FLOAT_ADD', NULL, NULL, $batch)",
+            tx, ("$d", kv.Key), ("$q", kv.Value), ("$batch", batchId)
           );
         }
       });
 
+      RefreshActivity();
       RefreshCashbox();
       StatusText.Text = "Float added to cashbox.";
     }
@@ -160,15 +171,52 @@ namespace pokersoc_connect
         RefreshCashbox();
     }
 
-    // ===== Data actions =====
-    private void RefreshTransactions()
+    // ===== Activity feed =====
+    private void RefreshActivity()
     {
-      var dt = Database.Query(
-        "SELECT tx_id, time, type, player_id, cash_amt, chips_amt, method, staff " +
-        "FROM transactions ORDER BY tx_id DESC");
+      var dt = Database.Query(@"
+WITH float_batches AS (
+  SELECT 
+    MIN(time) AS time,
+    'FLOAT_ADD' AS type,
+    NULL AS player_id,
+    SUM(denom_cents * delta_qty) / 100.0 AS cash_amt,
+    NULL AS method,
+    'Dealer' AS staff,
+    COALESCE(batch_id, printf('legacy-%d', move_id)) AS batch_id
+  FROM cashbox_movements
+  WHERE reason = 'FLOAT_ADD'
+  GROUP BY COALESCE(batch_id, printf('legacy-%d', move_id))
+)
+SELECT 
+  tx_id            AS activity_key,
+  time,
+  type,
+  player_id,
+  cash_amt,
+  method,
+  staff,
+  NULL             AS batch_id,
+  'TX'             AS activity_kind
+FROM transactions
+UNION ALL
+SELECT 
+  NULL             AS activity_key,
+  time,
+  type,
+  player_id,
+  cash_amt,
+  method,
+  staff,
+  batch_id,
+  'FLOAT'          AS activity_kind
+FROM float_batches
+ORDER BY time DESC
+");
       TxGrid.ItemsSource = dt.DefaultView;
     }
 
+    // ===== Cashbox =====
     private sealed class CashboxRow
     {
       public string Denomination { get; set; } = "";
@@ -178,7 +226,6 @@ namespace pokersoc_connect
 
     private void RefreshCashbox()
     {
-      // Always build rows (show zeros if no DB)
       var counts = AllDenoms.ToDictionary(d => d, d => 0);
       string? err = null;
 
@@ -186,7 +233,6 @@ namespace pokersoc_connect
       {
         if (Database.Conn != null)
         {
-          // baseline
           var floatDt = Database.Query("SELECT denom_cents, qty FROM cashbox_float");
           foreach (DataRow r in floatDt.Rows)
           {
@@ -195,7 +241,6 @@ namespace pokersoc_connect
             if (counts.ContainsKey(d)) counts[d] += q;
           }
 
-          // movements
           var movDt = Database.Query("SELECT denom_cents, COALESCE(SUM(delta_qty),0) AS qty FROM cashbox_movements GROUP BY denom_cents");
           foreach (DataRow r in movDt.Rows)
           {
@@ -207,7 +252,7 @@ namespace pokersoc_connect
       }
       catch (Exception ex)
       {
-        err = ex.Message; // still render zeros
+        err = ex.Message;
       }
 
       var au = CultureInfo.GetCultureInfo("en-AU");
@@ -222,13 +267,7 @@ namespace pokersoc_connect
 
         rows.Add(new CashboxRow
         {
-          Denomination = d switch
-          {
-            5 => "5c", 10 => "10c", 20 => "20c", 50 => "50c",
-            100 => "$1", 200 => "$2", 500 => "$5",
-            1000 => "$10", 2000 => "$20", 5000 => "$50", 10000 => "$100",
-            _ => $"{d}c"
-          },
+          Denomination = DenomLabel(d),
           Count = c,
           Value = (value / 100.0).ToString("C", au)
         });
@@ -245,17 +284,122 @@ namespace pokersoc_connect
     // ===== helpers =====
     private void EnsurePlayer(string playerId, SqliteTransaction? tx)
     {
-      // Upsert a minimal player row so FK succeeds
       Database.Exec(
         "INSERT OR IGNORE INTO players(player_id, first_name, last_name, display_name) " +
         "VALUES ($id,'','','')",
         tx, ("$id", playerId)
       );
-      // Optional: keep display_name in sync if empty
       Database.Exec(
         "UPDATE players SET display_name = COALESCE(NULLIF(display_name,''), $id) WHERE player_id=$id",
         tx, ("$id", playerId)
       );
     }
+
+    private void TxGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      if (TxGrid.SelectedItem is DataRowView row)
+      {
+        var kind = row["activity_kind"]?.ToString();
+        if (kind == "TX")
+        {
+          long txId = row["activity_key"] is DBNull ? 0 : Convert.ToInt64(row["activity_key"]);
+          var type = row["type"]?.ToString() ?? "";
+          ShowTransactionBreakdown(txId, type);
+        }
+        else if (kind == "FLOAT")
+        {
+          var batchId = row["batch_id"]?.ToString();
+          ShowFloatBreakdown(batchId);
+        }
+      }
+    }
+
+    private void ShowTransactionBreakdown(long txId, string type)
+    {
+      var au = CultureInfo.GetCultureInfo("en-AU");
+
+      // Chips turned in (tx_chips)
+      var chipsDt = Database.Query(@"
+SELECT denom_cents, qty
+FROM tx_chips
+WHERE tx_id = $tx
+ORDER BY denom_cents DESC", ("$tx", txId));
+      var chips = chipsDt.Rows.Cast<DataRow>()
+        .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+        .ToList();
+
+      // Cash movement for this tx (positive for BUYIN, negative for CASHOUT)
+      var cashDt = Database.Query(@"
+SELECT denom_cents, SUM(delta_qty) AS qty
+FROM cashbox_movements
+WHERE tx_id = $tx
+GROUP BY denom_cents
+ORDER BY denom_cents DESC", ("$tx", txId));
+      var cash = cashDt.Rows.Cast<DataRow>()
+        .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+        .ToList();
+
+      string title = type == "CASHOUT" ? "Cash-out breakdown" : "Buy-in breakdown";
+      string subtitle = type == "CASHOUT"
+        ? "Chips turned in + cash paid out"
+        : "Cash received";
+
+      // For BUYIN we may not have chips list; we only show cash received.
+      var view = new BreakdownView(title, subtitle, type == "CASHOUT" ? chips : Enumerable.Empty<(int,int)>(), cash, isCashOut: type == "CASHOUT");
+      view.Back += (_, __) => ShowTransactions();
+      ShowScreen(view);
+    }
+
+    private void ShowFloatBreakdown(string? batchId)
+    {
+      if (string.IsNullOrWhiteSpace(batchId))
+      {
+        MessageBox.Show(this, "Missing float batch id.", "Details");
+        return;
+      }
+
+      DataTable dt;
+
+      if (batchId.StartsWith("legacy-") && long.TryParse(batchId.AsSpan("legacy-".Length), out var moveId))
+      {
+        dt = Database.Query(@"
+SELECT denom_cents, delta_qty AS qty
+FROM cashbox_movements
+WHERE move_id = $id
+ORDER BY denom_cents DESC", ("$id", moveId));
+      }
+      else
+      {
+        dt = Database.Query(@"
+SELECT denom_cents, SUM(delta_qty) AS qty
+FROM cashbox_movements
+WHERE reason = 'FLOAT_ADD' AND batch_id = $b
+GROUP BY denom_cents
+ORDER BY denom_cents DESC", ("$b", batchId));
+      }
+
+      var lines = dt.Rows.Cast<DataRow>()
+        .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+        .ToList();
+
+      var view = new BreakdownView("Float addition", null,
+                                   Enumerable.Empty<(int,int)>(),   // no chips for float add
+                                   lines,
+                                   isCashOut: false);
+      view.Back += (_, __) => ShowTransactions();
+      ShowScreen(view);
+    }
+
+    private static string DenomLabel(int cents) => cents switch
+    {
+      5 => "5c",
+      25 => "25c",
+      100 => "$1",
+      200 => "$2",
+      500 => "$5",
+      2500 => "$25",
+      10000 => "$100",
+      _ => $"{cents}c"
+    };
   }
 }
