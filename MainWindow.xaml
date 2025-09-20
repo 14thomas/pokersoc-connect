@@ -71,6 +71,17 @@
           </DockPanel>
         </Grid>
       </TabItem>
+      <TabItem Header="Food">
+  <Grid Margin="8">
+    <!-- We’ll swap views here -->
+    <ContentControl x:Name="FoodHost"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+      <Button Content="Catalog" Margin="0,0,8,0" Click="FoodCatalog_Click"/>
+      <Button Content="Sell…" Click="FoodSell_Click"/>
+    </StackPanel>
+  </Grid>
+</TabItem>
+
     </TabControl>
 
     <!-- STATUS BAR -->

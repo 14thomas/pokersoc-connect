@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.IO;
 
 namespace pokersoc_connect
 {
@@ -163,13 +164,91 @@ namespace pokersoc_connect
       RefreshCashbox();
       StatusText.Text = "Float added to cashbox.";
     }
+    
+    // ===== Food Tab =====
+private void FoodCatalog_Click(object sender, RoutedEventArgs e)
+{
+  var view = new FoodCatalogView();
+  view.RequestSell += (_, __) => FoodSell_Click(sender, e);
+  FoodHost.Content = view;
+}
+
+private void FoodSell_Click(object sender, RoutedEventArgs e)
+{
+  var sell = new FoodSellView();
+  sell.Back += (_, __) => { FoodHost.Content = new FoodCatalogView(); };
+  sell.Confirmed += (_, args) =>
+  {
+    // Commit the sale
+    Database.InTransaction(tx =>
+    {
+      // optional player
+      string? playerId = args.PlayerId;
+      if (!string.IsNullOrWhiteSpace(playerId))
+      {
+        // upsert anonymous typed id
+        Database.Exec(
+          "INSERT OR IGNORE INTO players(player_id,display_name,first_name,last_name) VALUES ($id,$id,'','')",
+          tx, ("$id", playerId));
+      }
+
+      Database.Exec("INSERT INTO sales(player_id,staff) VALUES ($p,'Dealer')",
+        tx, ("$p", (object?)playerId ?? DBNull.Value));
+      long saleId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
+
+      Database.Exec("INSERT INTO sale_items(sale_id,product_id,variant_id,qty,unit_price) VALUES ($s,$p,$v,$q,$pr)",
+        tx, ("$s", saleId), ("$p", args.ProductId),
+            ("$v", (object?)args.VariantId ?? DBNull.Value),
+            ("$q", args.Qty), ("$pr", args.UnitPrice));
+
+      // Payment:
+      double saleTotal = args.Qty * args.UnitPrice;
+      double payTotal  = (args.PayDenomCents * args.PayQty) / 100.0;
+
+      if (args.PayMethod == "CASH")
+      {
+        // record cash IN to cashbox
+        Database.Exec(
+          "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CASH',$d,$q)",
+          tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
+
+        Database.Exec(
+          "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes, batch_id) " +
+          "VALUES ($d, $q, 'SALE', $p, NULL, 'Food sale', NULL)",
+          tx, ("$d", args.PayDenomCents), ("$q", args.PayQty),
+              ("$p", (object?)playerId ?? DBNull.Value));
+      }
+      else // CHIP
+      {
+        // chips come IN to house
+        Database.Exec(
+          "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CHIP',$d,$q)",
+          tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
+
+        // reuse tx_chips to track chips stock from sales
+        Database.Exec(
+          "INSERT INTO tx_chips(sale_id, tx_id, denom_cents, qty) VALUES ($s,NULL,$d,$q)",
+          tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
+      }
+    });
+
+    // After sale
+    RefreshActivity();   // you might add sales to activity later, if desired
+    RefreshCashbox();    // cash increases for CASH sale; chips stocked for CHIP sale
+    StatusText.Text = "Sale recorded.";
+    FoodHost.Content = new FoodCatalogView();
+  };
+
+  FoodHost.Content = sell;
+}
+
 
     // ===== Tabs: Auto-refresh Cashbox when selected =====
-    private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (MainTabs.SelectedItem is TabItem tab && tab.Header?.ToString() == "Cashbox")
-        RefreshCashbox();
-    }
+        private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (MainTabs.SelectedItem is TabItem tab && tab.Header?.ToString() == "Cashbox")
+                RefreshCashbox();
+        }
 
     // ===== Activity feed =====
     private void RefreshActivity()

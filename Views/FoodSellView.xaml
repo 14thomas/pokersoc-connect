@@ -1,0 +1,72 @@
+<UserControl x:Class="pokersoc_connect.Views.FoodSellView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinWidth="720">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+      <TextBlock Text="Player ID (optional):" VerticalAlignment="Center" Margin="0,0,8,0"/>
+      <TextBox x:Name="PlayerBox" Width="200" />
+      <CheckBox x:Name="NoCardBox" Content="No card / anonymous" Margin="12,0,0,0" />
+    </StackPanel>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="2*"/>
+      </Grid.ColumnDefinitions>
+
+      <GroupBox Header="Item">
+        <StackPanel>
+          <ComboBox x:Name="ProductBox" DisplayMemberPath="name" SelectionChanged="ProductBox_SelectionChanged"/>
+          <ComboBox x:Name="VariantBox" DisplayMemberPath="name" Margin="0,6,0,0"/>
+          <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="QtyBox" Width="80" Text="1"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="Price:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBlock x:Name="PriceText" VerticalAlignment="Center" FontWeight="Bold"/>
+          </StackPanel>
+        </StackPanel>
+      </GroupBox>
+
+      <GroupBox Header="Payment" Grid.Column="1" Margin="8,0,0,0">
+        <StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="PayCash" Content="Cash" IsChecked="True" Margin="0,0,12,0"/>
+            <RadioButton x:Name="PayChip" Content="Chip/Plaque"/>
+          </StackPanel>
+
+          <TextBlock Text="Denomination (cents):" Margin="0,8,0,2"/>
+          <ComboBox x:Name="DenomBox" />
+
+          <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="PayQtyBox" Width="80" Text="1"/>
+          </StackPanel>
+
+          <TextBlock x:Name="PayTotalText" Margin="0,8,0,0" FontWeight="Bold"/>
+        </StackPanel>
+      </GroupBox>
+
+      <GroupBox Header="Summary" Grid.Column="2" Margin="8,0,0,0">
+        <StackPanel>
+          <TextBlock x:Name="ItemTotalText" FontSize="16" FontWeight="Bold" />
+          <TextBlock x:Name="ChangeText" Margin="0,8,0,0" />
+        </StackPanel>
+      </GroupBox>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <Button Content="Back" Width="140" Margin="0,0,8,0" Click="Back_Click"/>
+      <Button Content="Confirm Sale" Width="180" Click="Confirm_Click"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

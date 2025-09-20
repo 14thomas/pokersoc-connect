@@ -1,0 +1,54 @@
+<UserControl x:Class="pokersoc_connect.Views.FoodCatalogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinWidth="720">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+      <Button Content="New Item" Width="140" Margin="0,0,8,0" Click="New_Click"/>
+      <Button Content="New Variant" Width="140" Margin="0,0,8,0" Click="NewVariant_Click"/>
+      <Button Content="Edit" Width="100" Margin="0,0,8,0" Click="Edit_Click"/>
+      <Button Content="Delete" Width="100" Margin="0,0,8,0" Click="Delete_Click"/>
+      <Separator Width="16"/>
+      <Button Content="Export Settings…" Width="160" Margin="0,0,8,0" Click="Export_Click"/>
+      <Button Content="Import Settings…" Width="160" Click="Import_Click"/>
+    </StackPanel>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
+
+      <GroupBox Header="Products">
+        <DataGrid x:Name="ProductsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionChanged="ProductsGrid_SelectionChanged">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Name" Binding="{Binding name}" Width="*" />
+            <DataGridTextColumn Header="Base Price" Binding="{Binding base_price}" Width="120"/>
+            <DataGridTextColumn Header="Image" Binding="{Binding image_path}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </GroupBox>
+
+      <GroupBox Header="Variants" Grid.Column="1" Margin="8,0,0,0">
+        <DataGrid x:Name="VariantsGrid" AutoGenerateColumns="False" IsReadOnly="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Name" Binding="{Binding name}" Width="*" />
+            <DataGridTextColumn Header="Price" Binding="{Binding price}" Width="120"/>
+            <DataGridTextColumn Header="Image" Binding="{Binding image_path}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </GroupBox>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+      <Button Content="Sell…" Width="140" Click="Sell_Click"/>
+    </StackPanel>
+  </Grid>
+</UserControl>
