@@ -14,9 +14,6 @@
       <Button Content="New Variant" Width="140" Margin="0,0,8,0" Click="NewVariant_Click"/>
       <Button Content="Edit" Width="100" Margin="0,0,8,0" Click="Edit_Click"/>
       <Button Content="Delete" Width="100" Margin="0,0,8,0" Click="Delete_Click"/>
-      <Separator Width="16"/>
-      <Button Content="Export Settings…" Width="160" Margin="0,0,8,0" Click="Export_Click"/>
-      <Button Content="Import Settings…" Width="160" Click="Import_Click"/>
     </StackPanel>
 
     <Grid Grid.Row="1">

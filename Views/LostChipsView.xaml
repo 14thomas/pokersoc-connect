@@ -1,0 +1,190 @@
+<UserControl x:Class="pokersoc_connect.Views.LostChipsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <Grid Grid.Row="0" Margin="0,0,0,20">
+      <TextBlock Text="Lost Chips - Record as Tips" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+      <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center" 
+              Width="30" Height="30" Click="Close_Click" FontSize="16"/>
+    </Grid>
+
+    <!-- Lost Chips Input - Chip Selection Grid -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Left Column - Chip Selection Grid -->
+      <StackPanel Grid.Column="0" Margin="0,0,20,0">
+        <TextBlock Text="Click each chip you found on the floor:" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+        
+        <!-- Chip Grid - 3 columns -->
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="80"/>
+            <RowDefinition Height="80"/>
+            <RowDefinition Height="80"/>
+          </Grid.RowDefinitions>
+
+          <!-- Row 1 - White 5c, Red 25c, Blue $1 -->
+          <Button Grid.Row="0" Grid.Column="0" Margin="5" Click="AddChip5c_Click" 
+                  Background="White" BorderThickness="3" BorderBrush="Black">
+            <StackPanel>
+              <TextBlock Text="5c" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="Black"/>
+              <TextBlock Text="White" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
+              <TextBlock x:Name="Chip5c" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="Black"/>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Row="0" Grid.Column="1" Margin="5" Click="AddChip25c_Click" 
+                  Background="Red" BorderThickness="3" BorderBrush="DarkRed">
+            <StackPanel>
+              <TextBlock Text="25c" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
+              <TextBlock Text="Red" FontSize="12" HorizontalAlignment="Center" Foreground="LightGray"/>
+              <TextBlock x:Name="Chip25c" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Row="0" Grid.Column="2" Margin="5" Click="AddChip1_Click" 
+                  Background="Blue" BorderThickness="3" BorderBrush="DarkBlue">
+            <StackPanel>
+              <TextBlock Text="$1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
+              <TextBlock Text="Blue" FontSize="12" HorizontalAlignment="Center" Foreground="LightBlue"/>
+              <TextBlock x:Name="Chip1" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 2 - Green $2, Black $5, White Plaque $25 -->
+          <Button Grid.Row="1" Grid.Column="0" Margin="5" Click="AddChip2_Click" 
+                  Background="Green" BorderThickness="3" BorderBrush="DarkGreen">
+            <StackPanel>
+              <TextBlock Text="$2" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
+              <TextBlock Text="Green" FontSize="12" HorizontalAlignment="Center" Foreground="LightGreen"/>
+              <TextBlock x:Name="Chip2" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Row="1" Grid.Column="1" Margin="5" Click="AddChip5_Click" 
+                  Background="Black" BorderThickness="3" BorderBrush="DarkGray">
+            <StackPanel>
+              <TextBlock Text="$5" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
+              <TextBlock Text="Black" FontSize="12" HorizontalAlignment="Center" Foreground="LightGray"/>
+              <TextBlock x:Name="Chip5" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Row="1" Grid.Column="2" Margin="5" Click="AddChip25_Click" 
+                  Background="White" BorderThickness="3" BorderBrush="Black">
+            <StackPanel>
+              <TextBlock Text="$25" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="Black"/>
+              <TextBlock Text="White Plaque" FontSize="10" HorizontalAlignment="Center" Foreground="Gray"/>
+              <TextBlock x:Name="Chip25" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="Black"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 3 - Red Plaque $100 -->
+          <Button Grid.Row="2" Grid.Column="0" Margin="5" Click="AddChip100_Click" 
+                  Background="Red" BorderThickness="3" BorderBrush="DarkRed">
+            <StackPanel>
+              <TextBlock Text="$100" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
+              <TextBlock Text="Red Plaque" FontSize="10" HorizontalAlignment="Center" Foreground="LightGray"/>
+              <TextBlock x:Name="Chip100" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Empty spaces for visual balance -->
+          <Button Grid.Row="2" Grid.Column="1" Margin="5" IsEnabled="False" 
+                  Background="LightGray" BorderThickness="2" BorderBrush="LightGray" Opacity="0.3">
+            <TextBlock Text="More" FontSize="16" HorizontalAlignment="Center" Opacity="0.5"/>
+          </Button>
+
+          <Button Grid.Row="2" Grid.Column="2" Margin="5" IsEnabled="False" 
+                  Background="LightGray" BorderThickness="2" BorderBrush="LightGray" Opacity="0.3">
+            <TextBlock Text="Chips" FontSize="16" HorizontalAlignment="Center" Opacity="0.5"/>
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Right Column - Toggle Buttons and Controls -->
+      <StackPanel Grid.Column="1" Margin="20,0,0,0">
+        <TextBlock Text="Multiplier &amp; Controls:" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+        
+        <!-- Toggle Buttons -->
+        <StackPanel Margin="0,0,0,20">
+          <TextBlock Text="Select Multiplier:" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+          
+          <ToggleButton x:Name="Toggle1x" Content="1x" 
+                        Click="Toggle1x_Click" 
+                        Margin="0,5" Padding="20,10" 
+                        FontSize="16" FontWeight="Bold"
+                        Background="LightBlue" BorderThickness="2" BorderBrush="DarkBlue"/>
+          
+          <ToggleButton x:Name="Toggle5x" Content="5x" 
+                        Click="Toggle5x_Click" 
+                        Margin="0,5" Padding="20,10" 
+                        FontSize="16" FontWeight="Bold"
+                        Background="LightGreen" BorderThickness="2" BorderBrush="DarkGreen"/>
+          
+          <ToggleButton x:Name="Toggle20x" Content="20x" 
+                        Click="Toggle20x_Click" 
+                        Margin="0,5" Padding="20,10" 
+                        FontSize="16" FontWeight="Bold"
+                        Background="LightYellow" BorderThickness="2" BorderBrush="Orange"/>
+        </StackPanel>
+
+        <!-- Summary -->
+        <TextBlock Text="Summary:" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+        <TextBlock x:Name="TotalTipsText" Text="Total Tips: $0.00" FontSize="18" FontWeight="Bold" 
+                   Margin="0,0,0,20" HorizontalAlignment="Center"/>
+        
+        <!-- Action Buttons -->
+        <Button Content="Record Lost Chips as Tips" 
+                Click="RecordTips_Click" 
+                Padding="20,15" 
+                FontSize="16" 
+                FontWeight="Bold"
+                Margin="0,0,0,10"
+                Height="60"/>
+        
+        <Button Content="Undo Last" 
+                Click="UndoLast_Click" 
+                Padding="20,10" 
+                FontSize="14" 
+                FontWeight="Bold"
+                Margin="0,0,0,10"
+                Height="50"/>
+        
+        <Button Content="Clear All" 
+                Click="ClearAll_Click" 
+                Padding="20,10" 
+                FontSize="14" 
+                FontWeight="Bold"
+                Margin="0,0,0,20"
+                Height="50"/>
+        
+        <TextBlock Text="Note: Lost chips will be recorded as tips and added to the cashbox total." 
+                   FontSize="12" 
+                   TextWrapping="Wrap" 
+                   Opacity="0.7"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- Action Buttons -->
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+      <Button Content="Close" Click="Close_Click" Padding="15,8" Margin="0,0,10,0"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

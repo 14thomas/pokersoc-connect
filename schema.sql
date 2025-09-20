@@ -36,11 +36,38 @@ CREATE TABLE IF NOT EXISTS cashbox_movements (
   time        TEXT DEFAULT CURRENT_TIMESTAMP,
   denom_cents INTEGER NOT NULL,
   delta_qty   INTEGER NOT NULL,           -- + in, - out
-  reason      TEXT NOT NULL,              -- 'BUYIN','CASHOUT','ADJUST','FLOAT_ADD'
+  reason      TEXT NOT NULL,              -- 'BUYIN','CASHOUT','ADJUST','FLOAT_ADD','LOST_CHIP'
   player_id   TEXT,                       -- optional
   tx_id       INTEGER,                    -- optional link to transactions(tx_id)
   notes       TEXT
 );
 
+-- Tips from lost chips
+CREATE TABLE IF NOT EXISTS tips (
+  tip_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  time        TEXT DEFAULT CURRENT_TIMESTAMP,
+  denom_cents INTEGER NOT NULL,
+  qty         INTEGER NOT NULL,
+  notes       TEXT
+);
+
+-- Activity log for tracking all system activities
+CREATE TABLE IF NOT EXISTS activity_log (
+  activity_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  activity_key  TEXT NOT NULL UNIQUE,
+  activity_type TEXT NOT NULL,
+  activity_kind TEXT NOT NULL,
+  method        TEXT,
+  staff         TEXT,
+  player_id     TEXT,
+  tx_id         INTEGER,
+  batch_id      TEXT,
+  amount_cents  INTEGER,
+  notes         TEXT,
+  time          TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_tx_player_time ON transactions(player_id, time);
 CREATE INDEX IF NOT EXISTS idx_moves_denom_time ON cashbox_movements(denom_cents, time);
+CREATE INDEX IF NOT EXISTS idx_tips_denom_time ON tips(denom_cents, time);
+CREATE INDEX IF NOT EXISTS idx_activity_type_time ON activity_log(activity_type, time);

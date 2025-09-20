@@ -1,0 +1,528 @@
+<UserControl x:Class="pokersoc_connect.Views.CashboxView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- MAIN CASHBOX VIEW -->
+    <Grid x:Name="MainCashboxView" Grid.Row="0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT SIDE: DENOMINATIONS TABLE -->
+      <Grid Grid.Column="0" Margin="12,12,6,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Denominations header -->
+        <TextBlock Text="Denominations" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+
+        <!-- Custom Denominations table -->
+        <StackPanel Grid.Row="1" Background="White">
+          <!-- Header Row -->
+          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+            <Grid Height="40">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="100"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+            </Grid>
+          </Border>
+          
+          <!-- Data Rows -->
+          <StackPanel x:Name="CashboxRowsPanel">
+            <!-- Rows will be populated dynamically -->
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Total Cash Panel -->
+        <Border Grid.Row="2"
+                Margin="0,0,0,0"
+                Padding="15,20"
+                BorderThickness="1,0,1,1"
+                BorderBrush="Gray"
+                Background="LightYellow">
+          <StackPanel>
+            <TextBlock Text="💵" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Total Cash" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="TotalCashText" Text="$0.00" FontSize="14" FontWeight="Bold" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- RIGHT SIDE: 8 BUTTON GRID (2 COLUMNS x 4 ROWS) -->
+      <Grid Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Row 1 -->
+        <!-- Add Float Button -->
+        <Button Grid.Row="0" Grid.Column="0"
+                Margin="0,0,5,5"
+                Padding="15,20"
+                Click="AddFloat_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Add Float" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Add starting cash" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Float Info Panel -->
+        <Border Grid.Row="0" Grid.Column="1"
+                Margin="5,0,0,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="Gray"
+                Background="LightGreen">
+          <StackPanel>
+            <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Float Added" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="FloatAmountText" Text="$0.00" FontSize="14" FontWeight="Bold" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Row 2 -->
+        <!-- Empty Button 2 -->
+        <Button Grid.Row="1" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="LightGray"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock Text="Button 2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Tips Panel -->
+        <Border Grid.Row="1" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="Gray"
+                Background="LightCoral">
+          <StackPanel>
+            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Tips" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="TipsText" Text="$0.00" FontSize="14" FontWeight="Bold" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Row 3 -->
+        <!-- Empty Button 5 -->
+        <Button Grid.Row="2" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="LightGray"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock Text="Button 5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Empty Button 6 -->
+        <Button Grid.Row="2" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="LightGray"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock Text="Button 6" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 4 -->
+        <!-- Empty Button 7 -->
+        <Button Grid.Row="3" Grid.Column="0"
+                Margin="0,5,5,0"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="LightGray"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="📈" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock Text="Button 7" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Back Button -->
+        <Button Grid.Row="3" Grid.Column="1"
+                Margin="5,5,0,0"
+                Padding="15,20"
+                Click="BackToMain_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="🏠" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Return to main" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Grid>
+
+    <!-- FLOAT INPUT VIEW -->
+    <Grid x:Name="FloatInputView" Grid.Row="0" Visibility="Collapsed">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT SIDE: FLOAT INPUT TABLE -->
+      <Grid Grid.Column="0" Margin="12,12,6,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Float input header -->
+        <TextBlock Text="Add Float" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+
+        <!-- Custom Float input table -->
+        <StackPanel Grid.Row="1" Background="White">
+          <!-- Header Row -->
+          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+            <Grid Height="40">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="100"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+            </Grid>
+          </Border>
+          
+          <!-- Data Rows -->
+          <StackPanel x:Name="FloatInputRowsPanel">
+            <!-- Rows will be populated dynamically -->
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Undo and Clear Buttons -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          
+          <!-- Clear Button -->
+          <Button Grid.Column="0" Margin="0,0,5,0" Click="FloatClear_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Orange">
+            <StackPanel>
+              <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Clear" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="All float" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+                  <!-- Undo Button -->
+                  <Button Grid.Column="1" Margin="5,0,0,0" Click="FloatUndo_Click"
+                          Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Yellow">
+            <StackPanel>
+              <TextBlock Text="↶" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Undo" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Last action" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <!-- Total Float Panel -->
+        <Border Grid.Row="3"
+                Margin="0,0,0,0"
+                Padding="15,20"
+                BorderThickness="1,0,1,1"
+                BorderBrush="Gray"
+                Background="LightGreen">
+          <StackPanel>
+            <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Total Float" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="TotalFloatText" Text="$0.00" FontSize="14" FontWeight="Bold" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          
+          <!-- Back Button -->
+          <Button Grid.Column="0" Margin="0,0,5,0" Click="BackToMain_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightCoral">
+            <StackPanel>
+              <TextBlock Text="🏠" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Return to main" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Add Float Button -->
+          <Button Grid.Column="1" Margin="5,0,0,0" Click="SaveFloat_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightBlue">
+            <StackPanel>
+              <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Add Float" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Save to cashbox" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+
+      <!-- RIGHT SIDE: DENOMINATION BUTTONS AND CONTROLS -->
+      <Grid Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Row 1 -->
+        <!-- 5c Button -->
+        <Button x:Name="Float5c" Grid.Row="0" Grid.Column="0"
+                Margin="0,0,5,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="5"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="5c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="5c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float5cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- 10c Button -->
+        <Button x:Name="Float10c" Grid.Row="0" Grid.Column="1"
+                Margin="5,0,0,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="10"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="10c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="10c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float10cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 2 -->
+        <!-- 20c Button -->
+        <Button x:Name="Float20c" Grid.Row="1" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="20"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="20c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="20c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float20cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- 50c Button -->
+        <Button x:Name="Float50c" Grid.Row="1" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="50"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="50c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="50c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float50cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 3 -->
+        <!-- $1 Button -->
+        <Button x:Name="Float1" Grid.Row="2" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="100"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$1" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$1" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float1Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- $2 Button -->
+        <Button x:Name="Float2" Grid.Row="2" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="200"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$2" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float2Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 4 -->
+        <!-- $5 Button -->
+        <Button x:Name="Float5" Grid.Row="3" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="500"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$5" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float5Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- $10 Button -->
+        <Button x:Name="Float10" Grid.Row="3" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="1000"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$10" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$10" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float10Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 5 -->
+        <!-- $20 Button -->
+        <Button x:Name="Float20" Grid.Row="4" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="2000"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$20" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$20" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float20Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- $50 Button -->
+        <Button x:Name="Float50" Grid.Row="4" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="5000"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$50" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$50" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float50Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 6 -->
+        <!-- $100 Button -->
+        <Button x:Name="Float100" Grid.Row="5" Grid.Column="0"
+                Margin="0,5,5,0"
+                Padding="15,20"
+                Click="FloatDenom_Click"
+                Tag="10000"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="$100" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="$100" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="Float100Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+          <!-- Multiplier Controls -->
+          <Button Grid.Row="5" Grid.Column="1"
+                  Margin="5,5,0,0"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  Background="LightBlue"
+                  Click="FloatMultiplier_Click">
+            <StackPanel>
+              <TextBlock Text="×" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Multiplier" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                <TextBlock x:Name="Float1xText" Text="1x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="|" FontSize="16" HorizontalAlignment="Center" Margin="5,0" Opacity="0.5"/>
+                <TextBlock x:Name="Float5xText" Text="5x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="|" FontSize="16" HorizontalAlignment="Center" Margin="5,0" Opacity="0.5"/>
+                <TextBlock x:Name="Float20xText" Text="20x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+              </StackPanel>
+            </StackPanel>
+          </Button>
+      </Grid>
+    </Grid>
+
+  </Grid>
+</UserControl>

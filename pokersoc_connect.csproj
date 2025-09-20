@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
   </ItemGroup>
 
+
   <!-- Embed schema into the assembly so it always exists -->
   <ItemGroup>
     <EmbeddedResource Include="schema.sql" />

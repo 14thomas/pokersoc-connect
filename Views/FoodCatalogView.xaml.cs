@@ -159,27 +159,6 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void Export_Click(object sender, RoutedEventArgs e)
-    {
-      var dlg = new SaveFileDialog { Filter = "pokersoc settings (*.json)|*.json|All files|*.*", FileName="food-settings.json" };
-      if (dlg.ShowDialog() == true)
-      {
-        Database.ExportSettings(dlg.FileName);
-        MessageBox.Show("Exported.");
-      }
-    }
-
-    private void Import_Click(object sender, RoutedEventArgs e)
-    {
-      var dlg = new OpenFileDialog { Filter = "pokersoc settings (*.json)|*.json|All files|*.*" };
-      if (dlg.ShowDialog() == true)
-      {
-        var merge = MessageBox.Show("Merge into existing catalog? (No = replace)",
-                    "Import", MessageBoxButton.YesNo) == MessageBoxResult.Yes;
-        Database.ImportSettings(dlg.FileName, merge: merge);
-        LoadProducts();
-      }
-    }
 
     private void Sell_Click(object sender, RoutedEventArgs e)
     {

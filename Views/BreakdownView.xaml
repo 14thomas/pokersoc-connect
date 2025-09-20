@@ -10,6 +10,8 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
@@ -44,7 +46,20 @@
       </DataGrid.Columns>
     </DataGrid>
 
-    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+    <!-- Change given back -->
+    <TextBlock Grid.Row="5" Text="{Binding ChangeHeader}" FontWeight="Bold" Margin="0,10,0,6"
+               Visibility="{Binding HasChange, Converter={StaticResource BoolToVisibility}}"/>
+    <DataGrid Grid.Row="6" ItemsSource="{Binding ChangeRows}" AutoGenerateColumns="False"
+              CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+              Visibility="{Binding HasChange, Converter={StaticResource BoolToVisibility}}">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Denomination" Binding="{Binding Denomination}" Width="*" />
+        <DataGridTextColumn Header="Qty"          Binding="{Binding Qty}"          Width="80" />
+        <DataGridTextColumn Header="Value"        Binding="{Binding Value}"        Width="120" />
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
       <TextBlock Text="{Binding GrandTotal}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0"/>
       <Button Content="Back" Width="120" Click="Back_Click"/>
     </StackPanel>

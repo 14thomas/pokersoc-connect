@@ -143,6 +143,37 @@ CREATE TABLE IF NOT EXISTS sale_payments(
       // Allow chip rows to link to a sale, so we can reuse chip stock reporting
       try { Exec("ALTER TABLE tx_chips ADD COLUMN sale_id INTEGER"); } catch { /* already */ }
       try { Exec("CREATE INDEX IF NOT EXISTS idx_txchips_sale ON tx_chips(sale_id)"); } catch { }
+
+      // ----- NEW: Tips from Lost Chips -----
+      Exec(@"
+CREATE TABLE IF NOT EXISTS tips (
+  tip_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  time        TEXT DEFAULT CURRENT_TIMESTAMP,
+  denom_cents INTEGER NOT NULL,
+  qty         INTEGER NOT NULL,
+  notes       TEXT
+);
+");
+      try { Exec("CREATE INDEX IF NOT EXISTS idx_tips_denom_time ON tips(denom_cents, time)"); } catch { }
+
+      // ----- NEW: Activity Log -----
+      Exec(@"
+CREATE TABLE IF NOT EXISTS activity_log (
+  activity_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  activity_key  TEXT NOT NULL UNIQUE,
+  activity_type TEXT NOT NULL,
+  activity_kind TEXT NOT NULL,
+  method        TEXT,
+  staff         TEXT,
+  player_id     TEXT,
+  tx_id         INTEGER,
+  batch_id      TEXT,
+  amount_cents  INTEGER,
+  notes         TEXT,
+  time          TEXT DEFAULT CURRENT_TIMESTAMP
+);
+");
+      try { Exec("CREATE INDEX IF NOT EXISTS idx_activity_type_time ON activity_log(activity_type, time)"); } catch { }
     }
 
     // ----------------- Public helpers -----------------

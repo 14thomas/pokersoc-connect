@@ -18,13 +18,25 @@ namespace pokersoc_connect.Views
                          bool isCashOut)
     {
       InitializeComponent();
-      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, isCashOut);
+      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, Enumerable.Empty<(int,int)>(), isCashOut);
+    }
+
+    public BreakdownView(string title,
+                         string? subtitle,
+                         IEnumerable<(int denom, int qty)> chipsRows,
+                         IEnumerable<(int denom, int qty)> cashRows,
+                         IEnumerable<(int denom, int qty)> changeRows,
+                         bool isCashOut)
+    {
+      InitializeComponent();
+      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, changeRows, isCashOut);
     }
 
     private object BuildVm(string title,
                            string? subtitle,
                            IEnumerable<(int denom, int qty)> chipsRows,
                            IEnumerable<(int denom, int qty)> cashRows,
+                           IEnumerable<(int denom, int qty)> changeRows,
                            bool isCashOut)
     {
       var au = CultureInfo.GetCultureInfo("en-AU");
@@ -52,19 +64,33 @@ namespace pokersoc_connect.Views
         })
         .ToList();
 
+      var changeList = (changeRows ?? Enumerable.Empty<(int,int)>())
+        .Where(x => x.qty != 0)
+        .OrderByDescending(x => x.denom)
+        .Select(x => new
+        {
+          Denomination = CashLabel(x.denom),
+          Qty          = x.qty,
+          Value        = ((x.denom * x.qty) / 100.0).ToString("C", au)
+        })
+        .ToList();
+
       double total = chipList.Sum(r => MoneyCents(r.Value, au)) + cashList.Sum(r => MoneyCents(r.Value, au));
       var grand = $"Total: {total.ToString("C", au)}";
 
       return new
       {
-        Title      = title,
-        Subtitle   = subtitle ?? "",
-        ChipsRows  = chipList,
-        CashRows   = cashList,
-        CashHeader = isCashOut ? "Cash paid out" : "Cash received",
-        HasChips   = chipList.Count > 0,
-        HasCash    = cashList.Count > 0,
-        GrandTotal = grand
+        Title        = title,
+        Subtitle     = subtitle ?? "",
+        ChipsRows    = chipList,
+        CashRows     = cashList,
+        ChangeRows   = changeList,
+        CashHeader   = isCashOut ? "Cash paid out" : "Cash received",
+        ChangeHeader = "Change given back",
+        HasChips     = chipList.Count > 0,
+        HasCash      = cashList.Count > 0,
+        HasChange    = changeList.Count > 0,
+        GrandTotal   = grand
       };
     }
 

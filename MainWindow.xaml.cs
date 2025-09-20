@@ -7,36 +7,144 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.IO;
 
 namespace pokersoc_connect
 {
   public partial class MainWindow : Window
   {
-    // Only the denominations you actually have (chips + plaques + cash notes/coins used)
-    private static readonly int[] AllDenoms = { 5, 25, 100, 200, 500, 2500, 10000 };
+    // Australian currency denominations only (for cashbox)
+    private static readonly int[] CashDenoms = { 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
+    
+    // All denominations including poker chips (for buy-ins, cash-outs, etc.)
+    private static readonly int[] AllDenoms = { 5, 10, 20, 25, 50, 100, 200, 500, 1000, 2000, 2500, 5000, 10000 };
 
     public MainWindow()
     {
       InitializeComponent();
       ShowTransactions();
       RefreshActivity();
-      RefreshCashbox();
       TxGrid.MouseDoubleClick += TxGrid_MouseDoubleClick;
+    }
+
+    // ===== Fullscreen functionality =====
+    private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+      if (e.Key == System.Windows.Input.Key.F11)
+      {
+        ToggleFullscreen();
+        e.Handled = true;
+      }
+    }
+
+    private void ToggleFullscreen()
+    {
+      if (WindowStyle == WindowStyle.None)
+      {
+        // Exit fullscreen
+        WindowStyle = WindowStyle.SingleBorderWindow;
+        WindowState = WindowState.Normal;
+        ResizeMode = ResizeMode.CanResize;
+        Topmost = false;
+        Left = (SystemParameters.WorkArea.Width - Width) / 2;
+        Top = (SystemParameters.WorkArea.Height - Height) / 2;
+      }
+      else
+      {
+        // Enter fullscreen - hide taskbar
+        WindowStyle = WindowStyle.None;
+        WindowState = WindowState.Maximized;
+        ResizeMode = ResizeMode.NoResize;
+        Topmost = true;
+        Left = 0;
+        Top = 0;
+        Width = SystemParameters.PrimaryScreenWidth;
+        Height = SystemParameters.PrimaryScreenHeight;
+      }
     }
 
     // ===== Screen switching =====
     private void ShowTransactions()
     {
       ScreenHost.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
       ScreenHost.Content = null;
-      TxGrid.Visibility = Visibility.Visible;
+      MainContent.Visibility = Visibility.Visible;
     }
 
     private void ShowScreen(UserControl view)
     {
-      TxGrid.Visibility = Visibility.Collapsed;
+      MainContent.Visibility = Visibility.Collapsed;
       ScreenHost.Content = view;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowSettings()
+    {
+      // Hide main content and other overlays
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+      
+      // Show settings content in ScreenHost
+      var settingsView = new Views.SettingsView();
+        settingsView.SettingsChanged += (s, e) => 
+        {
+          RefreshActivity();
+        };
+      settingsView.CloseRequested += (s, e) => ShowTransactions();
+      ScreenHost.Content = settingsView;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowCashbox()
+    {
+      // Hide main content and other overlays
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+      
+      // Show cashbox content in ScreenHost
+      var cashboxView = new Views.CashboxView();
+      cashboxView.CloseRequested += (s, e) => {
+        RefreshActivity();
+        ShowTransactions();
+      };
+      ScreenHost.Content = cashboxView;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowFood()
+    {
+      // Hide main content and other overlays
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+      
+      // Show food content in ScreenHost
+      var foodView = new FoodCatalogView();
+      foodView.RequestSell += (_, __) => FoodSell_Click(this, new RoutedEventArgs());
+      ScreenHost.Content = foodView;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowLostChips()
+    {
+      // Hide main content and other overlays
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+      
+      // Show lost chips content in ScreenHost
+      var lostChipsView = new Views.LostChipsView();
+      lostChipsView.CloseRequested += (s, e) => ShowTransactions();
+      ScreenHost.Content = lostChipsView;
       ScreenHost.Visibility = Visibility.Visible;
     }
 
@@ -50,7 +158,7 @@ namespace pokersoc_connect
       view.Confirmed += (_, args) =>
       {
         var playerId = args.MemberNumber;
-        var cashAmt  = args.TotalCents / 100.0;
+        var buyInAmt = args.BuyInAmountCents / 100.0;
 
         Database.InTransaction(tx =>
         {
@@ -59,12 +167,13 @@ namespace pokersoc_connect
           Database.Exec(
             "INSERT INTO transactions(player_id, type, cash_amt, method, staff) " +
             "VALUES ($p, 'BUYIN', $cash, 'Cash', 'Dealer')",
-            tx, ("$p", playerId), ("$cash", cashAmt)
+            tx, ("$p", playerId), ("$cash", buyInAmt)
           );
 
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
 
-          foreach (var kv in args.DenomCounts.Where(kv => kv.Value > 0))
+          // Record cash received (positive qty in cashbox)
+          foreach (var kv in args.CashReceived.Where(kv => kv.Value > 0))
           {
             Database.Exec(
               "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
@@ -72,11 +181,19 @@ namespace pokersoc_connect
               tx, ("$d", kv.Key), ("$q", kv.Value), ("$p", playerId), ("$tx", txId)
             );
           }
+
+          // Record change given out (negative qty in cashbox)
+          foreach (var kv in args.ChangeBreakdown.Where(kv => kv.Value > 0))
+          {
+            Database.Exec(
+              "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+              "VALUES ($d, $q, 'CHANGE', $p, $tx)",
+              tx, ("$d", kv.Key), ("$q", -kv.Value), ("$p", playerId), ("$tx", txId)
+            );
+          }
         });
 
         RefreshActivity();
-        RefreshCashbox();
-        StatusText.Text = $"Buy-in recorded for {playerId} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
         ShowTransactions();
       };
 
@@ -129,8 +246,6 @@ namespace pokersoc_connect
         });
 
         RefreshActivity();
-        RefreshCashbox();
-        StatusText.Text = $"Cash-out paid to {playerId} — {cashAmt.ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
         ShowTransactions();
       };
 
@@ -142,7 +257,7 @@ namespace pokersoc_connect
     {
       if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
-      var preset = AllDenoms.ToDictionary(d => d, d => 0);
+      var preset = CashDenoms.ToDictionary(d => d, d => 0);
       var dlg = new FloatWindow(preset) { Owner = this };
       if (dlg.ShowDialog() != true) return;
 
@@ -161,8 +276,6 @@ namespace pokersoc_connect
       });
 
       RefreshActivity();
-      RefreshCashbox();
-      StatusText.Text = "Float added to cashbox.";
     }
     
     // ===== Food Tab =====
@@ -176,11 +289,14 @@ private void FoodCatalog_Click(object sender, RoutedEventArgs e)
 private void FoodSell_Click(object sender, RoutedEventArgs e)
 {
   var sell = new FoodSellView();
-  sell.Back += (_, __) => { FoodHost.Content = new FoodCatalogView(); };
-  sell.Confirmed += (_, args) =>
+  sell.BackToCatalog += (_, __) => { FoodHost.Content = new FoodCatalogView(); };
+  sell.BackToMain += (_, __) => { ShowTransactions(); };
+  sell.SaleConfirmed += (_, args) =>
   {
-    // Commit the sale
-    Database.InTransaction(tx =>
+    try
+    {
+      // Commit the sale
+      Database.InTransaction(tx =>
     {
       // optional player
       string? playerId = args.PlayerId;
@@ -232,133 +348,71 @@ private void FoodSell_Click(object sender, RoutedEventArgs e)
       }
     });
 
-    // After sale
-    RefreshActivity();   // you might add sales to activity later, if desired
-    RefreshCashbox();    // cash increases for CASH sale; chips stocked for CHIP sale
-    StatusText.Text = "Sale recorded.";
-    FoodHost.Content = new FoodCatalogView();
+      // After sale
+      RefreshActivity();   // you might add sales to activity later, if desired
+      FoodHost.Content = new FoodCatalogView();
+    }
+    catch (Exception ex)
+    {
+      MessageBox.Show($"Error processing sale: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
   };
 
   FoodHost.Content = sell;
 }
 
 
-    // ===== Tabs: Auto-refresh Cashbox when selected =====
-        private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (MainTabs.SelectedItem is TabItem tab && tab.Header?.ToString() == "Cashbox")
-                RefreshCashbox();
-        }
+    // ===== New Button Handlers =====
+    private void Cashbox_Click(object sender, RoutedEventArgs e)
+    {
+        ShowCashbox();
+    }
+
+    private void Food_Click(object sender, RoutedEventArgs e)
+    {
+        ShowFood();
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        ShowSettings();
+    }
+
+    private void LostChips_Click(object sender, RoutedEventArgs e)
+    {
+        ShowLostChips();
+    }
 
     // ===== Activity feed =====
     private void RefreshActivity()
     {
       var dt = Database.Query(@"
-WITH float_batches AS (
-  SELECT 
-    MIN(time) AS time,
-    'FLOAT_ADD' AS type,
-    NULL AS player_id,
-    SUM(denom_cents * delta_qty) / 100.0 AS cash_amt,
-    NULL AS method,
-    'Dealer' AS staff,
-    COALESCE(batch_id, printf('legacy-%d', move_id)) AS batch_id
-  FROM cashbox_movements
-  WHERE reason = 'FLOAT_ADD'
-  GROUP BY COALESCE(batch_id, printf('legacy-%d', move_id))
-)
 SELECT 
-  tx_id            AS activity_key,
+  tx_id,
   time,
   type,
   player_id,
   cash_amt,
-  method,
-  staff,
-  NULL             AS batch_id,
-  'TX'             AS activity_kind
+  NULL AS batch_id,
+  'TX' AS activity_kind
 FROM transactions
 UNION ALL
 SELECT 
-  NULL             AS activity_key,
+  tx_id,
   time,
-  type,
+  activity_type AS type,
   player_id,
-  cash_amt,
-  method,
-  staff,
+  amount_cents / 100.0 AS cash_amt,
   batch_id,
-  'FLOAT'          AS activity_kind
-FROM float_batches
+  activity_kind
+FROM activity_log
 ORDER BY time DESC
 ");
       TxGrid.ItemsSource = dt.DefaultView;
     }
 
     // ===== Cashbox =====
-    private sealed class CashboxRow
-    {
-      public string Denomination { get; set; } = "";
-      public int    Count        { get; set; }
-      public string Value        { get; set; } = "";
-    }
-
-    private void RefreshCashbox()
-    {
-      var counts = AllDenoms.ToDictionary(d => d, d => 0);
-      string? err = null;
-
-      try
-      {
-        if (Database.Conn != null)
-        {
-          var floatDt = Database.Query("SELECT denom_cents, qty FROM cashbox_float");
-          foreach (DataRow r in floatDt.Rows)
-          {
-            int d = Convert.ToInt32(r["denom_cents"]);
-            int q = Convert.ToInt32(r["qty"]);
-            if (counts.ContainsKey(d)) counts[d] += q;
-          }
-
-          var movDt = Database.Query("SELECT denom_cents, COALESCE(SUM(delta_qty),0) AS qty FROM cashbox_movements GROUP BY denom_cents");
-          foreach (DataRow r in movDt.Rows)
-          {
-            int d = Convert.ToInt32(r["denom_cents"]);
-            int q = Convert.ToInt32(r["qty"]);
-            if (counts.ContainsKey(d)) counts[d] += q;
-          }
-        }
-      }
-      catch (Exception ex)
-      {
-        err = ex.Message;
-      }
-
-      var au = CultureInfo.GetCultureInfo("en-AU");
-      long totalCents = 0;
-      var rows = new List<CashboxRow>();
-
-      foreach (var d in AllDenoms)
-      {
-        int c = counts[d];
-        long value = (long)c * d;
-        totalCents += value;
-
-        rows.Add(new CashboxRow
-        {
-          Denomination = DenomLabel(d),
-          Count = c,
-          Value = (value / 100.0).ToString("C", au)
-        });
-      }
-
-      CashboxGrid.AutoGenerateColumns = true;
-      CashboxGrid.ItemsSource = rows;
-      CashboxTotalText.Text = (totalCents / 100.0).ToString("C", au);
-
-      if (err != null)
-        StatusText.Text = $"Cashbox (showing zeros): {err}";
-    }
+    // Cashbox functionality moved to CashboxView
 
     // ===== helpers =====
     private void EnsurePlayer(string playerId, SqliteTransaction? tx)
@@ -381,11 +435,11 @@ ORDER BY time DESC
         var kind = row["activity_kind"]?.ToString();
         if (kind == "TX")
         {
-          long txId = row["activity_key"] is DBNull ? 0 : Convert.ToInt64(row["activity_key"]);
+          long txId = row["tx_id"] is DBNull ? 0 : Convert.ToInt64(row["tx_id"]);
           var type = row["type"]?.ToString() ?? "";
           ShowTransactionBreakdown(txId, type);
         }
-        else if (kind == "FLOAT")
+        else if (kind == "FLOAT" || kind == "FLOAT_ADD")
         {
           var batchId = row["batch_id"]?.ToString();
           ShowFloatBreakdown(batchId);
@@ -407,26 +461,56 @@ ORDER BY denom_cents DESC", ("$tx", txId));
         .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
         .ToList();
 
-      // Cash movement for this tx (positive for BUYIN, negative for CASHOUT)
-      var cashDt = Database.Query(@"
+      if (type == "BUYIN")
+      {
+        // For BUYIN: separate cash received from change given back
+        var cashReceivedDt = Database.Query(@"
+SELECT denom_cents, SUM(delta_qty) AS qty
+FROM cashbox_movements
+WHERE tx_id = $tx AND reason = 'BUYIN'
+GROUP BY denom_cents
+ORDER BY denom_cents DESC", ("$tx", txId));
+        var cashReceived = cashReceivedDt.Rows.Cast<DataRow>()
+          .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+          .ToList();
+
+        var changeGivenDt = Database.Query(@"
+SELECT denom_cents, ABS(SUM(delta_qty)) AS qty
+FROM cashbox_movements
+WHERE tx_id = $tx AND reason = 'CHANGE'
+GROUP BY denom_cents
+ORDER BY denom_cents DESC", ("$tx", txId));
+        var changeGiven = changeGivenDt.Rows.Cast<DataRow>()
+          .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+          .ToList();
+
+        string title = "Buy-in breakdown";
+        string subtitle = "Cash received + change given back";
+
+        var view = new BreakdownView(title, subtitle, Enumerable.Empty<(int,int)>(), cashReceived, changeGiven, isCashOut: false);
+        view.Back += (_, __) => ShowTransactions();
+        ShowScreen(view);
+      }
+      else
+      {
+        // For CASHOUT: show chips turned in + cash paid out
+        var cashDt = Database.Query(@"
 SELECT denom_cents, SUM(delta_qty) AS qty
 FROM cashbox_movements
 WHERE tx_id = $tx
 GROUP BY denom_cents
 ORDER BY denom_cents DESC", ("$tx", txId));
-      var cash = cashDt.Rows.Cast<DataRow>()
-        .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
-        .ToList();
+        var cash = cashDt.Rows.Cast<DataRow>()
+          .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+          .ToList();
 
-      string title = type == "CASHOUT" ? "Cash-out breakdown" : "Buy-in breakdown";
-      string subtitle = type == "CASHOUT"
-        ? "Chips turned in + cash paid out"
-        : "Cash received";
+        string title = "Cash-out breakdown";
+        string subtitle = "Chips turned in + cash paid out";
 
-      // For BUYIN we may not have chips list; we only show cash received.
-      var view = new BreakdownView(title, subtitle, type == "CASHOUT" ? chips : Enumerable.Empty<(int,int)>(), cash, isCashOut: type == "CASHOUT");
-      view.Back += (_, __) => ShowTransactions();
-      ShowScreen(view);
+        var view = new BreakdownView(title, subtitle, chips, cash, Enumerable.Empty<(int,int)>(), isCashOut: true);
+        view.Back += (_, __) => ShowTransactions();
+        ShowScreen(view);
+      }
     }
 
     private void ShowFloatBreakdown(string? batchId)
@@ -469,16 +553,7 @@ ORDER BY denom_cents DESC", ("$b", batchId));
       ShowScreen(view);
     }
 
-    private static string DenomLabel(int cents) => cents switch
-    {
-      5 => "5c",
-      25 => "25c",
-      100 => "$1",
-      200 => "$2",
-      500 => "$5",
-      2500 => "$25",
-      10000 => "$100",
-      _ => $"{cents}c"
-    };
+
+
   }
 }

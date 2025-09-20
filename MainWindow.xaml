@@ -5,90 +5,179 @@
         Height="720" Width="1080"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        SnapsToDevicePixels="True"
+        KeyDown="Window_KeyDown">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <!-- MAIN TABS -->
-    <TabControl x:Name="MainTabs" Grid.Row="0" SelectionChanged="MainTabs_SelectionChanged">
-      <!-- ===================== ACTIVITY TAB ===================== -->
-      <TabItem Header="Activity">
-        <Grid Margin="12">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
+    <!-- MAIN CONTENT AREA -->
+    <Grid x:Name="MainContent" Grid.Row="0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
 
-          <!-- Top bar -->
-          <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
-            <Button Content="Buy-in"   Click="BuyIn_Click"   Margin="0,0,8,0"/>
-            <Button Content="Cash-out" Click="CashOut_Click" Margin="0,0,8,0"/>
+      <!-- LEFT SIDE: ACTIVITY LOG -->
+      <Grid Grid.Column="0" Margin="12,12,6,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Activity header -->
+        <TextBlock Text="Activity Log" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+
+        <!-- Activity table -->
+        <DataGrid x:Name="TxGrid"
+                  Grid.Row="1"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Time" Binding="{Binding time}" Width="120"/>
+            <DataGridTextColumn Header="Type" Binding="{Binding type}" Width="60"/>
+            <DataGridTextColumn Header="Player" Binding="{Binding player_id}" Width="100"/>
+            <DataGridTextColumn Header="Amount" Binding="{Binding cash_amt, StringFormat=C}" Width="80"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Grid>
+
+      <!-- RIGHT SIDE: 8 BUTTON GRID (2 COLUMNS x 4 ROWS) -->
+      <Grid Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Row 1 -->
+        <!-- Buy-in Button -->
+        <Button Grid.Row="0" Grid.Column="0"
+                Margin="0,0,5,5"
+                Padding="15,20"
+                Click="BuyIn_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💵" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Buy-in" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Record player buy-in" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
+        </Button>
 
-          <!-- Body host: either transactions table or an inline view -->
-          <Grid Grid.Row="1">
-            <!-- Inline screen host (BuyInView / CashOutView) -->
-            <ContentControl x:Name="ScreenHost" Visibility="Collapsed"/>
-
-            <!-- Default: transactions table -->
-            <DataGrid x:Name="TxGrid"
-                      Visibility="Visible"
-                      AutoGenerateColumns="True"
-                      IsReadOnly="True"/>
-          </Grid>
-        </Grid>
-      </TabItem>
-
-      <!-- ===================== CASHBOX TAB ===================== -->
-      <TabItem Header="Cashbox">
-        <Grid Margin="12">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-          </Grid.RowDefinitions>
-
-          <!-- Cashbox toolbar (no manual refresh) -->
-          <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
-            <Button Content="Add Float…" Click="AddFloat_Click"/>
+        <!-- Cash-out Button -->
+        <Button Grid.Row="0" Grid.Column="1"
+                Margin="5,0,0,5"
+                Padding="15,20"
+                Click="CashOut_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Cash-out" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Record player cash-out" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
+        </Button>
 
-          <!-- Cashbox breakdown -->
-          <DataGrid x:Name="CashboxGrid"
-                    Grid.Row="1"
-                    AutoGenerateColumns="True"
-                    IsReadOnly="True"/>
+        <!-- Row 2 -->
+        <!-- Cashbox Button -->
+        <Button Grid.Row="1" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                Click="Cashbox_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Cashbox" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Manage float and cash" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
 
-          <!-- Cashbox total -->
-          <DockPanel Grid.Row="2" LastChildFill="False" Margin="0,10,0,0">
-            <TextBlock Text="Total:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-            <TextBlock x:Name="CashboxTotalText"
-                       FontWeight="Bold"
-                       VerticalAlignment="Center"/>
-          </DockPanel>
-        </Grid>
-      </TabItem>
-      <TabItem Header="Food">
-  <Grid Margin="8">
-    <!-- We’ll swap views here -->
-    <ContentControl x:Name="FoodHost"/>
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-      <Button Content="Catalog" Margin="0,0,8,0" Click="FoodCatalog_Click"/>
-      <Button Content="Sell…" Click="FoodSell_Click"/>
-    </StackPanel>
-  </Grid>
-</TabItem>
+        <!-- Food Button -->
+        <Button Grid.Row="1" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                Click="Food_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="🍕" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Food" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Sell food and drinks" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
 
-    </TabControl>
+        <!-- Row 3 -->
+        <!-- Empty Button 5 -->
+        <Button Grid.Row="2" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="LightGray"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock Text="Button 5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+          </StackPanel>
+        </Button>
 
-    <!-- STATUS BAR -->
-    <StatusBar Grid.Row="1">
-      <StatusBarItem>
-        <TextBlock x:Name="StatusText" Text="Ready."/>
-      </StatusBarItem>
-    </StatusBar>
+        <!-- Empty Button 6 -->
+        <Button Grid.Row="2" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="LightGray"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock Text="Button 6" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 4 -->
+        <!-- Lost Chips Button -->
+        <Button Grid.Row="3" Grid.Column="0"
+                Margin="0,5,5,0"
+                Padding="15,20"
+                Click="LostChips_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Lost Chips" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Record lost chips as tips" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Settings Button (Bottom Right) -->
+        <Button Grid.Row="3" Grid.Column="1"
+                Margin="5,5,0,0"
+                Padding="15,20"
+                Click="Settings_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="⚙" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Settings" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Configure system" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Grid>
+
+
+    <!-- OVERLAY HOSTS FOR MODAL CONTENT - These cover the entire window -->
+    <ContentControl x:Name="ScreenHost" Visibility="Collapsed" Grid.Row="0"/>
+    <ContentControl x:Name="SettingsHost" Visibility="Collapsed" Grid.Row="0"/>
+    <ContentControl x:Name="FoodHost" Visibility="Collapsed" Grid.Row="0"/>
   </Grid>
 </Window>
