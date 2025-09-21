@@ -43,6 +43,65 @@
           </StackPanel>
         </GroupBox>
 
+        <!-- Food Items Management Section -->
+        <GroupBox Header="Food Items Management" Margin="0,0,0,20">
+          <StackPanel Margin="10">
+            <TextBlock Text="Manage food items for sale:" Margin="0,0,0,10"/>
+            
+            <!-- Add New Item Section -->
+            <GroupBox Header="Add New Item" Margin="0,0,0,10">
+              <StackPanel Margin="10">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="100"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:" VerticalAlignment="Center" Margin="0,0,5,5"/>
+                  <TextBox x:Name="NewItemNameBox" Grid.Row="0" Grid.Column="1" Margin="0,0,10,5"/>
+                  
+                  <TextBlock Grid.Row="0" Grid.Column="2" Text="Price:" VerticalAlignment="Center" Margin="0,0,5,5"/>
+                  <TextBox x:Name="NewItemPriceBox" Grid.Row="0" Grid.Column="3" Margin="0,0,10,5" Text="0.00"/>
+                  
+                  <Button Grid.Row="0" Grid.Column="4" Content="Add Item" Click="AddFoodItemInline_Click" Margin="0,0,0,5"/>
+                  
+                  <TextBlock Grid.Row="1" Grid.Column="0" Text="Image:" VerticalAlignment="Center" Margin="0,0,5,5"/>
+                  <TextBox x:Name="NewItemImageBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,10,5"/>
+                  <Button Grid.Row="1" Grid.Column="4" Content="Browse" Click="BrowseImage_Click" Margin="0,0,0,5"/>
+                </Grid>
+              </StackPanel>
+            </GroupBox>
+            
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+              <Button x:Name="DeleteFoodItemButton" Content="Delete Selected" Width="120" Margin="0,0,10,0" 
+                      Click="DeleteFoodItem_Click" IsEnabled="False"/>
+            </StackPanel>
+            
+            <DataGrid x:Name="FoodItemsGrid" 
+                      AutoGenerateColumns="False" 
+                      CanUserAddRows="False" 
+                      CanUserDeleteRows="False"
+                      CanUserResizeRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      SelectionChanged="FoodItemsGrid_SelectionChanged">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding name}" Width="*" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Price" Binding="{Binding price}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Image Path" Binding="{Binding image_path}" Width="*" IsReadOnly="True"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </StackPanel>
+        </GroupBox>
+
         <!-- Chip Configuration Section -->
         <GroupBox Header="Chip Configuration" Margin="0,0,0,20">
           <StackPanel Margin="10">

@@ -90,22 +90,13 @@ CREATE TABLE IF NOT EXISTS tx_chips(
       } catch { }
 
       // ----- NEW: Product Catalog -----
-      // products + variants (each variant can have its own image & price)
+      // Simple products without variants
       Exec(@"
 CREATE TABLE IF NOT EXISTS products(
   product_id   INTEGER PRIMARY KEY AUTOINCREMENT,
   name         TEXT NOT NULL,
-  base_price   REAL NOT NULL DEFAULT 0,   -- used if no variant chosen
+  price        REAL NOT NULL DEFAULT 0,   -- single price per product
   image_path   TEXT                       -- optional file path
-);
-");
-      Exec(@"
-CREATE TABLE IF NOT EXISTS product_variants(
-  variant_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-  product_id   INTEGER NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
-  name         TEXT NOT NULL,             -- e.g. ""Large"", ""Chicken"", ""No cheese""
-  price        REAL NOT NULL,
-  image_path   TEXT
 );
 ");
 
@@ -125,7 +116,6 @@ CREATE TABLE IF NOT EXISTS sale_items(
   sale_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
   sale_id      INTEGER NOT NULL REFERENCES sales(sale_id) ON DELETE CASCADE,
   product_id   INTEGER NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
-  variant_id   INTEGER NULL REFERENCES product_variants(variant_id) ON DELETE SET NULL,
   qty          INTEGER NOT NULL,
   unit_price   REAL NOT NULL
 );
@@ -174,6 +164,15 @@ CREATE TABLE IF NOT EXISTS activity_log (
 );
 ");
       try { Exec("CREATE INDEX IF NOT EXISTS idx_activity_type_time ON activity_log(activity_type, time)"); } catch { }
+
+      // ----- NEW: Food Slot Assignments -----
+      Exec(@"
+CREATE TABLE IF NOT EXISTS food_slot_assignments (
+  slot_id    INTEGER PRIMARY KEY CHECK (slot_id >= 1 AND slot_id <= 6),
+  product_id INTEGER REFERENCES products(product_id) ON DELETE SET NULL,
+  UNIQUE(slot_id)
+);
+");
     }
 
     // ----------------- Public helpers -----------------
@@ -275,40 +274,20 @@ CREATE TABLE IF NOT EXISTS activity_log (
 
     // ----------------- Settings export/import -----------------
 
-    // Exports just the reusable catalog (products + variants) to JSON
+    // Exports just the reusable catalog (products) to JSON
     public static void ExportSettings(string filePath)
     {
-      var products = Query("SELECT product_id,name,base_price,image_path FROM products");
-      var variants = Query("SELECT variant_id,product_id,name,price,image_path FROM product_variants");
+      var products = Query("SELECT product_id,name,price,image_path FROM products");
 
       var prodList = new List<object>();
-      var variantLookup = new Dictionary<long, List<object>>();
-
-      foreach (DataRow v in variants.Rows)
-      {
-        long pid = Convert.ToInt64(v["product_id"]);
-        if (!variantLookup.TryGetValue(pid, out var list))
-        {
-          list = new List<object>();
-          variantLookup[pid] = list;
-        }
-        list.Add(new
-        {
-          name = (string)(v["name"] ?? ""),
-          price = Convert.ToDouble(v["price"] ?? 0.0),
-          image = (string?)(v["image_path"] == DBNull.Value ? null : v["image_path"])
-        });
-      }
 
       foreach (DataRow p in products.Rows)
       {
-        long pid = Convert.ToInt64(p["product_id"]);
         prodList.Add(new
         {
           name = (string)(p["name"] ?? ""),
-          base_price = Convert.ToDouble(p["base_price"] ?? 0.0),
-          image = (string?)(p["image_path"] == DBNull.Value ? null : p["image_path"]),
-          variants = variantLookup.TryGetValue(pid, out var vs) ? vs : new List<object>()
+          price = Convert.ToDouble(p["price"] ?? 0.0),
+          image = (string?)(p["image_path"] == DBNull.Value ? null : p["image_path"])
         });
       }
 
@@ -326,7 +305,6 @@ CREATE TABLE IF NOT EXISTS activity_log (
 
       if (!merge)
       {
-        Exec("DELETE FROM product_variants");
         Exec("DELETE FROM products");
       }
 
@@ -335,27 +313,50 @@ CREATE TABLE IF NOT EXISTS activity_log (
         foreach (var p in prods.EnumerateArray())
         {
           string name = p.GetProperty("name").GetString() ?? "";
-          double basePrice = p.TryGetProperty("base_price", out var bp) ? bp.GetDouble() : 0.0;
+          double price = p.TryGetProperty("price", out var bp) ? bp.GetDouble() : 0.0;
           string? img = p.TryGetProperty("image", out var ip) && ip.ValueKind != JsonValueKind.Null ? ip.GetString() : null;
 
-          Exec("INSERT INTO products(name,base_price,image_path) VALUES ($n,$pr,$img)",
-               ("$n", name), ("$pr", basePrice), ("$img", (object?)img ?? DBNull.Value));
-          long newPid = ScalarLong("SELECT last_insert_rowid()");
-
-          if (p.TryGetProperty("variants", out var vars) && vars.ValueKind == JsonValueKind.Array)
-          {
-            foreach (var v in vars.EnumerateArray())
-            {
-              string vname = v.GetProperty("name").GetString() ?? "";
-              double vprice = v.TryGetProperty("price", out var vp) ? vp.GetDouble() : basePrice;
-              string? vimg = v.TryGetProperty("image", out var vip) && vip.ValueKind != JsonValueKind.Null ? vip.GetString() : null;
-
-              Exec("INSERT INTO product_variants(product_id,name,price,image_path) VALUES ($p,$n,$pr,$img)",
-                   ("$p", newPid), ("$n", vname), ("$pr", vprice), ("$img", (object?)vimg ?? DBNull.Value));
-            }
-          }
+          Exec("INSERT INTO products(name,price,image_path) VALUES ($n,$pr,$img)",
+               ("$n", name), ("$pr", price), ("$img", (object?)img ?? DBNull.Value));
         }
       }
+    }
+
+    // ----------------- Food Slot Management -----------------
+
+    public static void SaveFoodSlotAssignment(int slotId, int? productId)
+    {
+      if (productId.HasValue)
+      {
+        Exec("INSERT OR REPLACE INTO food_slot_assignments(slot_id, product_id) VALUES ($slot, $product)",
+             ("$slot", slotId), ("$product", productId.Value));
+      }
+      else
+      {
+        Exec("DELETE FROM food_slot_assignments WHERE slot_id = $slot", ("$slot", slotId));
+      }
+    }
+
+    public static Dictionary<int, int> LoadFoodSlotAssignments()
+    {
+      var assignments = new Dictionary<int, int>();
+      
+      try
+      {
+        var result = Query("SELECT slot_id, product_id FROM food_slot_assignments");
+        foreach (DataRow row in result.Rows)
+        {
+          var slotId = Convert.ToInt32(row["slot_id"]);
+          var productId = Convert.ToInt32(row["product_id"]);
+          assignments[slotId] = productId;
+        }
+      }
+      catch
+      {
+        // Return empty dictionary if table doesn't exist or query fails
+      }
+
+      return assignments;
     }
   }
 }

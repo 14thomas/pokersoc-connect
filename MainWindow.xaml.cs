@@ -128,7 +128,9 @@ namespace pokersoc_connect
       
       // Show food content in ScreenHost
       var foodView = new FoodCatalogView();
-      foodView.RequestSell += (_, __) => FoodSell_Click(this, new RoutedEventArgs());
+      foodView.BackToMain += (_, __) => ShowTransactions();
+      foodView.GoToSettings += (_, __) => ShowSettings();
+      foodView.SaleConfirmed += HandleFoodSaleConfirmed;
       ScreenHost.Content = foodView;
       ScreenHost.Visibility = Visibility.Visible;
     }
@@ -278,88 +280,71 @@ namespace pokersoc_connect
       RefreshActivity();
     }
     
-    // ===== Food Tab =====
-private void FoodCatalog_Click(object sender, RoutedEventArgs e)
-{
-  var view = new FoodCatalogView();
-  view.RequestSell += (_, __) => FoodSell_Click(sender, e);
-  FoodHost.Content = view;
-}
-
-private void FoodSell_Click(object sender, RoutedEventArgs e)
-{
-  var sell = new FoodSellView();
-  sell.BackToCatalog += (_, __) => { FoodHost.Content = new FoodCatalogView(); };
-  sell.BackToMain += (_, __) => { ShowTransactions(); };
-  sell.SaleConfirmed += (_, args) =>
-  {
-    try
+    // ===== Food Sale Handling =====
+    private void HandleFoodSaleConfirmed(object? sender, SaleConfirmedEventArgs args)
     {
-      // Commit the sale
-      Database.InTransaction(tx =>
-    {
-      // optional player
-      string? playerId = args.PlayerId;
-      if (!string.IsNullOrWhiteSpace(playerId))
+      try
       {
-        // upsert anonymous typed id
-        Database.Exec(
-          "INSERT OR IGNORE INTO players(player_id,display_name,first_name,last_name) VALUES ($id,$id,'','')",
-          tx, ("$id", playerId));
+        // Commit the sale
+        Database.InTransaction(tx =>
+        {
+          // optional player
+          string? playerId = args.PlayerId;
+          if (!string.IsNullOrWhiteSpace(playerId))
+          {
+            // upsert anonymous typed id
+            Database.Exec(
+              "INSERT OR IGNORE INTO players(player_id,display_name,first_name,last_name) VALUES ($id,$id,'','')",
+              tx, ("$id", playerId));
+          }
+
+          Database.Exec("INSERT INTO sales(player_id,staff) VALUES ($p,'Dealer')",
+            tx, ("$p", (object?)playerId ?? DBNull.Value));
+          long saleId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
+
+          Database.Exec("INSERT INTO sale_items(sale_id,product_id,qty,unit_price) VALUES ($s,$p,$q,$pr)",
+            tx, ("$s", saleId), ("$p", args.ProductId),
+                ("$q", args.Qty), ("$pr", args.UnitPrice));
+
+          // Payment:
+          double saleTotal = args.Qty * args.UnitPrice;
+          double payTotal  = (args.PayDenomCents * args.PayQty) / 100.0;
+
+          if (args.PayMethod == "CASH")
+          {
+            // record cash IN to cashbox
+            Database.Exec(
+              "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CASH',$d,$q)",
+              tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
+
+            Database.Exec(
+              "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes, batch_id) " +
+              "VALUES ($d, $q, 'SALE', $p, NULL, 'Food sale', NULL)",
+              tx, ("$d", args.PayDenomCents), ("$q", args.PayQty),
+                  ("$p", (object?)playerId ?? DBNull.Value));
+          }
+          else // CHIP
+          {
+            // chips come IN to house
+            Database.Exec(
+              "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CHIP',$d,$q)",
+              tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
+
+            // reuse tx_chips to track chips stock from sales
+            Database.Exec(
+              "INSERT INTO tx_chips(sale_id, tx_id, denom_cents, qty) VALUES ($s,NULL,$d,$q)",
+              tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
+          }
+        });
+
+        // After sale
+        RefreshActivity();
       }
-
-      Database.Exec("INSERT INTO sales(player_id,staff) VALUES ($p,'Dealer')",
-        tx, ("$p", (object?)playerId ?? DBNull.Value));
-      long saleId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
-
-      Database.Exec("INSERT INTO sale_items(sale_id,product_id,variant_id,qty,unit_price) VALUES ($s,$p,$v,$q,$pr)",
-        tx, ("$s", saleId), ("$p", args.ProductId),
-            ("$v", (object?)args.VariantId ?? DBNull.Value),
-            ("$q", args.Qty), ("$pr", args.UnitPrice));
-
-      // Payment:
-      double saleTotal = args.Qty * args.UnitPrice;
-      double payTotal  = (args.PayDenomCents * args.PayQty) / 100.0;
-
-      if (args.PayMethod == "CASH")
+      catch (Exception ex)
       {
-        // record cash IN to cashbox
-        Database.Exec(
-          "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CASH',$d,$q)",
-          tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
-
-        Database.Exec(
-          "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes, batch_id) " +
-          "VALUES ($d, $q, 'SALE', $p, NULL, 'Food sale', NULL)",
-          tx, ("$d", args.PayDenomCents), ("$q", args.PayQty),
-              ("$p", (object?)playerId ?? DBNull.Value));
+        MessageBox.Show($"Error processing sale: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
       }
-      else // CHIP
-      {
-        // chips come IN to house
-        Database.Exec(
-          "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CHIP',$d,$q)",
-          tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
-
-        // reuse tx_chips to track chips stock from sales
-        Database.Exec(
-          "INSERT INTO tx_chips(sale_id, tx_id, denom_cents, qty) VALUES ($s,NULL,$d,$q)",
-          tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
-      }
-    });
-
-      // After sale
-      RefreshActivity();   // you might add sales to activity later, if desired
-      FoodHost.Content = new FoodCatalogView();
     }
-    catch (Exception ex)
-    {
-      MessageBox.Show($"Error processing sale: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-    }
-  };
-
-  FoodHost.Content = sell;
-}
 
 
     // ===== New Button Handlers =====

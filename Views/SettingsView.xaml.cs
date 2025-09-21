@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -18,6 +19,7 @@ namespace pokersoc_connect.Views
     {
       InitializeComponent();
       LoadChipConfiguration();
+      LoadFoodItems();
     }
 
     private void LoadChipConfiguration()
@@ -292,6 +294,129 @@ namespace pokersoc_connect.Views
       {
         MessageBox.Show($"Error applying chip changes:\n{ex.Message}", "Apply Error", 
           MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void LoadFoodItems()
+    {
+      try
+      {
+        if (Database.Conn == null)
+        {
+          FoodItemsGrid.ItemsSource = null;
+          return;
+        }
+
+        var result = Database.Query("SELECT product_id, name, price, image_path FROM products ORDER BY name");
+        var foodItems = result.AsEnumerable().Select(r => new
+        {
+          product_id = Convert.ToInt64(r["product_id"]),
+          name = r["name"]?.ToString() ?? "",
+          price = Convert.ToDouble(r["price"] ?? 0).ToString("C", CultureInfo.GetCultureInfo("en-AU")),
+          image_path = r["image_path"] == DBNull.Value ? "" : r["image_path"]?.ToString() ?? ""
+        }).ToList();
+
+        FoodItemsGrid.ItemsSource = foodItems;
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error loading food items:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void FoodItemsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      // Enable/disable delete button based on selection
+      DeleteFoodItemButton.IsEnabled = FoodItemsGrid.SelectedItem != null;
+    }
+
+    private void AddFoodItemInline_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var name = NewItemNameBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+          MessageBox.Show("Please enter a product name.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+          NewItemNameBox.Focus();
+          return;
+        }
+
+        if (!double.TryParse(NewItemPriceBox.Text, NumberStyles.Any, CultureInfo.GetCultureInfo("en-AU"), out var price) || price < 0)
+        {
+          MessageBox.Show("Please enter a valid price.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+          NewItemPriceBox.Focus();
+          NewItemPriceBox.SelectAll();
+          return;
+        }
+
+        var imagePath = string.IsNullOrWhiteSpace(NewItemImageBox.Text) ? null : NewItemImageBox.Text.Trim();
+
+        Database.Exec("INSERT INTO products(name, price, image_path) VALUES ($n, $p, $img)",
+          ("$n", name), ("$p", price), ("$img", (object?)imagePath ?? DBNull.Value));
+        
+        LoadFoodItems();
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
+        
+        // Clear the form
+        NewItemNameBox.Text = "";
+        NewItemPriceBox.Text = "0.00";
+        NewItemImageBox.Text = "";
+        NewItemNameBox.Focus();
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error adding food item:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void BrowseImage_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+          Title = "Choose image",
+          Filter = "Images|*.png;*.jpg;*.jpeg;*.gif;*.bmp|All files|*.*"
+        };
+        if (dlg.ShowDialog() == true)
+        {
+          NewItemImageBox.Text = dlg.FileName;
+        }
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error browsing for image:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void DeleteFoodItem_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        if (FoodItemsGrid.SelectedItem == null)
+        {
+          MessageBox.Show("Please select a food item to delete.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+          return;
+        }
+
+        var selectedItem = FoodItemsGrid.SelectedItem;
+        long productId = (long)selectedItem.GetType().GetProperty("product_id")!.GetValue(selectedItem, null)!;
+        string productName = selectedItem.GetType().GetProperty("name")!.GetValue(selectedItem, null)!.ToString()!;
+
+        var result = MessageBox.Show($"Are you sure you want to delete '{productName}'?\n\nThis will also delete all sales records for this item.", 
+          "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+          Database.Exec("DELETE FROM products WHERE product_id = $id", ("$id", productId));
+          LoadFoodItems();
+          SettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error deleting food item:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
       }
     }
 
