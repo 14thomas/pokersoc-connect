@@ -1,0 +1,51 @@
+<UserControl x:Class="pokersoc_connect.Views.FoodSaleDetailsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinWidth="520">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Sale Information -->
+    <TextBlock Grid.Row="0" Text="{Binding SaleTime}" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+    <TextBlock Grid.Row="1" Text="{Binding ProductInfo}" FontSize="16" Margin="0,0,0,5"/>
+    <TextBlock Grid.Row="2" Text="{Binding PaymentInfo}" FontSize="16" Margin="0,0,0,10"/>
+
+    <!-- Payment Details -->
+    <TextBlock Grid.Row="3" Text="Payment Details:" FontSize="14" FontWeight="Bold" Margin="0,10,0,6"/>
+    <DataGrid Grid.Row="4" ItemsSource="{Binding PaymentRows}" AutoGenerateColumns="False"
+              CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+              Visibility="{Binding HasPayments, Converter={StaticResource BoolToVisibility}}">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Method" Binding="{Binding Method}" Width="80" />
+        <DataGridTextColumn Header="Denomination" Binding="{Binding Denomination}" Width="*" />
+        <DataGridTextColumn Header="Qty" Binding="{Binding Qty}" Width="60" />
+        <DataGridTextColumn Header="Amount" Binding="{Binding Amount}" Width="100" />
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <!-- Change Details -->
+    <TextBlock Grid.Row="5" Text="Change Given:" FontSize="14" FontWeight="Bold" Margin="0,10,0,6"
+               Visibility="{Binding HasChange, Converter={StaticResource BoolToVisibility}}"/>
+    <DataGrid Grid.Row="6" ItemsSource="{Binding ChangeRows}" AutoGenerateColumns="False"
+              CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+              Visibility="{Binding HasChange, Converter={StaticResource BoolToVisibility}}">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Denomination" Binding="{Binding Denomination}" Width="*" />
+        <DataGridTextColumn Header="Qty" Binding="{Binding Qty}" Width="80" />
+        <DataGridTextColumn Header="Amount" Binding="{Binding Amount}" Width="120" />
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+      <Button Content="Back" Click="Back_Click" Padding="15,8" Margin="0,0,10,0" Background="LightCoral"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

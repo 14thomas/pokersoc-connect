@@ -100,7 +100,7 @@
                 BorderThickness="2"
                 BorderBrush="Gray"
                 Background="LightGreen">
-          <StackPanel>
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Float Added" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock x:Name="FloatAmountText" Text="$0.00" FontSize="14" FontWeight="Bold" 
@@ -129,8 +129,8 @@
                 Padding="15,20"
                 BorderThickness="2"
                 BorderBrush="Gray"
-                Background="LightCoral">
-          <StackPanel>
+                Background="Plum">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Tips" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock x:Name="TipsText" Text="$0.00" FontSize="14" FontWeight="Bold" 
@@ -153,19 +153,20 @@
           </StackPanel>
         </Button>
 
-        <!-- Empty Button 6 -->
-        <Button Grid.Row="2" Grid.Column="1"
+        <!-- Total Sales Panel -->
+        <Border Grid.Row="2" Grid.Column="1"
+                x:Name="TotalSalesPanel"
                 Margin="5,5,0,5"
                 Padding="15,20"
                 BorderThickness="2"
-                BorderBrush="LightGray"
-                IsEnabled="False">
-          <StackPanel>
-            <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
-            <TextBlock Text="Button 6" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
-            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+                BorderBrush="Gold"
+                Background="LightYellow">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock x:Name="TotalSalesIcon" Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock x:Name="TotalSalesLabel" Text="Total Sales" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="TotalSalesAmount" Text="$0.00" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
           </StackPanel>
-        </Button>
+        </Border>
 
         <!-- Row 4 -->
         <!-- Empty Button 7 -->
@@ -188,7 +189,8 @@
                 Padding="15,20"
                 Click="BackToMain_Click"
                 BorderThickness="2"
-                BorderBrush="Gray">
+                BorderBrush="Gray"
+                Background="LightCoral">
           <StackPanel>
             <TextBlock Text="🏠" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>

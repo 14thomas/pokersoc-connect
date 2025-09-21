@@ -7,8 +7,8 @@
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
-    <!-- Main Content - Split Layout (Same as BuyIn/Float Add) -->
-    <Grid Grid.Row="0">
+    <!-- STEP 1: Chip Selection Screen -->
+    <Grid x:Name="ChipSelectionScreen" Grid.Row="0">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="2*"/>
         <ColumnDefinition Width="3*"/>
@@ -25,8 +25,8 @@
           <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Change header -->
-        <TextBlock Text="Change to Give" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+        <!-- Chips to Cash Out header -->
+        <TextBlock Text="Chips to Cash Out" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
         <!-- Custom Change table -->
         <StackPanel Grid.Row="1" Background="White">
@@ -38,7 +38,7 @@
                 <ColumnDefinition Width="80"/>
                 <ColumnDefinition Width="100"/>
               </Grid.ColumnDefinitions>
-              <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
+              <TextBlock Grid.Column="0" Text="Chip Denomination" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
               <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
@@ -97,7 +97,7 @@
                 Background="LightGreen">
           <StackPanel>
             <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <TextBlock Text="Total Change" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Total Value" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock x:Name="TotalText" Text="$0.00" FontSize="14" FontWeight="Bold" 
                        HorizontalAlignment="Center" Margin="0,5,0,0"/>
           </StackPanel>
@@ -120,15 +120,15 @@
             </StackPanel>
           </Button>
 
-          <!-- Confirm Button -->
-          <Button Grid.Column="1" Margin="5,0,0,0" Click="Confirm_Click"
-                  x:Name="ConfirmBtn"
+          <!-- Next Button -->
+          <Button Grid.Column="1" Margin="5,0,0,0" Click="Next_Click"
+                  x:Name="NextBtn"
                   Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightBlue"
                   IsEnabled="False">
             <StackPanel>
-              <TextBlock Text="✓" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="Confirm" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock Text="Process cashout" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+              <TextBlock Text="→" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Next" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Continue to change" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
             </StackPanel>
           </Button>
         </Grid>
@@ -345,6 +345,392 @@
           </Button>
         </Grid>
       </Grid>
+    </Grid>
+
+    <!-- STEP 2: Change Customization Screen -->
+    <Grid x:Name="ChangeCustomizationScreen" Grid.Row="0" Visibility="Collapsed">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT SIDE: CHANGE CUSTOMIZATION -->
+      <Grid Grid.Column="0" Margin="12,12,6,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Change header -->
+        <TextBlock Text="Change Breakdown" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+
+        <!-- Change table -->
+        <StackPanel Grid.Row="1" Background="White">
+          <!-- Header Row -->
+          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+            <Grid Height="40">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="100"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+            </Grid>
+          </Border>
+          
+          <!-- Data Rows -->
+          <StackPanel x:Name="ChangeCustomizationRowsPanel">
+            <!-- Rows will be populated dynamically -->
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Total Panel -->
+        <Border Grid.Row="2"
+                Margin="0,10,0,10"
+                Padding="15,20"
+                BorderThickness="1,0,1,1"
+                BorderBrush="Gray"
+                Background="LightGreen">
+          <StackPanel>
+            <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Total Value" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="ChangeTotalText" Text="$0.00" FontSize="14" FontWeight="Bold" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+
+      </Grid>
+
+      <!-- RIGHT SIDE: 8 BUTTON GRID (2 COLUMNS x 4 ROWS) -->
+      <Grid Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Row 1 -->
+        <!-- Add Food Button -->
+        <Button Grid.Row="0" Grid.Column="0"
+                Margin="0,0,5,5"
+                Padding="15,20"
+                Click="AddFood_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="🍕" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Add Food" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Purchase items" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Add Tip Button -->
+        <Button Grid.Row="0" Grid.Column="1"
+                Margin="5,0,0,5"
+                Padding="15,20"
+                Click="AddTip_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Add Tip" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Custom tip amount" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 2 -->
+        <!-- Change Denominations Button -->
+        <Button Grid.Row="1" Grid.Column="0"
+                Margin="0,5,5,5"
+                Padding="15,20"
+                Click="ChangeDenominations_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Change" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Customize denominations" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Add Extra Cash Button -->
+        <Button Grid.Row="1" Grid.Column="1"
+                Margin="5,5,0,5"
+                Padding="15,20"
+                Click="AddExtraCash_Click"
+                BorderThickness="2"
+                BorderBrush="Gray">
+          <StackPanel>
+            <TextBlock Text="💵" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Add Cash" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Add extra money" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Row 3 -->
+        <!-- Summary Panel -->
+        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                Margin="0,5,0,5"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="Gray"
+                Background="LightBlue">
+          <StackPanel>
+            <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Cashout Summary" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="ChipValueText" Text="Chip Value: $0.00" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            <TextBlock x:Name="FoodValueText" Text="Food: $0.00" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            <TextBlock x:Name="TipValueText" Text="Tip: $0.00" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            <TextBlock x:Name="ExtraCashValueText" Text="Extra Cash: $0.00" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            <TextBlock x:Name="FinalChangeText" Text="Final Change: $0.00" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Row 4 -->
+        <!-- Back Button -->
+        <Button Grid.Row="3" Grid.Column="0"
+                Margin="0,5,5,0"
+                Padding="15,20"
+                Click="BackToChipSelection_Click"
+                BorderThickness="2"
+                BorderBrush="Gray"
+                Background="LightCoral">
+          <StackPanel>
+            <TextBlock Text="←" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Edit chips" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Confirm Button -->
+        <Button Grid.Row="3" Grid.Column="1"
+                Margin="5,5,0,0"
+                Click="ConfirmCashOut_Click"
+                x:Name="ConfirmCashOutBtn"
+                Padding="15,20"
+                BorderThickness="2"
+                BorderBrush="Gray"
+                Background="LightBlue"
+                IsEnabled="False">
+          <StackPanel>
+            <TextBlock Text="✓" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Confirm" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Process cashout" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <!-- INLINE DIALOG OVERLAYS -->
+      
+      <!-- Food Selection Dialog -->
+      <Border x:Name="FoodSelectionDialog" 
+              Grid.ColumnSpan="2" 
+              Visibility="Collapsed"
+              Background="#80000000" 
+              HorizontalAlignment="Stretch" 
+              VerticalAlignment="Stretch">
+        <Border Background="White" 
+                HorizontalAlignment="Center" 
+                VerticalAlignment="Center" 
+                Padding="30" 
+                CornerRadius="10"
+                MinWidth="500"
+                MinHeight="600">
+          <StackPanel>
+            <TextBlock Text="Select Food Item" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+            
+            <StackPanel x:Name="FoodItemsList" Height="400" Width="400" Margin="0,0,0,20">
+              <!-- Food items will be populated dynamically -->
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <Button Content="Cancel" Margin="0,0,10,0" Padding="20,10" Click="CancelFoodSelection_Click"/>
+              <Button Content="Add Selected" Padding="20,10" Click="ConfirmFoodSelection_Click" IsEnabled="False" x:Name="ConfirmFoodButton"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Border>
+
+      <!-- Tip Input Dialog -->
+      <Border x:Name="TipInputDialog" 
+              Grid.ColumnSpan="2" 
+              Visibility="Collapsed"
+              Background="#80000000" 
+              HorizontalAlignment="Stretch" 
+              VerticalAlignment="Stretch">
+        <Border Background="White" 
+                HorizontalAlignment="Center" 
+                VerticalAlignment="Center" 
+                Padding="30" 
+                CornerRadius="10"
+                MinWidth="400">
+          <StackPanel>
+            <TextBlock Text="Enter Tip Amount" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+            
+            <!-- Tip Amount Display -->
+            <Border Background="LightGray" 
+                    Padding="20" 
+                    CornerRadius="5" 
+                    Margin="0,0,0,20">
+              <TextBlock x:Name="TipAmountDisplay" 
+                         Text="$0.00" 
+                         FontSize="24" 
+                         FontWeight="Bold" 
+                         HorizontalAlignment="Center"/>
+            </Border>
+            
+            <!-- Touchscreen Keypad -->
+            <Grid Width="300" Height="300">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              
+              <!-- Row 1 -->
+              <Button Grid.Row="0" Grid.Column="0" Content="1" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="1"/>
+              <Button Grid.Row="0" Grid.Column="1" Content="2" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="2"/>
+              <Button Grid.Row="0" Grid.Column="2" Content="3" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="3"/>
+              
+              <!-- Row 2 -->
+              <Button Grid.Row="1" Grid.Column="0" Content="4" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="4"/>
+              <Button Grid.Row="1" Grid.Column="1" Content="5" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="5"/>
+              <Button Grid.Row="1" Grid.Column="2" Content="6" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="6"/>
+              
+              <!-- Row 3 -->
+              <Button Grid.Row="2" Grid.Column="0" Content="7" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="7"/>
+              <Button Grid.Row="2" Grid.Column="1" Content="8" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="8"/>
+              <Button Grid.Row="2" Grid.Column="2" Content="9" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="9"/>
+              
+              <!-- Row 4 -->
+              <Button Grid.Row="3" Grid.Column="0" Content="." FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="."/>
+              <Button Grid.Row="3" Grid.Column="1" Content="0" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="0"/>
+              <Button Grid.Row="3" Grid.Column="2" Content="⌫" FontSize="20" Margin="2" Click="TipKeypadButton_Click" Tag="backspace"/>
+            </Grid>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+              <Button Content="Close" Margin="0,0,10,0" Padding="20,10" Click="CloseTipInput_Click"/>
+              <Button Content="Set Tip" Padding="20,10" Click="SetTipInput_Click"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Border>
+
+      <!-- Extra Cash Input Dialog -->
+      <Border x:Name="ExtraCashInputDialog" 
+              Grid.ColumnSpan="2" 
+              Visibility="Collapsed"
+              Background="#80000000" 
+              HorizontalAlignment="Stretch" 
+              VerticalAlignment="Stretch">
+        <Border Background="White" 
+                HorizontalAlignment="Center" 
+                VerticalAlignment="Center" 
+                Padding="30" 
+                CornerRadius="10"
+                MinWidth="500">
+          <StackPanel>
+            <TextBlock Text="Add Extra Cash" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+            
+            <!-- Extra Cash Amount Display -->
+            <Border Background="LightGray" 
+                    Padding="20" 
+                    CornerRadius="5" 
+                    Margin="0,0,0,20">
+              <TextBlock x:Name="ExtraCashAmountDisplay" 
+                         Text="$0.00" 
+                         FontSize="24" 
+                         FontWeight="Bold" 
+                         HorizontalAlignment="Center"/>
+            </Border>
+            
+            <!-- Cash Denomination Buttons -->
+            <Grid Width="400" Height="300">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              
+              <!-- Row 1: Coins -->
+              <Button Grid.Row="0" Grid.Column="0" Content="5c" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="5"/>
+              <Button Grid.Row="0" Grid.Column="1" Content="10c" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="10"/>
+              <Button Grid.Row="0" Grid.Column="2" Content="20c" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="20"/>
+              <Button Grid.Row="0" Grid.Column="3" Content="50c" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="50"/>
+              
+              <!-- Row 2: Small Bills -->
+              <Button Grid.Row="1" Grid.Column="0" Content="$1" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="100"/>
+              <Button Grid.Row="1" Grid.Column="1" Content="$2" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="200"/>
+              <Button Grid.Row="1" Grid.Column="2" Content="$5" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="500"/>
+              <Button Grid.Row="1" Grid.Column="3" Content="$10" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="1000"/>
+              
+              <!-- Row 3: Large Bills -->
+              <Button Grid.Row="2" Grid.Column="0" Content="$20" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="2000"/>
+              <Button Grid.Row="2" Grid.Column="1" Content="$50" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="5000"/>
+              <Button Grid.Row="2" Grid.Column="2" Content="Clear" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="clear"/>
+              <Button Grid.Row="2" Grid.Column="3" Content="⌫" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="backspace"/>
+            </Grid>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+              <Button Content="Close" Margin="0,0,10,0" Padding="20,10" Click="CloseExtraCashInput_Click"/>
+              <Button Content="Add Cash" Padding="20,10" Click="ConfirmExtraCashInput_Click"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Border>
+
+      <!-- Change Denominations Dialog -->
+      <Border x:Name="ChangeDenominationsDialog" 
+              Grid.ColumnSpan="2" 
+              Visibility="Collapsed"
+              Background="#80000000" 
+              HorizontalAlignment="Stretch" 
+              VerticalAlignment="Stretch">
+        <Border Background="White" 
+                HorizontalAlignment="Center" 
+                VerticalAlignment="Center" 
+                Padding="30" 
+                CornerRadius="10"
+                MinWidth="500">
+          <StackPanel>
+            <TextBlock Text="Customize Change Denominations" FontSize="20" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+            <TextBlock Text="(Manual customization disables automatic optimal)" FontSize="12" Foreground="Gray" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+            
+            <StackPanel x:Name="ChangeDenominationsList" Height="500" Width="450" Margin="0,0,0,20">
+              <!-- Change denominations will be populated dynamically -->
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <Button Content="Close" Margin="0,0,10,0" Padding="20,10" Click="CloseChangeDenominations_Click"/>
+              <Button Content="Reset to Optimal" Padding="20,10" Click="ResetToOptimalChange_Click"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Border>
+
     </Grid>
   </Grid>
 </UserControl>

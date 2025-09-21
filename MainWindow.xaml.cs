@@ -130,7 +130,7 @@ namespace pokersoc_connect
       var foodView = new FoodCatalogView();
       foodView.BackToMain += (_, __) => ShowTransactions();
       foodView.GoToSettings += (_, __) => ShowSettings();
-      foodView.SaleConfirmed += HandleFoodSaleConfirmed;
+      foodView.ActivityRefreshRequested += (_, __) => RefreshActivity();
       ScreenHost.Content = foodView;
       ScreenHost.Visibility = Visibility.Visible;
     }
@@ -280,71 +280,6 @@ namespace pokersoc_connect
       RefreshActivity();
     }
     
-    // ===== Food Sale Handling =====
-    private void HandleFoodSaleConfirmed(object? sender, SaleConfirmedEventArgs args)
-    {
-      try
-      {
-        // Commit the sale
-        Database.InTransaction(tx =>
-        {
-          // optional player
-          string? playerId = args.PlayerId;
-          if (!string.IsNullOrWhiteSpace(playerId))
-          {
-            // upsert anonymous typed id
-            Database.Exec(
-              "INSERT OR IGNORE INTO players(player_id,display_name,first_name,last_name) VALUES ($id,$id,'','')",
-              tx, ("$id", playerId));
-          }
-
-          Database.Exec("INSERT INTO sales(player_id,staff) VALUES ($p,'Dealer')",
-            tx, ("$p", (object?)playerId ?? DBNull.Value));
-          long saleId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
-
-          Database.Exec("INSERT INTO sale_items(sale_id,product_id,qty,unit_price) VALUES ($s,$p,$q,$pr)",
-            tx, ("$s", saleId), ("$p", args.ProductId),
-                ("$q", args.Qty), ("$pr", args.UnitPrice));
-
-          // Payment:
-          double saleTotal = args.Qty * args.UnitPrice;
-          double payTotal  = (args.PayDenomCents * args.PayQty) / 100.0;
-
-          if (args.PayMethod == "CASH")
-          {
-            // record cash IN to cashbox
-            Database.Exec(
-              "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CASH',$d,$q)",
-              tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
-
-            Database.Exec(
-              "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes, batch_id) " +
-              "VALUES ($d, $q, 'SALE', $p, NULL, 'Food sale', NULL)",
-              tx, ("$d", args.PayDenomCents), ("$q", args.PayQty),
-                  ("$p", (object?)playerId ?? DBNull.Value));
-          }
-          else // CHIP
-          {
-            // chips come IN to house
-            Database.Exec(
-              "INSERT INTO sale_payments(sale_id,method,denom_cents,qty) VALUES ($s,'CHIP',$d,$q)",
-              tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
-
-            // reuse tx_chips to track chips stock from sales
-            Database.Exec(
-              "INSERT INTO tx_chips(sale_id, tx_id, denom_cents, qty) VALUES ($s,NULL,$d,$q)",
-              tx, ("$s", saleId), ("$d", args.PayDenomCents), ("$q", args.PayQty));
-          }
-        });
-
-        // After sale
-        RefreshActivity();
-      }
-      catch (Exception ex)
-      {
-        MessageBox.Show($"Error processing sale: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-    }
 
 
     // ===== New Button Handlers =====
@@ -428,6 +363,11 @@ ORDER BY time DESC
         {
           var batchId = row["batch_id"]?.ToString();
           ShowFloatBreakdown(batchId);
+        }
+        else if (kind == "FOOD")
+        {
+          long saleId = row["tx_id"] is DBNull ? 0 : Convert.ToInt64(row["tx_id"]);
+          ShowFoodSaleDetails(saleId);
         }
       }
     }
@@ -534,6 +474,13 @@ ORDER BY denom_cents DESC", ("$b", batchId));
                                    Enumerable.Empty<(int,int)>(),   // no chips for float add
                                    lines,
                                    isCashOut: false);
+      view.Back += (_, __) => ShowTransactions();
+      ShowScreen(view);
+    }
+
+    private void ShowFoodSaleDetails(long saleId)
+    {
+      var view = new FoodSaleDetailsView(saleId);
       view.Back += (_, __) => ShowTransactions();
       ShowScreen(view);
     }

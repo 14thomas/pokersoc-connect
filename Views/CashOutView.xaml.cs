@@ -26,6 +26,14 @@ namespace pokersoc_connect.Views
     private readonly Dictionary<int,int> _payout = new();
     private static readonly int[] DenomsDesc = { 10000,5000,2500,2000,1000,500,200,100,50,25,20,10,5 };
 
+    // New fields for second screen functionality
+    private readonly Dictionary<int,int> _changeDenominations = new();
+    private readonly Dictionary<int,int> _selectedFoodItems = new();
+    private double _tipAmount = 0.0;
+    private double _foodTotal = 0.0;
+    private double _extraCashAmount = 0.0;
+    private readonly int[] _cashDenominations = { 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
+
     public string MemberNumber => ScanBox.Text.Trim();
     public int TotalCents => _chipCounts.Sum(kv => kv.Key * kv.Value);
     public double TotalDollars => TotalCents / 100.0;
@@ -118,40 +126,78 @@ namespace pokersoc_connect.Views
       TotalText.Text = (TotalDollars).ToString("C", culture);
 
       _payout.Clear();
+      RefreshChipTable();
+      
       if (TotalCents == 0)
       {
-        RefreshChangeTable();
-        ConfirmBtn.IsEnabled = false; return;
+        NextBtn.IsEnabled = false; return;
       }
 
       var avail = _available.ToDictionary(kv => kv.Key, kv => kv.Value);
       if (TryMakeChange(TotalCents, avail, out var plan))
       {
         foreach (var kv in plan) _payout[kv.Key] = kv.Value;
-        RefreshChangeTable();
-        ConfirmBtn.IsEnabled = true;
+        NextBtn.IsEnabled = true;
       }
       else
       {
-        RefreshChangeTable();
-        ConfirmBtn.IsEnabled = false;
+        NextBtn.IsEnabled = false;
       }
     }
 
-    private void RefreshChangeTable()
+    private void RefreshChipTable()
     {
       var culture = CultureInfo.GetCultureInfo("en-AU");
+      if (ChangeRowsPanel != null)
       ChangeRowsPanel.Children.Clear();
+      if (TotalText != null)
+        TotalText.Text = (TotalDollars).ToString("C", culture);
 
-      if (_payout.Count == 0)
+      // Debug: Check if we have any chips
+      System.Diagnostics.Debug.WriteLine($"RefreshChipTable called. _chipCounts.Count = {_chipCounts.Count}");
+      foreach (var kv in _chipCounts)
       {
-        // Show empty state or no change needed
+        System.Diagnostics.Debug.WriteLine($"  {kv.Key}: {kv.Value}");
+      }
+
+      if (_chipCounts.Count == 0)
+      {
+        // Show empty state message
+        var emptyRow = new Border
+        {
+          BorderBrush = Brushes.Gray,
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Background = Brushes.LightGray
+        };
+
+        var emptyGrid = new Grid { Height = 36 };
+        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+
+        var emptyText = new TextBlock
+        {
+          Text = "No chips selected",
+          FontSize = 14,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          FontStyle = FontStyles.Italic,
+          Opacity = 0.7
+        };
+        Grid.SetColumn(emptyText, 0);
+        Grid.SetColumnSpan(emptyText, 3);
+
+        emptyGrid.Children.Add(emptyText);
+        emptyRow.Child = emptyGrid;
+        if (ChangeRowsPanel != null)
+          ChangeRowsPanel.Children.Add(emptyRow);
         return;
       }
 
-      var orderedPayout = _payout.OrderByDescending(kv => kv.Key).ToList();
+      // Show the selected chips (not the change calculation)
+      var orderedChips = _chipCounts.OrderByDescending(kv => kv.Key).ToList();
       
-      foreach (var kv in orderedPayout)
+      foreach (var kv in orderedChips)
       {
         if (kv.Value <= 0) continue;
 
@@ -215,6 +261,7 @@ namespace pokersoc_connect.Views
         grid.Children.Add(countText);
         grid.Children.Add(valueText);
         row.Child = grid;
+        if (ChangeRowsPanel != null)
         ChangeRowsPanel.Children.Add(row);
       }
     }
@@ -298,30 +345,758 @@ namespace pokersoc_connect.Views
     private void Back_Click(object sender, RoutedEventArgs e) => Back?.Invoke(this, EventArgs.Empty);
     private void ClearScan_Click(object sender, RoutedEventArgs e) => ScanBox.Clear();
 
-    private void Confirm_Click(object sender, RoutedEventArgs e)
+    private void Next_Click(object sender, RoutedEventArgs e)
     {
       if (string.IsNullOrWhiteSpace(MemberNumber))
       {
         MessageBox.Show("Please scan or enter a member number first.");
         return;
       }
-      if (_payout.Count == 0)
+      if (_chipCounts.Sum(kv => kv.Value) == 0)
       {
-        MessageBox.Show("No payout planned.");
+        MessageBox.Show("Please select chips to cash out first.");
         return;
       }
-      // Pass both chips turned in AND cash payout plan
+
+      // Calculate initial change (chip value)
+      var chipValueCents = TotalCents;
+      CalculateOptimalChange(chipValueCents);
+      
+      // Load food items
+      LoadFoodItems();
+      
+      // Initialize change customization
+      InitializeChangeCustomization();
+      
+      // Update summary
+      UpdateCashoutSummary();
+      
+      // Show second screen
+      ShowChangeCustomizationScreen();
+    }
+
+    private void ConfirmCashOut_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        Database.InTransaction(transaction =>
+        {
+          // Add extra cash to cashbox if any
+          if (_extraCashAmount > 0)
+          {
+            // Add extra cash as received money
+            Database.Exec("INSERT INTO cashbox_movements (denom_cents, delta_qty, reason, notes) VALUES (@amount, @qty, 'CASHOUT', @notes)", transaction,
+              ("@amount", (int)(_extraCashAmount * 100)),
+              ("@qty", 1), // 1 unit of this amount
+              ("@notes", $"Extra cash from cashout - Member {MemberNumber}"));
+          }
+
+          // Add tip to tips table if any
+          if (_tipAmount > 0)
+          {
+            // Break down tip into denominations (simplified - just add as one entry)
+            Database.Exec("INSERT INTO tips (denom_cents, qty, notes) VALUES (@amount, @qty, @notes)", transaction,
+              ("@amount", (int)(_tipAmount * 100)),
+              ("@qty", 1),
+              ("@notes", $"Tip from cashout - Member {MemberNumber}"));
+          }
+
+          // Add food sale to activity log if any
+          if (_foodTotal > 0)
+          {
+            Database.Exec("INSERT INTO activity_log (activity_key, activity_type, activity_kind, amount_cents, notes) VALUES (@key, @type, @kind, @amount, @notes)", transaction,
+              ("@key", $"cashout_food_{DateTime.Now.Ticks}"),
+              ("@type", "FOOD_SALE"),
+              ("@kind", "CASHOUT_FOOD"),
+              ("@amount", (int)(_foodTotal * 100)),
+              ("@notes", $"Food sale during cashout - Member {MemberNumber}"));
+          }
+        });
+      }
+      catch (Exception ex)
+      {
+        System.Diagnostics.Debug.WriteLine($"Error processing cashout: {ex.Message}");
+      }
+
+      // Final confirmation - process the cashout with all customizations
       Confirmed?.Invoke(this, new CashOutConfirmedEventArgs(
         MemberNumber,
-        new Dictionary<int,int>(_payout),              // cash plan
-        new Dictionary<int,int>(_chipCounts),          // chips turned in
+        new Dictionary<int,int>(_changeDenominations),   // final change plan
+        new Dictionary<int,int>(_chipCounts),            // chips turned in
         TotalCents));
+    }
+
+    private void BackToChipSelection_Click(object sender, RoutedEventArgs e)
+    {
+      ShowChipSelectionScreen();
     }
 
     private void ScanBox_KeyDown(object sender, KeyEventArgs e)
     {
-      if (e.Key == Key.Enter && ConfirmBtn.IsEnabled) Confirm_Click(sender, e);
+      if (e.Key == Key.Enter && NextBtn.IsEnabled) Next_Click(sender, e);
     }
+
+    // New methods for second screen functionality
+    private void ShowChipSelectionScreen()
+    {
+      ChipSelectionScreen.Visibility = Visibility.Visible;
+      ChangeCustomizationScreen.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowChangeCustomizationScreen()
+    {
+      ChipSelectionScreen.Visibility = Visibility.Collapsed;
+      ChangeCustomizationScreen.Visibility = Visibility.Visible;
+      
+      // Initialize values for second screen
+      _tipAmount = 0.0;
+      _foodTotal = 0.0;
+      _extraCashAmount = 0.0;
+      
+      // Initialize change customization with optimal change
+      CalculateOptimalChange(TotalCents);
+      RefreshChangeTable(); // Show the change breakdown on second screen
+      UpdateCashoutSummary();
+    }
+
+    private void RefreshChangeTable()
+    {
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      if (ChangeCustomizationRowsPanel != null)
+        ChangeCustomizationRowsPanel.Children.Clear();
+      if (ChangeTotalText != null)
+        ChangeTotalText.Text = (_changeDenominations.Sum(kv => kv.Key * kv.Value) / 100.0).ToString("C", culture);
+
+      if (_changeDenominations.Count == 0)
+      {
+        // Show empty state message
+        var emptyRow = new Border
+        {
+          BorderBrush = Brushes.Gray,
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Background = Brushes.LightGray
+        };
+
+        var emptyGrid = new Grid { Height = 36 };
+        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+
+        var emptyText = new TextBlock
+        {
+          Text = "No change calculated",
+          FontSize = 14,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          FontStyle = FontStyles.Italic,
+          Opacity = 0.7
+        };
+        Grid.SetColumn(emptyText, 0);
+        Grid.SetColumnSpan(emptyText, 3);
+
+        emptyGrid.Children.Add(emptyText);
+        emptyRow.Child = emptyGrid;
+        if (ChangeCustomizationRowsPanel != null)
+          ChangeCustomizationRowsPanel.Children.Add(emptyRow);
+        return;
+      }
+
+      // Show the change denominations
+      var orderedChange = _changeDenominations.OrderByDescending(kv => kv.Key).ToList();
+      
+      foreach (var kv in orderedChange)
+      {
+        if (kv.Value <= 0) continue;
+
+        var row = new Border
+        {
+          BorderBrush = Brushes.Gray,
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Background = Brushes.White
+        };
+
+        var grid = new Grid { Height = 36 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+
+        var denomination = kv.Key switch
+        {
+          5 => "5c",
+          10 => "10c",
+          20 => "20c",
+          50 => "50c",
+          100 => "$1",
+          200 => "$2",
+          500 => "$5",
+          1000 => "$10",
+          2000 => "$20",
+          5000 => "$50",
+          _ => $"{kv.Key}c"
+        };
+
+        var value = (kv.Key * kv.Value / 100.0).ToString("C", culture);
+
+        var denomText = new TextBlock
+        {
+          Text = denomination,
+          FontSize = 14,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(5)
+        };
+        Grid.SetColumn(denomText, 0);
+
+        var countText = new TextBlock
+        {
+          Text = kv.Value.ToString(),
+          FontSize = 14,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(5)
+        };
+        Grid.SetColumn(countText, 1);
+
+        var valueText = new TextBlock
+        {
+          Text = value,
+          FontSize = 14,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(5)
+        };
+        Grid.SetColumn(valueText, 2);
+
+        grid.Children.Add(denomText);
+        grid.Children.Add(countText);
+        grid.Children.Add(valueText);
+        row.Child = grid;
+        if (ChangeCustomizationRowsPanel != null)
+          ChangeCustomizationRowsPanel.Children.Add(row);
+      }
+    }
+
+    private void CalculateOptimalChange(int totalCents)
+    {
+      _changeDenominations.Clear();
+      var remaining = totalCents;
+
+      foreach (var denom in _cashDenominations.OrderByDescending(d => d))
+      {
+        var count = remaining / denom;
+        if (count > 0)
+        {
+          _changeDenominations[denom] = count;
+          remaining -= count * denom;
+        }
+      }
+    }
+
+    private void LoadFoodItems()
+    {
+      // Food items will be loaded via dialog when Add Food button is clicked
+      _selectedFoodItems.Clear();
+      _foodTotal = 0.0;
+    }
+
+    private void InitializeChangeCustomization()
+    {
+      // Change customization will be handled via dialog when Change Denominations button is clicked
+      CalculateOptimalChange(TotalCents);
+    }
+
+    private void UpdateChangeDisplay()
+    {
+      // Change display will be updated via the summary panel
+      UpdateCashoutSummary();
+    }
+
+    private void UpdateCashoutSummary()
+    {
+      var chipValue = TotalDollars;
+      var foodValue = _foodTotal;
+      var tipValue = _tipAmount;
+      var extraCashValue = _extraCashAmount;
+      
+      // Total amount player should receive = chip value - food - tip + extra cash
+      // Extra cash INCREASES the change needed (player pays extra cash, gets more change)
+      var totalCashoutValue = chipValue - foodValue - tipValue + extraCashValue;
+      var changeValue = _changeDenominations.Sum(kv => kv.Key * kv.Value) / 100.0;
+
+      if (ChipValueText != null)
+        ChipValueText.Text = $"Chip Value: {chipValue:C}";
+      if (FoodValueText != null)
+        FoodValueText.Text = $"Food: {foodValue:C}";
+      if (TipValueText != null)
+        TipValueText.Text = $"Tip: {tipValue:C}";
+      if (ExtraCashValueText != null)
+        ExtraCashValueText.Text = $"Extra Cash: {extraCashValue:C}";
+      if (FinalChangeText != null)
+        FinalChangeText.Text = $"Final Change: {totalCashoutValue:C}";
+
+      // Enable confirm button only if we have chips selected
+      if (ConfirmCashOutBtn != null)
+        ConfirmCashOutBtn.IsEnabled = TotalCents > 0;
+        
+      // Auto-update change if not manually customized and tip/food changed
+      if (!_isManualChangeCustomization)
+      {
+        CalculateOptimalChange((int)(totalCashoutValue * 100));
+        RefreshChangeTable();
+      }
+    }
+
+
+    private static string FormatDenom(int cents)
+    {
+      return cents < 100 ? $"{cents}¢" : $"${cents / 100}";
+    }
+
+
+    // New button click methods for the 8-button layout
+    private void AddFood_Click(object sender, RoutedEventArgs e)
+    {
+      // Show inline food selection dialog
+      PopulateFoodItemsList();
+      FoodSelectionDialog.Visibility = Visibility.Visible;
+    }
+
+    private void AddTip_Click(object sender, RoutedEventArgs e)
+    {
+      // Show inline tip input dialog with keypad
+      if (_tipAmount == 0.0)
+      {
+        // First time opening: initialize with coin sum (5c, 10c, 20c, 50c, $1, $2)
+        var coinDenominations = new[] { 5, 10, 20, 50, 100, 200 }; // Only coins
+        var coinChangeAmount = _changeDenominations
+          .Where(kv => coinDenominations.Contains(kv.Key))
+          .Sum(kv => kv.Key * kv.Value) / 100.0;
+        _tipInputValue = coinChangeAmount;
+      }
+      else
+      {
+        // Reopening: initialize with current tip amount
+        _tipInputValue = _tipAmount;
+      }
+      
+      UpdateTipDisplay();
+      TipInputDialog.Visibility = Visibility.Visible;
+    }
+
+    private void ChangeDenominations_Click(object sender, RoutedEventArgs e)
+    {
+      // Show inline change denominations dialog
+      PopulateChangeDenominationsList();
+      ChangeDenominationsDialog.Visibility = Visibility.Visible;
+    }
+
+    private void AddExtraCash_Click(object sender, RoutedEventArgs e)
+    {
+      // Show inline extra cash input dialog with denomination buttons
+      _extraCashInputValue = _extraCashAmount;
+      UpdateExtraCashDisplay();
+      ExtraCashInputDialog.Visibility = Visibility.Visible;
+    }
+
+    // Inline dialog methods
+    private void PopulateFoodItemsList()
+    {
+      if (FoodItemsList == null) return;
+      
+      FoodItemsList.Children.Clear();
+      
+      try
+      {
+        if (Database.Conn != null)
+        {
+          // Get actual food items from database
+          var products = Database.Query("SELECT product_id, name, price FROM products ORDER BY name");
+          
+          foreach (DataRow row in products.Rows)
+          {
+            var name = row["name"].ToString();
+            var price = Convert.ToDouble(row["price"]);
+            var productId = Convert.ToInt32(row["product_id"]);
+            
+            var button = new Button
+            {
+              Content = $"{name} - {price:C}",
+              Tag = new { Id = productId, Price = price, Name = name },
+              Margin = new Thickness(5),
+              Padding = new Thickness(10, 5, 10, 5),
+              Background = Brushes.LightBlue
+            };
+            button.Click += FoodItemButton_Click;
+            
+            FoodItemsList.Children.Add(button);
+          }
+          
+          // If no products found, add sample items
+          if (FoodItemsList.Children.Count == 0)
+          {
+            var sampleItems = new[]
+            {
+              new { Name = "Chips", Price = 3.50 },
+              new { Name = "Drink", Price = 2.00 },
+              new { Name = "Sandwich", Price = 8.50 },
+              new { Name = "Coffee", Price = 4.00 },
+              new { Name = "Snack Bar", Price = 2.50 }
+            };
+            
+            foreach (var item in sampleItems)
+            {
+              var button = new Button
+              {
+                Content = $"{item.Name} - {item.Price:C}",
+                Tag = new { Id = 0, Price = item.Price, Name = item.Name },
+                Margin = new Thickness(5),
+                Padding = new Thickness(10, 5, 10, 5),
+                Background = Brushes.LightBlue
+              };
+              button.Click += FoodItemButton_Click;
+              
+              FoodItemsList.Children.Add(button);
+            }
+          }
+        }
+      }
+      catch { }
+      
+      if (FoodItemsList.Children.Count == 0)
+      {
+        FoodItemsList.Children.Add(new TextBlock 
+        { 
+          Text = "No food items available", 
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(10)
+        });
+      }
+    }
+
+    private void FoodItemButton_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && button.Tag is { } tag)
+      {
+        // Update button appearance to show selection
+        foreach (Button b in FoodItemsList.Children.OfType<Button>())
+        {
+          b.Background = Brushes.LightBlue;
+        }
+        button.Background = Brushes.LightGreen;
+        
+        // Store selected item and enable confirm button
+        _selectedFoodItem = tag;
+        ConfirmFoodButton.IsEnabled = true;
+      }
+    }
+
+    private void CancelFoodSelection_Click(object sender, RoutedEventArgs e)
+    {
+      FoodSelectionDialog.Visibility = Visibility.Collapsed;
+      _selectedFoodItem = null!;
+    }
+
+    private void ConfirmFoodSelection_Click(object sender, RoutedEventArgs e)
+    {
+      if (_selectedFoodItem != null)
+      {
+        _foodTotal += _selectedFoodItem.Price;
+        UpdateCashoutSummary();
+      }
+      
+      FoodSelectionDialog.Visibility = Visibility.Collapsed;
+      _selectedFoodItem = null!;
+    }
+
+    private void TipKeypadButton_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && button.Tag is string tag)
+      {
+        switch (tag)
+        {
+          case "backspace":
+            // Convert to cents, remove last digit, convert back
+            var cents = (int)(_tipInputValue * 100);
+            cents = cents / 10; // Remove last digit
+            _tipInputValue = cents / 100.0;
+            break;
+          
+          case ".":
+            // Handle decimal point - already handled by the digit input logic
+            break;
+          
+          default:
+            if (double.TryParse(tag, out double digit))
+            {
+              // Convert to cents, add digit, convert back
+              var totalCents = (int)(_tipInputValue * 100);
+              totalCents = totalCents * 10 + (int)digit;
+              _tipInputValue = totalCents / 100.0;
+            }
+            break;
+        }
+        
+        UpdateTipDisplay();
+      }
+    }
+
+    private void UpdateTipDisplay()
+    {
+      if (TipAmountDisplay != null)
+      {
+        TipAmountDisplay.Text = _tipInputValue.ToString("C");
+      }
+    }
+
+    private void CloseTipInput_Click(object sender, RoutedEventArgs e)
+    {
+      TipInputDialog.Visibility = Visibility.Collapsed;
+      // Don't change _tipAmount - it stays at current value
+    }
+
+    private void SetTipInput_Click(object sender, RoutedEventArgs e)
+    {
+      // Update tip amount when user sets it
+      _tipAmount = _tipInputValue;
+      UpdateCashoutSummary();
+      // Keep dialog open for persistent editing
+    }
+
+    private void ExtraCashButton_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && button.Tag is string tag)
+      {
+        switch (tag)
+        {
+          case "clear":
+            _extraCashInputValue = 0.0;
+            break;
+          
+          case "backspace":
+            // Convert to cents, remove last digit, convert back
+            var cents = (int)(_extraCashInputValue * 100);
+            cents = cents / 10; // Remove last digit
+            _extraCashInputValue = cents / 100.0;
+            break;
+          
+          default:
+            if (int.TryParse(tag, out int denominationCents))
+            {
+              _extraCashInputValue += denominationCents / 100.0;
+            }
+            break;
+        }
+        
+        UpdateExtraCashDisplay();
+      }
+    }
+
+    private void UpdateExtraCashDisplay()
+    {
+      if (ExtraCashAmountDisplay != null)
+      {
+        ExtraCashAmountDisplay.Text = _extraCashInputValue.ToString("C");
+      }
+    }
+
+    private void CloseExtraCashInput_Click(object sender, RoutedEventArgs e)
+    {
+      ExtraCashInputDialog.Visibility = Visibility.Collapsed;
+    }
+
+    private void ConfirmExtraCashInput_Click(object sender, RoutedEventArgs e)
+    {
+      _extraCashAmount = _extraCashInputValue;
+      UpdateCashoutSummary();
+      ExtraCashInputDialog.Visibility = Visibility.Collapsed;
+      _extraCashInputValue = 0.0;
+    }
+
+    private void PopulateChangeDenominationsList()
+    {
+      if (ChangeDenominationsList == null) return;
+      
+      ChangeDenominationsList.Children.Clear();
+      
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      var currentChange = _changeDenominations.Sum(kv => kv.Key * kv.Value) / 100.0;
+      
+      var headerText = new TextBlock
+      {
+        Text = $"Current change total: {currentChange:C}",
+        FontSize = 16,
+        FontWeight = FontWeights.Bold,
+        Margin = new Thickness(0, 0, 0, 10),
+        HorizontalAlignment = HorizontalAlignment.Center
+      };
+      ChangeDenominationsList.Children.Add(headerText);
+      
+      // Add all possible denominations, not just the ones with values
+      var allDenominations = new[] { 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
+      
+      foreach (var denomCents in allDenominations)
+      {
+        var currentCount = _changeDenominations.TryGetValue(denomCents, out var count) ? count : 0;
+        
+        var denom = denomCents switch
+        {
+          5 => "5c",
+          10 => "10c",
+          20 => "20c",
+          50 => "50c",
+          100 => "$1",
+          200 => "$2",
+          500 => "$5",
+          1000 => "$10",
+          2000 => "$20",
+          5000 => "$50",
+          _ => $"{denomCents}c"
+        };
+        
+        var row = new Border
+        {
+          BorderBrush = Brushes.Gray,
+          BorderThickness = new Thickness(1),
+          Background = Brushes.White,
+          Margin = new Thickness(2)
+        };
+        
+        var grid = new Grid { Height = 40 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        
+        // Denomination label
+        var denomText = new TextBlock
+        {
+          Text = denom,
+          FontSize = 14,
+          FontWeight = FontWeights.Bold,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center
+        };
+        Grid.SetColumn(denomText, 0);
+        
+        // Minus button
+        var minusButton = new Button
+        {
+          Content = "-",
+          FontSize = 16,
+          FontWeight = FontWeights.Bold,
+          Background = Brushes.LightCoral,
+          Tag = new { Denom = denomCents, Action = "minus" }
+        };
+        minusButton.Click += ChangeDenominationButton_Click;
+        Grid.SetColumn(minusButton, 1);
+        
+        // Count display
+        var countText = new TextBlock
+        {
+          Text = currentCount.ToString(),
+          FontSize = 14,
+          FontWeight = FontWeights.Bold,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center
+        };
+        Grid.SetColumn(countText, 2);
+        
+        // Plus button
+        var plusButton = new Button
+        {
+          Content = "+",
+          FontSize = 16,
+          FontWeight = FontWeights.Bold,
+          Background = Brushes.LightGreen,
+          Tag = new { Denom = denomCents, Action = "plus" }
+        };
+        plusButton.Click += ChangeDenominationButton_Click;
+        Grid.SetColumn(plusButton, 3);
+        
+        // Value display
+        var valueText = new TextBlock
+        {
+          Text = (denomCents * currentCount / 100.0).ToString("C", culture),
+          FontSize = 12,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center
+        };
+        Grid.SetColumn(valueText, 4);
+        
+        grid.Children.Add(denomText);
+        grid.Children.Add(minusButton);
+        grid.Children.Add(countText);
+        grid.Children.Add(plusButton);
+        grid.Children.Add(valueText);
+        row.Child = grid;
+        
+        ChangeDenominationsList.Children.Add(row);
+      }
+    }
+
+    private void CloseChangeDenominations_Click(object sender, RoutedEventArgs e)
+    {
+      ChangeDenominationsDialog.Visibility = Visibility.Collapsed;
+    }
+
+    private void ChangeDenominationButton_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && button.Tag is { } tag)
+      {
+        var denomCents = (int)tag.GetType().GetProperty("Denom")?.GetValue(tag)!;
+        var action = (string)tag.GetType().GetProperty("Action")?.GetValue(tag)!;
+        
+        var currentCount = _changeDenominations.TryGetValue(denomCents, out var count) ? count : 0;
+        
+        switch (action)
+        {
+          case "plus":
+            _changeDenominations[denomCents] = currentCount + 1;
+            break;
+          case "minus":
+            if (currentCount > 0)
+            {
+              _changeDenominations[denomCents] = currentCount - 1;
+              if (_changeDenominations[denomCents] == 0)
+              {
+                _changeDenominations.Remove(denomCents);
+              }
+            }
+            break;
+        }
+        
+        // Mark as manually customized
+        _isManualChangeCustomization = true;
+        
+        // Refresh displays
+        RefreshChangeTable();
+        UpdateCashoutSummary();
+        PopulateChangeDenominationsList();
+      }
+    }
+
+    private void ResetToOptimalChange_Click(object sender, RoutedEventArgs e)
+    {
+      _isManualChangeCustomization = false;
+      
+      var chipValue = TotalDollars;
+      var foodValue = _foodTotal;
+      var tipValue = _tipAmount;
+      var extraCashValue = _extraCashAmount;
+      var totalCashoutValue = chipValue + extraCashValue - foodValue - tipValue;
+      
+      CalculateOptimalChange((int)(totalCashoutValue * 100));
+      RefreshChangeTable();
+      UpdateCashoutSummary();
+      PopulateChangeDenominationsList();
+    }
+
+    // Fields to store selected food item and tip input
+    private dynamic _selectedFoodItem = null!;
+    private double _tipInputValue = 0.0;
+    private double _extraCashInputValue = 0.0;
+    private bool _isManualChangeCustomization = false;
   }
 
   public sealed class CashOutConfirmedEventArgs : EventArgs

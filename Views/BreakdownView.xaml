@@ -61,7 +61,7 @@
 
     <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
       <TextBlock Text="{Binding GrandTotal}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0"/>
-      <Button Content="Back" Width="120" Click="Back_Click"/>
+      <Button Content="Back" Width="120" Click="Back_Click" Background="LightCoral"/>
     </StackPanel>
   </Grid>
 </UserControl>

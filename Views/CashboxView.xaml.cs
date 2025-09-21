@@ -25,6 +25,7 @@ namespace pokersoc_connect.Views
       InitializeComponent();
       RefreshCashbox();
       InitializeFloatInput();
+      UpdateTotalSalesDisplay();
     }
 
     private void RefreshCashbox()
@@ -171,6 +172,9 @@ namespace pokersoc_connect.Views
         TipsText.Text += $" (Error)";
         FloatAmountText.Text += $" (Error)";
       }
+      
+      // Update total sales display
+      UpdateTotalSalesDisplay();
     }
 
     private static string FormatDenom(int cents)
@@ -478,6 +482,27 @@ namespace pokersoc_connect.Views
       public string Denomination { get; set; } = "";
       public int    Count        { get; set; }
       public string Value        { get; set; } = "";
+    }
+
+    private void UpdateTotalSalesDisplay()
+    {
+      try
+      {
+        // Calculate total money made from all food sales
+        var totalCents = Database.ScalarLong(@"
+SELECT COALESCE(SUM(amount_cents), 0)
+FROM activity_log 
+WHERE activity_kind = 'FOOD'");
+
+        var totalAmount = totalCents / 100.0;
+        var AU = CultureInfo.GetCultureInfo("en-AU");
+        TotalSalesAmount.Text = totalAmount.ToString("C", AU);
+      }
+      catch (Exception ex)
+      {
+        TotalSalesAmount.Text = "$0.00";
+        System.Diagnostics.Debug.WriteLine($"Error updating total sales: {ex.Message}");
+      }
     }
   }
 }

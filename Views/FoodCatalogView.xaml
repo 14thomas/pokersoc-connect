@@ -18,7 +18,6 @@
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
-          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -32,7 +31,6 @@
                 <TextBlock Text="1. Click on an empty slot to assign a product" FontSize="14" Margin="0,0,0,10"/>
                 <TextBlock Text="2. Click on a filled slot to sell that item" FontSize="14" Margin="0,0,0,10"/>
                 <TextBlock Text="3. Use Settings to manage your product catalog" FontSize="14" Margin="0,0,0,10"/>
-                <TextBlock Text="4. Recent sales are shown below" FontSize="14"/>
               </StackPanel>
             </GroupBox>
 
@@ -46,12 +44,6 @@
           </StackPanel>
         </ScrollViewer>
 
-        <!-- Recent Sales -->
-        <GroupBox Grid.Row="2" Header="Recent Sales" Padding="10">
-          <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="RecentSalesPanel"/>
-          </ScrollViewer>
-        </GroupBox>
       </Grid>
 
       <!-- RIGHT SIDE: 8 BUTTON GRID (2 COLUMNS x 4 ROWS) -->
@@ -150,21 +142,19 @@
           </StackPanel>
         </Button>
 
-        <Button Grid.Row="2" Grid.Column="1"
-                x:Name="ItemButton6"
+        <Border Grid.Row="2" Grid.Column="1"
+                x:Name="TotalMoneyPanel"
                 Margin="5,5,0,5"
                 Padding="15,20"
-                Click="ItemButton_Click"
-                Tag="6"
                 BorderThickness="2"
-                BorderBrush="LightGray"
-                Background="White">
-          <StackPanel>
-            <TextBlock x:Name="Item6Icon" Text="🥨" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <TextBlock x:Name="Item6Name" Text="Empty Slot" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-            <TextBlock x:Name="Item6Price" Text="Click to assign" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+                BorderBrush="Gold"
+                Background="LightYellow">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock x:Name="TotalMoneyIcon" Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock x:Name="TotalMoneyLabel" Text="Total Made" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="TotalMoneyAmount" Text="$0.00" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
           </StackPanel>
-        </Button>
+        </Border>
 
         <!-- Row 4: Settings & Back -->
         <!-- Settings Button -->
@@ -187,7 +177,8 @@
                 Padding="15,20"
                 Click="BackToMain_Click"
                 BorderThickness="2"
-                BorderBrush="Gray">
+                BorderBrush="Gray"
+                Background="LightCoral">
           <StackPanel>
             <TextBlock Text="🏠" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -271,6 +262,8 @@
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
           <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -285,238 +278,40 @@
             <TextBlock Text="Player ID (Optional):" Margin="0,10,0,5"/>
             <TextBox x:Name="PaymentPlayerIdTextBox" Height="30" Margin="0,0,0,10"
                      TextChanged="PaymentPlayerIdTextBox_TextChanged"/>
-            
-            <!-- Payment Method Selection -->
-            <TextBlock Text="Payment Method:" Margin="0,10,0,5"/>
-            <StackPanel Orientation="Horizontal">
-              <RadioButton x:Name="PaymentCashRadioButton" Content="Cash" IsChecked="True" 
-                           Checked="PaymentMethod_Changed" Margin="0,0,20,0"/>
-              <RadioButton x:Name="PaymentChipRadioButton" Content="Chip" 
-                           Checked="PaymentMethod_Changed"/>
-            </StackPanel>
           </StackPanel>
         </GroupBox>
 
-        <!-- Payment Summary -->
-        <GroupBox Grid.Row="2" Header="Payment Summary" Padding="10">
+        <!-- Payment Summary (Large Box) -->
+        <GroupBox Grid.Row="2" Header="Payment Summary" Padding="15" Margin="0,0,0,15">
           <StackPanel>
-            <TextBlock x:Name="PaymentSummaryText" FontSize="16" Margin="0,0,0,5"/>
-            <TextBlock x:Name="PaymentChangeText" FontSize="16" FontWeight="Bold" Margin="0,5,0,0"/>
+            <TextBlock x:Name="PaymentSummaryText" FontSize="20" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="PaymentChangeText" FontSize="18" FontWeight="Bold" Margin="0,5,0,10" HorizontalAlignment="Center"/>
+            
+            <!-- Exact Change Breakdown (Cash only) -->
+            <StackPanel x:Name="ChangeBreakdownPanel" Visibility="Collapsed" Margin="0,10,0,0">
+              <TextBlock Text="Change Breakdown:" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
+              <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="ChangeBreakdownList"/>
+              </ScrollViewer>
+            </StackPanel>
           </StackPanel>
         </GroupBox>
-      </Grid>
 
-      <!-- RIGHT SIDE: DENOMINATION BUTTONS (Same as BuyIn) -->
-      <Grid Grid.Column="1" Margin="6,12,12,12">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <!-- Denomination Buttons Grid (Same layout as BuyIn) -->
-        <Grid Grid.Row="0">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-          </Grid.ColumnDefinitions>
-
-          <!-- Row 1 -->
-          <!-- 5c Button -->
-          <Button x:Name="Payment5c" Grid.Row="0" Grid.Column="0"
-                  Margin="0,0,5,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="5"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
+        <!-- Payment Method Selection -->
+        <GroupBox Grid.Row="3" Header="Payment Method" Padding="10" Margin="0,0,0,15">
+          <Button x:Name="PaymentMethodToggle" Click="PaymentMethodToggle_Click"
+                  Padding="15,20" BorderThickness="2" BorderBrush="Gray" Background="LightBlue"
+                  HorizontalAlignment="Stretch">
             <StackPanel>
-              <TextBlock Text="5c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="5c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment5cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+              <TextBlock x:Name="PaymentMethodIcon" Text="🪙" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock x:Name="PaymentMethodText" Text="Chips" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Click to toggle" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
             </StackPanel>
           </Button>
-
-          <!-- 10c Button -->
-          <Button x:Name="Payment10c" Grid.Row="0" Grid.Column="1"
-                  Margin="5,0,0,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="10"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="10c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="10c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment10cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Row 2 -->
-          <!-- 20c Button -->
-          <Button x:Name="Payment20c" Grid.Row="1" Grid.Column="0"
-                  Margin="0,5,5,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="20"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="20c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="20c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment20cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- 50c/25c Button (changes based on payment method) -->
-          <Button x:Name="Payment50c" Grid.Row="1" Grid.Column="1"
-                  Margin="5,5,0,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="50"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock x:Name="Payment50cText" Text="50c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock x:Name="Payment50cLabel" Text="50c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment50cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Row 3 -->
-          <!-- $1 Button -->
-          <Button x:Name="Payment1" Grid.Row="2" Grid.Column="0"
-                  Margin="0,5,5,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="100"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$1" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$1" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment1Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- $2 Button -->
-          <Button x:Name="Payment2" Grid.Row="2" Grid.Column="1"
-                  Margin="5,5,0,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="200"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$2" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment2Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Row 4 -->
-          <!-- $5 Button -->
-          <Button x:Name="Payment5" Grid.Row="3" Grid.Column="0"
-                  Margin="0,5,5,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="500"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$5" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment5Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- $10 Button -->
-          <Button x:Name="Payment10" Grid.Row="3" Grid.Column="1"
-                  Margin="5,5,0,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="1000"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$10" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$10" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment10Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Row 5 -->
-          <!-- $20 Button -->
-          <Button x:Name="Payment20" Grid.Row="4" Grid.Column="0"
-                  Margin="0,5,5,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="2000"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$20" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$20" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment20Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- $50/$25 Button (changes based on payment method) -->
-          <Button x:Name="Payment50" Grid.Row="4" Grid.Column="1"
-                  Margin="5,5,0,5"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="5000"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock x:Name="Payment50Text" Text="$50" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock x:Name="Payment50Label" Text="$50" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment50Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Row 6 -->
-          <!-- $100 Button -->
-          <Button x:Name="Payment100" Grid.Row="5" Grid.Column="0"
-                  Margin="0,5,5,0"
-                  Padding="15,20"
-                  Click="PaymentDenom_Click"
-                  Tag="10000"
-                  BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$100" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$100" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Payment100Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Clear Button -->
-          <Button x:Name="PaymentClear" Grid.Row="5" Grid.Column="1"
-                  Margin="5,5,0,0"
-                  Padding="15,20"
-                  Click="PaymentClear_Click"
-                  BorderThickness="2"
-                  BorderBrush="Gray"
-                  Background="LightCoral">
-            <StackPanel>
-              <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="Clear" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock Text="Reset all" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-        </Grid>
+        </GroupBox>
 
         <!-- Action Buttons -->
-        <Grid Grid.Row="1" Margin="0,10,0,0">
+        <Grid Grid.Row="4">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -542,6 +337,426 @@
             </StackPanel>
           </Button>
         </Grid>
+      </Grid>
+
+      <!-- RIGHT SIDE: CASH PAYMENT INTERFACE -->
+      <Grid x:Name="CashPaymentView" Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Cash Denomination Buttons Grid -->
+        <Grid Grid.Row="0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+
+          <!-- Row 1 -->
+          <!-- 5c Button -->
+          <Button x:Name="Cash5c" Grid.Row="0" Grid.Column="0"
+                  Margin="0,0,5,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="5"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="5c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="5c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash5cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- 10c Button -->
+          <Button x:Name="Cash10c" Grid.Row="0" Grid.Column="1"
+                  Margin="5,0,0,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="10"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="10c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="10c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash10cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 2 -->
+          <!-- 20c Button -->
+          <Button x:Name="Cash20c" Grid.Row="1" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="20"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="20c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="20c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash20cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- 50c Button -->
+          <Button x:Name="Cash50c" Grid.Row="1" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="50"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="50c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="50c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash50cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 3 -->
+          <!-- $1 Button -->
+          <Button x:Name="Cash1" Grid.Row="2" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="100"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$1" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$1" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash1Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- $2 Button -->
+          <Button x:Name="Cash2" Grid.Row="2" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="200"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$2" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash2Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 4 -->
+          <!-- $5 Button -->
+          <Button x:Name="Cash5" Grid.Row="3" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="500"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$5" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash5Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- $10 Button -->
+          <Button x:Name="Cash10" Grid.Row="3" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="1000"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$10" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$10" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash10Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 5 -->
+          <!-- $20 Button -->
+          <Button x:Name="Cash20" Grid.Row="4" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="2000"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$20" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$20" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash20Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- $50 Button -->
+          <Button x:Name="Cash50" Grid.Row="4" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="5000"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$50" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$50" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash50Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 6 -->
+          <!-- Clear Button -->
+          <Button x:Name="CashClear" Grid.Row="5" Grid.Column="0"
+                  Margin="0,5,5,0"
+                  Padding="15,20"
+                  Click="CashClear_Click"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  Background="Orange">
+            <StackPanel>
+              <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Clear" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Reset all" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- $100 Button -->
+          <Button x:Name="Cash100" Grid.Row="5" Grid.Column="1"
+                  Margin="5,5,0,0"
+                  Padding="15,20"
+                  Click="CashDenom_Click"
+                  Tag="10000"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$100" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$100" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Cash100Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+
+      <!-- RIGHT SIDE: CHIP PAYMENT INTERFACE -->
+      <Grid x:Name="ChipPaymentView" Grid.Column="1" Margin="6,12,12,12" Visibility="Collapsed">
+
+        <!-- Chip Denomination Buttons Grid -->
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+
+          <!-- Row 1 -->
+          <!-- 5c Chip Button -->
+          <Button x:Name="Chip5c" Grid.Row="0" Grid.Column="0"
+                  Margin="0,0,5,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="5"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="5c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="5c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip5cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- 25c Chip Button -->
+          <Button x:Name="Chip25c" Grid.Row="0" Grid.Column="1"
+                  Margin="5,0,0,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="25"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="25c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="25c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip25cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 2 -->
+          <!-- $1 Chip Button -->
+          <Button x:Name="Chip1" Grid.Row="1" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="100"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$1" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$1" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip1Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- $2 Chip Button -->
+          <Button x:Name="Chip2" Grid.Row="1" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="200"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$2" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip2Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 3 -->
+          <!-- $5 Chip Button -->
+          <Button x:Name="Chip5" Grid.Row="2" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="500"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$5" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip5Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- $25 Plaque Button -->
+          <Button x:Name="Chip25" Grid.Row="2" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="2500"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$25" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$25" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip25Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 4 -->
+          <!-- $100 Plaque Button -->
+          <Button x:Name="Chip100" Grid.Row="3" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  Click="ChipDenom_Click"
+                  Tag="10000"
+                  BorderThickness="2"
+                  BorderBrush="Gray">
+            <StackPanel>
+              <TextBlock Text="$100" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="$100" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="Chip100Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Empty space for balance -->
+          <Button Grid.Row="3" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  IsEnabled="False">
+            <StackPanel>
+              <TextBlock Text="" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 5 -->
+          <!-- Empty space for balance -->
+          <Button Grid.Row="4" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  IsEnabled="False">
+            <StackPanel>
+              <TextBlock Text="" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Empty space for balance -->
+          <Button Grid.Row="4" Grid.Column="1"
+                  Margin="5,5,0,5"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  IsEnabled="False">
+            <StackPanel>
+              <TextBlock Text="" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 6 -->
+          <!-- Clear Button -->
+          <Button x:Name="ChipClear" Grid.Row="5" Grid.Column="0"
+                  Margin="0,5,5,0"
+                  Padding="15,20"
+                  Click="CashClear_Click"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  Background="Orange">
+            <StackPanel>
+              <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Clear" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Reset all" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Multiplier Controls -->
+          <Button Grid.Row="5" Grid.Column="1"
+                  Margin="5,5,0,0"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  Background="LightBlue"
+                  Click="ChipMultiplier_Click">
+            <StackPanel>
+              <TextBlock Text="×" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Multiplier" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                <TextBlock x:Name="Chip1xText" Text="1x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="|" FontSize="16" HorizontalAlignment="Center" Margin="5,0" Opacity="0.5"/>
+                <TextBlock x:Name="Chip5xText" Text="5x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="|" FontSize="16" HorizontalAlignment="Center" Margin="5,0" Opacity="0.5"/>
+                <TextBlock x:Name="Chip20xText" Text="20x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+              </StackPanel>
+          </StackPanel>
+          </Button>
+        </Grid>
+
       </Grid>
     </Grid>
   </Grid>
