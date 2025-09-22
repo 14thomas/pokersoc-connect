@@ -214,17 +214,92 @@ namespace pokersoc_connect
         var playerId = args.MemberNumber;
         var cashAmt  = args.TotalCents / 100.0;
 
+        // Build transaction notes including food sales, tips, and extra cash
+        var notes = new List<string>();
+        if (args.FoodTotal > 0) notes.Add($"Food: {args.FoodTotal:C}");
+        if (args.TipAmount > 0) notes.Add($"Tip: {args.TipAmount:C}");
+        if (args.ExtraCashAmount > 0) notes.Add($"Extra Cash: {args.ExtraCashAmount:C}");
+        var transactionNotes = notes.Count > 0 ? string.Join(", ", notes) : null;
+
         Database.InTransaction(tx =>
         {
           EnsurePlayer(playerId, tx);
 
           Database.Exec(
-            "INSERT INTO transactions(player_id, type, cash_amt, method, staff) " +
-            "VALUES ($p, 'CASHOUT', $cash, 'Cash', 'Dealer')",
-            tx, ("$p", playerId), ("$cash", cashAmt)
+            "INSERT INTO transactions(player_id, type, cash_amt, method, staff, notes) " +
+            "VALUES ($p, 'CASHOUT', $cash, 'Cash', 'Dealer', $notes)",
+            tx, ("$p", playerId), ("$cash", cashAmt), ("$notes", transactionNotes)
           );
 
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
+
+          // Calculate change given (total chips - food - tip + extra cash)
+          var changeGiven = cashAmt - args.FoodTotal - args.TipAmount + args.ExtraCashAmount;
+          
+          // Create ONE SINGLE activity log entry with complete cashout breakdown
+          var activityNotes = $"Chips: {cashAmt:C} | Change: {changeGiven:C}";
+          if (args.FoodTotal > 0) activityNotes += $" | Food: {args.FoodTotal:C}";
+          if (args.TipAmount > 0) activityNotes += $" | Tip: {args.TipAmount:C}";
+          if (args.ExtraCashAmount > 0) activityNotes += $" | Cash Added: {args.ExtraCashAmount:C}";
+            
+          Database.Exec("INSERT INTO activity_log (activity_key, activity_type, activity_kind, tx_id, amount_cents, notes) VALUES (@key, @type, @kind, @tx_id, @amount, @notes)", tx,
+            ("@key", $"cashout_{txId}"),
+            ("@type", "CASHOUT"),
+            ("@kind", "TX"),
+            ("@tx_id", txId),
+            ("@amount", (int)(cashAmt * 100)),
+            ("@notes", activityNotes));
+            
+          // Add extra cash to cashbox if any
+          if (args.ExtraCashAmount > 0)
+          {
+            // Break down extra cash into denominations and add to cashbox
+            var extraCashCents = (int)(args.ExtraCashAmount * 100);
+            var cashDenoms = new int[] { 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
+            
+            foreach (var denom in cashDenoms)
+            {
+              if (extraCashCents >= denom)
+              {
+                var count = extraCashCents / denom;
+                extraCashCents -= count * denom;
+                if (count > 0)
+                {
+                  Database.Exec(
+                    "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+                    "VALUES ($d, $q, 'EXTRA_CASH', $p, $tx)",
+                    tx, ("$d", denom), ("$q", count), ("$p", playerId), ("$tx", txId)
+                  );
+                }
+              }
+            }
+          }
+          
+          // Add tips to tips table if any
+          if (args.TipAmount > 0)
+          {
+            // Break down tip into denominations and add to tips
+            var tipCents = (int)(args.TipAmount * 100);
+            var cashDenoms = new int[] { 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
+            
+            foreach (var denom in cashDenoms)
+            {
+              if (tipCents >= denom)
+              {
+                var count = tipCents / denom;
+                tipCents -= count * denom;
+                if (count > 0)
+                {
+                  Database.Exec(
+                    "INSERT INTO tips(denom_cents, qty, player_id, tx_id) " +
+                    "VALUES ($d, $q, $p, $tx)",
+                    tx, ("$d", denom), ("$q", count), ("$p", playerId), ("$tx", txId)
+                  );
+                }
+              }
+            }
+          }
+          
 
           // 1) Record cash paid out (negative qty in cashbox)
           foreach (var kv in args.PayoutPlan.Where(kv => kv.Value > 0))
@@ -249,6 +324,18 @@ namespace pokersoc_connect
 
         RefreshActivity();
         ShowTransactions();
+        
+        // Refresh cashbox if it's currently visible
+        if (ScreenHost.Content is Views.CashboxView cashboxView)
+        {
+          cashboxView.RefreshCashbox();
+        }
+        
+        // Refresh food view if it's currently visible
+        if (ScreenHost.Content is FoodCatalogView foodView)
+        {
+          foodView.UpdateTotalMoneyDisplay();
+        }
       };
 
       ShowScreen(view);

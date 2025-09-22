@@ -28,7 +28,7 @@ namespace pokersoc_connect.Views
 
     // New fields for second screen functionality
     private readonly Dictionary<int,int> _changeDenominations = new();
-    private readonly Dictionary<int,int> _selectedFoodItems = new();
+    private readonly Dictionary<string,int> _selectedFoodItems = new();
     private double _tipAmount = 0.0;
     private double _foodTotal = 0.0;
     private double _extraCashAmount = 0.0;
@@ -384,33 +384,50 @@ namespace pokersoc_connect.Views
           // Add extra cash to cashbox if any
           if (_extraCashAmount > 0)
           {
-            // Add extra cash as received money
-            Database.Exec("INSERT INTO cashbox_movements (denom_cents, delta_qty, reason, notes) VALUES (@amount, @qty, 'CASHOUT', @notes)", transaction,
-              ("@amount", (int)(_extraCashAmount * 100)),
-              ("@qty", 1), // 1 unit of this amount
-              ("@notes", $"Extra cash from cashout - Member {MemberNumber}"));
+            // Add extra cash as received money (break down into denominations)
+            var extraCashCents = (int)(_extraCashAmount * 100);
+            var denominations = new[] { 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 }; // $50, $20, $10, $5, $2, $1, 50c, 20c, 10c, 5c
+            
+            foreach (var denom in denominations)
+            {
+              if (extraCashCents >= denom)
+              {
+                var count = extraCashCents / denom;
+                extraCashCents -= count * denom;
+                
+                Database.Exec("INSERT INTO cashbox_movements (denom_cents, delta_qty, reason, notes) VALUES (@denom, @qty, 'CASHOUT', @notes)", transaction,
+                  ("@denom", denom),
+                  ("@qty", count),
+                  ("@notes", $"Extra cash from cashout - Member {MemberNumber}"));
+              }
+            }
           }
 
           // Add tip to tips table if any
           if (_tipAmount > 0)
           {
-            // Break down tip into denominations (simplified - just add as one entry)
-            Database.Exec("INSERT INTO tips (denom_cents, qty, notes) VALUES (@amount, @qty, @notes)", transaction,
-              ("@amount", (int)(_tipAmount * 100)),
-              ("@qty", 1),
-              ("@notes", $"Tip from cashout - Member {MemberNumber}"));
+            // Break down tip into currency denominations for proper display in cashbox
+            var tipCents = (int)(_tipAmount * 100);
+            var denominations = new[] { 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 }; // $50, $20, $10, $5, $2, $1, 50c, 20c, 10c, 5c
+            
+            foreach (var denom in denominations)
+            {
+              if (tipCents >= denom)
+              {
+                var count = tipCents / denom;
+                tipCents -= count * denom;
+                
+                Database.Exec("INSERT INTO tips (denom_cents, qty, notes) VALUES (@denom, @qty, @notes)", transaction,
+                  ("@denom", denom),
+                  ("@qty", count),
+                  ("@notes", $"Tip from cashout - Member {MemberNumber}"));
+              }
+            }
           }
 
-          // Add food sale to activity log if any
-          if (_foodTotal > 0)
-          {
-            Database.Exec("INSERT INTO activity_log (activity_key, activity_type, activity_kind, amount_cents, notes) VALUES (@key, @type, @kind, @amount, @notes)", transaction,
-              ("@key", $"cashout_food_{DateTime.Now.Ticks}"),
-              ("@type", "FOOD_SALE"),
-              ("@kind", "CASHOUT_FOOD"),
-              ("@amount", (int)(_foodTotal * 100)),
-              ("@notes", $"Food sale during cashout - Member {MemberNumber}"));
-          }
+          // Food sales are included in the consolidated activity log entry in main window
+
+          // Extra cash and other details are now handled in the main window's consolidated activity log
         });
       }
       catch (Exception ex)
@@ -423,7 +440,10 @@ namespace pokersoc_connect.Views
         MemberNumber,
         new Dictionary<int,int>(_changeDenominations),   // final change plan
         new Dictionary<int,int>(_chipCounts),            // chips turned in
-        TotalCents));
+        TotalCents,
+        _foodTotal,
+        _tipAmount,
+        _extraCashAmount));
     }
 
     private void BackToChipSelection_Click(object sender, RoutedEventArgs e)
@@ -579,7 +599,10 @@ namespace pokersoc_connect.Views
     private void CalculateOptimalChange(int totalCents)
     {
       _changeDenominations.Clear();
-      var remaining = totalCents;
+      
+      // Round to nearest 5c (Australian standard)
+      var roundedCents = ((totalCents + 2) / 5) * 5;
+      var remaining = roundedCents;
 
       foreach (var denom in _cashDenominations.OrderByDescending(d => d))
       {
@@ -589,6 +612,12 @@ namespace pokersoc_connect.Views
           _changeDenominations[denom] = count;
           remaining -= count * denom;
         }
+      }
+      
+      // If there's still remaining (shouldn't happen with proper rounding), log it
+      if (remaining > 0)
+      {
+        System.Diagnostics.Debug.WriteLine($"Warning: {remaining} cents remaining after rounding {totalCents} to {roundedCents} cents");
       }
     }
 
@@ -722,9 +751,10 @@ namespace pokersoc_connect.Views
             {
               Content = $"{name} - {price:C}",
               Tag = new { Id = productId, Price = price, Name = name },
-              Margin = new Thickness(5),
-              Padding = new Thickness(10, 5, 10, 5),
-              Background = Brushes.LightBlue
+              Margin = new Thickness(2),
+              Padding = new Thickness(10, 8, 10, 8),
+              Background = Brushes.LightBlue,
+              HorizontalAlignment = HorizontalAlignment.Stretch
             };
             button.Click += FoodItemButton_Click;
             
@@ -749,9 +779,10 @@ namespace pokersoc_connect.Views
               {
                 Content = $"{item.Name} - {item.Price:C}",
                 Tag = new { Id = 0, Price = item.Price, Name = item.Name },
-                Margin = new Thickness(5),
-                Padding = new Thickness(10, 5, 10, 5),
-                Background = Brushes.LightBlue
+                Margin = new Thickness(2),
+                Padding = new Thickness(10, 8, 10, 8),
+                Background = Brushes.LightBlue,
+                HorizontalAlignment = HorizontalAlignment.Stretch
               };
               button.Click += FoodItemButton_Click;
               
@@ -771,41 +802,118 @@ namespace pokersoc_connect.Views
           Margin = new Thickness(10)
         });
       }
+      
+      // Update selected items display
+      UpdateSelectedFoodItemsDisplay();
     }
 
     private void FoodItemButton_Click(object sender, RoutedEventArgs e)
     {
       if (sender is Button button && button.Tag is { } tag)
       {
-        // Update button appearance to show selection
-        foreach (Button b in FoodItemsList.Children.OfType<Button>())
-        {
-          b.Background = Brushes.LightBlue;
-        }
-        button.Background = Brushes.LightGreen;
+        // Cast tag to dynamic to access properties
+        dynamic item = tag;
+        var itemKey = $"{item.Name}_{item.Price}";
         
-        // Store selected item and enable confirm button
-        _selectedFoodItem = tag;
-        ConfirmFoodButton.IsEnabled = true;
+        if (_selectedFoodItems.ContainsKey(itemKey))
+        {
+          _selectedFoodItems[itemKey]++;
+        }
+        else
+        {
+          _selectedFoodItems[itemKey] = 1;
+        }
+        
+        // Update display
+        UpdateSelectedFoodItemsDisplay();
+      }
+    }
+
+    private void UpdateSelectedFoodItemsDisplay()
+    {
+      if (SelectedFoodItemsList == null || FoodTotalText == null) return;
+      
+      SelectedFoodItemsList.Children.Clear();
+      
+      _foodTotal = 0.0;
+      
+      foreach (var kvp in _selectedFoodItems)
+      {
+        var parts = kvp.Key.Split(new char[] { '_' });
+        var name = parts[0];
+        var price = double.Parse(parts[1]);
+        var quantity = kvp.Value;
+        var total = price * quantity;
+        
+        _foodTotal += total;
+        
+        var itemPanel = new StackPanel
+        {
+          Orientation = Orientation.Horizontal,
+          Margin = new Thickness(0, 2, 0, 2)
+        };
+        
+        var nameText = new TextBlock
+        {
+          Text = $"{name} x{quantity}",
+          Width = 200,
+          VerticalAlignment = VerticalAlignment.Center
+        };
+        
+        var priceText = new TextBlock
+        {
+          Text = total.ToString("C"),
+          Width = 80,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Right
+        };
+        
+        var removeButton = new Button
+        {
+          Content = "✕",
+          Width = 30,
+          Height = 25,
+          Margin = new Thickness(5, 0, 0, 0),
+          Background = Brushes.LightCoral,
+          FontWeight = FontWeights.Bold
+        };
+        removeButton.Click += (s, e) => RemoveFoodItem(kvp.Key);
+        
+        itemPanel.Children.Add(nameText);
+        itemPanel.Children.Add(priceText);
+        itemPanel.Children.Add(removeButton);
+        
+        SelectedFoodItemsList.Children.Add(itemPanel);
+      }
+      
+      FoodTotalText.Text = $"Total: {_foodTotal:C}";
+    }
+    
+    private void RemoveFoodItem(string itemKey)
+    {
+      if (_selectedFoodItems.ContainsKey(itemKey))
+      {
+        _selectedFoodItems[itemKey]--;
+        if (_selectedFoodItems[itemKey] <= 0)
+        {
+          _selectedFoodItems.Remove(itemKey);
+        }
+        UpdateSelectedFoodItemsDisplay();
       }
     }
 
     private void CancelFoodSelection_Click(object sender, RoutedEventArgs e)
     {
       FoodSelectionDialog.Visibility = Visibility.Collapsed;
-      _selectedFoodItem = null!;
+      _selectedFoodItems.Clear();
+      _foodTotal = 0.0;
     }
 
     private void ConfirmFoodSelection_Click(object sender, RoutedEventArgs e)
     {
-      if (_selectedFoodItem != null)
-      {
-        _foodTotal += _selectedFoodItem.Price;
-        UpdateCashoutSummary();
-      }
-      
+      // Food total is already calculated in UpdateSelectedFoodItemsDisplay
       FoodSelectionDialog.Visibility = Visibility.Collapsed;
-      _selectedFoodItem = null!;
+      UpdateCashoutSummary();
     }
 
     private void TipKeypadButton_Click(object sender, RoutedEventArgs e)
@@ -1092,8 +1200,7 @@ namespace pokersoc_connect.Views
       PopulateChangeDenominationsList();
     }
 
-    // Fields to store selected food item and tip input
-    private dynamic _selectedFoodItem = null!;
+    // Fields to store tip input
     private double _tipInputValue = 0.0;
     private double _extraCashInputValue = 0.0;
     private bool _isManualChangeCustomization = false;
@@ -1105,10 +1212,18 @@ namespace pokersoc_connect.Views
     public Dictionary<int,int> PayoutPlan { get; }   // cash paid out (AU denoms)
     public Dictionary<int,int> ChipsIn { get; }      // chips turned in
     public int TotalCents { get; }
+    public double FoodTotal { get; }
+    public double TipAmount { get; }
+    public double ExtraCashAmount { get; }
+    
     public CashOutConfirmedEventArgs(string member,
                                      Dictionary<int,int> plan,
                                      Dictionary<int,int> chipsIn,
-                                     int totalCents)
-      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents) = (member, plan, chipsIn, totalCents);
+                                     int totalCents,
+                                     double foodTotal,
+                                     double tipAmount,
+                                     double extraCashAmount)
+      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents, FoodTotal, TipAmount, ExtraCashAmount) = 
+         (member, plan, chipsIn, totalCents, foodTotal, tipAmount, extraCashAmount);
   }
 }

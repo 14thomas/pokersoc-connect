@@ -1018,15 +1018,23 @@ namespace pokersoc_connect.Views
     }
 
 
-    private void UpdateTotalMoneyDisplay()
+    public void UpdateTotalMoneyDisplay()
     {
       try
       {
-        // Calculate total money made from all food sales
+        // Calculate total money made from all food sales (including cashout food sales)
         var totalCents = Database.ScalarLong(@"
-SELECT COALESCE(SUM(amount_cents), 0)
+SELECT COALESCE(SUM(
+  CASE 
+    WHEN activity_kind = 'FOOD' THEN amount_cents
+    WHEN activity_kind = 'TX' AND activity_type = 'CASHOUT' AND notes LIKE '%Food:%' 
+    THEN CAST(SUBSTR(notes, INSTR(notes, 'Food: $') + 7, INSTR(notes || ' |', ' |') - INSTR(notes, 'Food: $') - 7) AS REAL) * 100
+    ELSE 0
+  END
+), 0)
 FROM activity_log 
-WHERE activity_kind = 'FOOD'");
+WHERE activity_kind = 'FOOD' 
+   OR (activity_kind = 'TX' AND activity_type = 'CASHOUT' AND notes LIKE '%Food:%')");
 
         var totalAmount = totalCents / 100.0;
         var AU = CultureInfo.GetCultureInfo("en-AU");
