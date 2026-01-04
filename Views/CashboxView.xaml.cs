@@ -365,45 +365,42 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void FloatMultiplier_Click(object sender, RoutedEventArgs e)
+    private void FloatMultiplier1x_Click(object sender, RoutedEventArgs e)
     {
-      // Cycle through 1x, 5x, 20x
-      _currentMultiplier = _currentMultiplier switch
-      {
-        1 => 5,
-        5 => 20,
-        20 => 1,
-        _ => 1
-      };
+      _currentMultiplier = 1;
+      UpdateFloatMultiplierDisplay();
+    }
 
-      // Update display to highlight current multiplier
+    private void FloatMultiplier5x_Click(object sender, RoutedEventArgs e)
+    {
+      _currentMultiplier = 5;
+      UpdateFloatMultiplierDisplay();
+    }
+
+    private void FloatMultiplier20x_Click(object sender, RoutedEventArgs e)
+    {
+      _currentMultiplier = 20;
       UpdateFloatMultiplierDisplay();
     }
 
     private void UpdateFloatMultiplierDisplay()
     {
-      // Reset all to normal size and opacity
-      Float1xText.FontSize = 16;
-      Float1xText.Opacity = 0.6;
-      Float5xText.FontSize = 16;
-      Float5xText.Opacity = 0.6;
-      Float20xText.FontSize = 16;
-      Float20xText.Opacity = 0.6;
+      // Reset all to default (light blue)
+      Float1xButton.Background = Brushes.LightBlue;
+      Float5xButton.Background = Brushes.LightBlue;
+      Float20xButton.Background = Brushes.LightBlue;
 
-      // Highlight current multiplier
+      // Highlight current multiplier (light green)
       switch (_currentMultiplier)
       {
         case 1:
-          Float1xText.FontSize = 24;
-          Float1xText.Opacity = 1.0;
+          Float1xButton.Background = Brushes.LightGreen;
           break;
         case 5:
-          Float5xText.FontSize = 24;
-          Float5xText.Opacity = 1.0;
+          Float5xButton.Background = Brushes.LightGreen;
           break;
         case 20:
-          Float20xText.FontSize = 24;
-          Float20xText.Opacity = 1.0;
+          Float20xButton.Background = Brushes.LightGreen;
           break;
       }
     }

@@ -102,44 +102,6 @@
           </StackPanel>
         </GroupBox>
 
-        <!-- Chip Configuration Section -->
-        <GroupBox Header="Chip Configuration" Margin="0,0,0,20">
-          <StackPanel Margin="10">
-            <TextBlock Text="Customize chip colors and values:" Margin="0,0,0,10"/>
-            
-            <DataGrid x:Name="ChipConfigGrid" 
-                      AutoGenerateColumns="False" 
-                      CanUserAddRows="False" 
-                      CanUserDeleteRows="False"
-                      CanUserResizeRows="False"
-                      GridLinesVisibility="Horizontal"
-                      HeadersVisibility="Column"
-                      Margin="0,0,0,10">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Denomination" Binding="{Binding Denomination}" Width="120" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Current Value" Binding="{Binding CurrentValue}" Width="100" IsReadOnly="True"/>
-                <DataGridTextColumn Header="New Value" Binding="{Binding NewValue}" Width="100"/>
-                <DataGridTemplateColumn Header="Color" Width="120">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <StackPanel Orientation="Horizontal">
-                        <Border Width="20" Height="20" Background="{Binding Color}" BorderBrush="Gray" BorderThickness="1" Margin="0,0,5,0"/>
-                        <Button Content="Change" Click="ChangeColor_Click" Tag="{Binding}"/>
-                      </StackPanel>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
-              </DataGrid.Columns>
-            </DataGrid>
-            
-            <StackPanel Orientation="Horizontal">
-              <Button Content="Reset to Defaults" Width="140" Margin="0,0,10,0" Click="ResetChips_Click"/>
-              <Button Content="Apply Changes" Width="140" Margin="0,0,10,0" Click="ApplyChipChanges_Click"/>
-            </StackPanel>
-          </StackPanel>
-        </GroupBox>
-
         <!-- About Section -->
         <GroupBox Header="About" Margin="0,0,0,20">
           <StackPanel Margin="10">
@@ -151,7 +113,6 @@
             <TextBlock Text="• Food catalog and sales management" Margin="20,0,0,2"/>
             <TextBlock Text="• Settings import/export" Margin="20,0,0,2"/>
             <TextBlock Text="• Database backup and restore" Margin="20,0,0,2"/>
-            <TextBlock Text="• Customizable chip configuration" Margin="20,0,0,2"/>
           </StackPanel>
         </GroupBox>
 

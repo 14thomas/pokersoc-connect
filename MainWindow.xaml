@@ -19,19 +19,66 @@
         <ColumnDefinition Width="3*"/>
       </Grid.ColumnDefinitions>
 
-      <!-- LEFT SIDE: ACTIVITY LOG -->
+      <!-- LEFT SIDE: PLAYER ID + ACTIVITY LOG -->
       <Grid Grid.Column="0" Margin="12,12,6,12">
         <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- Current Player Section -->
+        <Border Grid.Row="0" 
+                BorderBrush="Gray" 
+                BorderThickness="2" 
+                Background="LightBlue" 
+                Padding="10" 
+                Margin="0,0,0,15">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <TextBlock Text="Current Player" 
+                       FontSize="14" 
+                       FontWeight="Bold" 
+                       Grid.Row="0" 
+                       Margin="0,0,0,5"/>
+            
+            <Grid Grid.Row="1">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              
+              <TextBox x:Name="CurrentPlayerIdBox"
+                       Grid.Column="0"
+                       FontSize="16"
+                       VerticalContentAlignment="Center"
+                       Padding="5"
+                       KeyDown="CurrentPlayerIdBox_KeyDown"
+                       TextChanged="CurrentPlayerIdBox_TextChanged"/>
+              
+              <Button x:Name="ClearPlayerBtn"
+                      Grid.Column="1"
+                      Content="✕"
+                      FontSize="16"
+                      FontWeight="Bold"
+                      Width="40"
+                      Margin="5,0,0,0"
+                      Background="LightCoral"
+                      Click="ClearPlayer_Click"/>
+            </Grid>
+          </Grid>
+        </Border>
+
         <!-- Activity header -->
-        <TextBlock Text="Activity Log" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+        <TextBlock Text="Activity Log" FontSize="18" FontWeight="Bold" Grid.Row="1" Margin="0,0,0,10"/>
 
         <!-- Activity table -->
         <DataGrid x:Name="TxGrid"
-                  Grid.Row="1"
+                  Grid.Row="2"
                   AutoGenerateColumns="False"
                   IsReadOnly="True">
           <DataGrid.Columns>
@@ -58,12 +105,14 @@
 
         <!-- Row 1 -->
         <!-- Buy-in Button -->
-        <Button Grid.Row="0" Grid.Column="0"
+        <Button x:Name="BuyInButton"
+                Grid.Row="0" Grid.Column="0"
                 Margin="0,0,5,5"
                 Padding="15,20"
                 Click="BuyIn_Click"
                 BorderThickness="2"
-                BorderBrush="Gray">
+                BorderBrush="Gray"
+                IsEnabled="False">
           <StackPanel>
             <TextBlock Text="💵" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Buy-in" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -72,12 +121,14 @@
         </Button>
 
         <!-- Cash-out Button -->
-        <Button Grid.Row="0" Grid.Column="1"
+        <Button x:Name="CashOutButton"
+                Grid.Row="0" Grid.Column="1"
                 Margin="5,0,0,5"
                 Padding="15,20"
                 Click="CashOut_Click"
                 BorderThickness="2"
-                BorderBrush="Gray">
+                BorderBrush="Gray"
+                IsEnabled="False">
           <StackPanel>
             <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Cash-out" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>

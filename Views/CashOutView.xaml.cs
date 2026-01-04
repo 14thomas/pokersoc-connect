@@ -17,14 +17,14 @@ namespace pokersoc_connect.Views
 
     // Your chip set only
     private readonly Dictionary<int,int> _chipCounts = new()
-      { {5,0},{10,0},{20,0},{25,0},{50,0},{100,0},{200,0},{500,0},{1000,0},{2000,0},{2500,0},{5000,0},{10000,0} };
+      { {5,0},{10,0},{20,0},{25,0},{50,0},{100,0},{500,0},{1000,0},{2000,0},{2500,0},{5000,0},{10000,0} };
 
     private readonly Stack<int> _history = new();
     private int _multiplier = 1;
 
     private readonly Dictionary<int,int> _available = new();
     private readonly Dictionary<int,int> _payout = new();
-    private static readonly int[] DenomsDesc = { 10000,5000,2500,2000,1000,500,200,100,50,25,20,10,5 };
+    private static readonly int[] DenomsDesc = { 10000,5000,2500,2000,1000,500,100,50,25,20,10,5 };
 
     // New fields for second screen functionality
     private readonly Dictionary<int,int> _changeDenominations = new();
@@ -51,6 +51,15 @@ namespace pokersoc_connect.Views
       };
     }
 
+    // Method to pre-fill player ID from main window
+    public void SetPlayerID(string playerId)
+    {
+      if (ScanBox != null)
+      {
+        ScanBox.Text = playerId;
+      }
+    }
+
     private void LoadAvailableFromDb()
     {
       _available.Clear();
@@ -68,7 +77,7 @@ namespace pokersoc_connect.Views
       foreach (var d in DenomsDesc) if (!_available.ContainsKey(d)) _available[d] = 0;
     }
 
-    private IEnumerable<Button> AllChipButtons() => new[] { C5,C25,C100,C200,C500,P2500,P10000 };
+    private IEnumerable<Button> AllChipButtons() => new[] { C5,C25,C100,C500,P2500,P10000 };
 
     private void UpdateBadgeFor(Button b, int count)
     {
@@ -99,7 +108,6 @@ namespace pokersoc_connect.Views
         case 5: C5Count.Text = count.ToString(); break;
         case 25: C25Count.Text = count.ToString(); break;
         case 100: C100Count.Text = count.ToString(); break;
-        case 200: C200Count.Text = count.ToString(); break;
         case 500: C500Count.Text = count.ToString(); break;
         case 2500: P2500Count.Text = count.ToString(); break;
         case 10000: P10000Count.Text = count.ToString(); break;
@@ -218,7 +226,6 @@ namespace pokersoc_connect.Views
           5 => "5c",
           25 => "25c", 
           100 => "$1",
-          200 => "$2",
           500 => "$5",
           2500 => "$25",
           10000 => "$100",
@@ -266,45 +273,42 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void Multiplier_Click(object sender, RoutedEventArgs e)
+    private void Multiplier1x_Click(object sender, RoutedEventArgs e)
     {
-      // Cycle through 1x, 5x, 20x
-      _multiplier = _multiplier switch
-      {
-        1 => 5,
-        5 => 20,
-        20 => 1,
-        _ => 1
-      };
+      _multiplier = 1;
+      UpdateMultiplierDisplay();
+    }
 
-      // Update display to highlight current multiplier
+    private void Multiplier5x_Click(object sender, RoutedEventArgs e)
+    {
+      _multiplier = 5;
+      UpdateMultiplierDisplay();
+    }
+
+    private void Multiplier20x_Click(object sender, RoutedEventArgs e)
+    {
+      _multiplier = 20;
       UpdateMultiplierDisplay();
     }
 
     private void UpdateMultiplierDisplay()
     {
-      // Reset all to normal size and opacity
-      X1Text.FontSize = 16;
-      X1Text.Opacity = 0.6;
-      X5Text.FontSize = 16;
-      X5Text.Opacity = 0.6;
-      X20Text.FontSize = 16;
-      X20Text.Opacity = 0.6;
+      // Reset all to default (light blue)
+      X1Button.Background = Brushes.LightBlue;
+      X5Button.Background = Brushes.LightBlue;
+      X20Button.Background = Brushes.LightBlue;
 
-      // Highlight current multiplier
+      // Highlight current multiplier (light green)
       switch (_multiplier)
       {
         case 1:
-          X1Text.FontSize = 24;
-          X1Text.Opacity = 1.0;
+          X1Button.Background = Brushes.LightGreen;
           break;
         case 5:
-          X5Text.FontSize = 24;
-          X5Text.Opacity = 1.0;
+          X5Button.Background = Brushes.LightGreen;
           break;
         case 20:
-          X20Text.FontSize = 24;
-          X20Text.Opacity = 1.0;
+          X20Button.Background = Brushes.LightGreen;
           break;
       }
     }

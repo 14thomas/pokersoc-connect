@@ -9,8 +9,8 @@ namespace pokersoc_connect.Views
 {
   public partial class LostChipsView : UserControl
   {
-    // Poker chip denominations only
-    private static readonly int[] PokerChipDenoms = { 5, 25, 100, 200, 500, 2500, 10000 };
+    // Poker chip denominations only (removed $2 chip - 200)
+    private static readonly int[] PokerChipDenoms = { 5, 25, 100, 500, 2500, 10000 };
     private readonly Dictionary<int, TextBlock> _chipCounts = new Dictionary<int, TextBlock>();
     private readonly Dictionary<int, int> _chipValues = new Dictionary<int, int>();
     private int _currentMultiplier = 1; // Current multiplier (1, 5, or 20)
@@ -34,7 +34,6 @@ namespace pokersoc_connect.Views
       _chipCounts[5] = Chip5c;    // White 5c
       _chipCounts[25] = Chip25c;  // Red 25c
       _chipCounts[100] = Chip1;   // Blue $1
-      _chipCounts[200] = Chip2;   // Green $2
       _chipCounts[500] = Chip5;   // Black $5
       _chipCounts[2500] = Chip25; // White Plaque $25
       _chipCounts[10000] = Chip100; // Red Plaque $100
@@ -67,7 +66,6 @@ namespace pokersoc_connect.Views
     private void AddChip5c_Click(object sender, RoutedEventArgs e) => AddChip(5);
     private void AddChip25c_Click(object sender, RoutedEventArgs e) => AddChip(25);
     private void AddChip1_Click(object sender, RoutedEventArgs e) => AddChip(100);
-    private void AddChip2_Click(object sender, RoutedEventArgs e) => AddChip(200);
     private void AddChip5_Click(object sender, RoutedEventArgs e) => AddChip(500);
     private void AddChip25_Click(object sender, RoutedEventArgs e) => AddChip(2500);
     private void AddChip100_Click(object sender, RoutedEventArgs e) => AddChip(10000);

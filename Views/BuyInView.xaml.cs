@@ -38,6 +38,15 @@ namespace pokersoc_connect.Views
       };
     }
 
+    // Method to pre-fill player ID from main window
+    public void SetPlayerID(string playerId)
+    {
+      if (ScanBox != null)
+      {
+        ScanBox.Text = playerId;
+      }
+    }
+
     private void InitializeCashInput()
     {
       _cashCounts = CashDenoms.ToDictionary(d => d, d => 0);
@@ -159,45 +168,42 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void CashMultiplier_Click(object sender, RoutedEventArgs e)
+    private void CashMultiplier1x_Click(object sender, RoutedEventArgs e)
     {
-      // Cycle through 1x, 5x, 20x
-      _currentMultiplier = _currentMultiplier switch
-      {
-        1 => 5,
-        5 => 20,
-        20 => 1,
-        _ => 1
-      };
+      _currentMultiplier = 1;
+      UpdateCashMultiplierDisplay();
+    }
 
-      // Update display to highlight current multiplier
+    private void CashMultiplier5x_Click(object sender, RoutedEventArgs e)
+    {
+      _currentMultiplier = 5;
+      UpdateCashMultiplierDisplay();
+    }
+
+    private void CashMultiplier20x_Click(object sender, RoutedEventArgs e)
+    {
+      _currentMultiplier = 20;
       UpdateCashMultiplierDisplay();
     }
 
     private void UpdateCashMultiplierDisplay()
     {
-      // Reset all to normal size and opacity
-      Cash1xText.FontSize = 16;
-      Cash1xText.Opacity = 0.6;
-      Cash5xText.FontSize = 16;
-      Cash5xText.Opacity = 0.6;
-      Cash20xText.FontSize = 16;
-      Cash20xText.Opacity = 0.6;
+      // Reset all to default (light blue)
+      Cash1xButton.Background = Brushes.LightBlue;
+      Cash5xButton.Background = Brushes.LightBlue;
+      Cash20xButton.Background = Brushes.LightBlue;
 
-      // Highlight current multiplier
+      // Highlight current multiplier (light green)
       switch (_currentMultiplier)
       {
         case 1:
-          Cash1xText.FontSize = 24;
-          Cash1xText.Opacity = 1.0;
+          Cash1xButton.Background = Brushes.LightGreen;
           break;
         case 5:
-          Cash5xText.FontSize = 24;
-          Cash5xText.Opacity = 1.0;
+          Cash5xButton.Background = Brushes.LightGreen;
           break;
         case 20:
-          Cash20xText.FontSize = 24;
-          Cash20xText.Opacity = 1.0;
+          Cash20xButton.Background = Brushes.LightGreen;
           break;
       }
     }

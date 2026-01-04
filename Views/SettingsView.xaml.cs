@@ -18,24 +18,7 @@ namespace pokersoc_connect.Views
     public SettingsView()
     {
       InitializeComponent();
-      LoadChipConfiguration();
       LoadFoodItems();
-    }
-
-    private void LoadChipConfiguration()
-    {
-      var chipConfigs = new List<ChipConfigItem>
-      {
-        new ChipConfigItem { Denomination = "5c", CurrentValue = 5, NewValue = 5, Color = Brushes.LightGray, IsEnabled = true },
-        new ChipConfigItem { Denomination = "25c", CurrentValue = 25, NewValue = 25, Color = Brushes.Red, IsEnabled = true },
-        new ChipConfigItem { Denomination = "$1", CurrentValue = 100, NewValue = 100, Color = Brushes.Blue, IsEnabled = true },
-        new ChipConfigItem { Denomination = "$2", CurrentValue = 200, NewValue = 200, Color = Brushes.Green, IsEnabled = true },
-        new ChipConfigItem { Denomination = "$5", CurrentValue = 500, NewValue = 500, Color = Brushes.Black, IsEnabled = true },
-        new ChipConfigItem { Denomination = "$25", CurrentValue = 2500, NewValue = 2500, Color = Brushes.White, IsEnabled = true },
-        new ChipConfigItem { Denomination = "$100", CurrentValue = 10000, NewValue = 10000, Color = Brushes.Red, IsEnabled = true }
-      };
-
-      ChipConfigGrid.ItemsSource = chipConfigs;
     }
 
     private void ImportSettings_Click(object sender, RoutedEventArgs e)
@@ -195,108 +178,6 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void ChangeColor_Click(object sender, RoutedEventArgs e)
-    {
-      if (sender is Button btn && btn.Tag is ChipConfigItem item)
-      {
-        // Simple color selection using predefined colors
-        var colorWindow = new Window
-        {
-          Title = "Select Color",
-          Width = 300,
-          Height = 200,
-          WindowStartupLocation = WindowStartupLocation.CenterOwner,
-          Owner = Window.GetWindow(this)
-        };
-
-        var colors = new[]
-        {
-          Brushes.Red, Brushes.Blue, Brushes.Green, Brushes.Yellow, Brushes.Orange,
-          Brushes.Purple, Brushes.Pink, Brushes.Brown, Brushes.Gray, Brushes.Black,
-          Brushes.White, Brushes.LightBlue, Brushes.LightGreen, Brushes.LightYellow,
-          Brushes.LightPink, Brushes.LightGray, Brushes.DarkRed, Brushes.DarkBlue,
-          Brushes.DarkGreen, Brushes.DarkOrange, Brushes.DarkViolet, Brushes.Gold
-        };
-
-        var wrapPanel = new WrapPanel { Margin = new Thickness(10) };
-        
-        foreach (var color in colors)
-        {
-          var button = new Button
-          {
-            Width = 40,
-            Height = 40,
-            Margin = new Thickness(2),
-            Background = color,
-            BorderBrush = Brushes.Black,
-            BorderThickness = new Thickness(1)
-          };
-          
-          button.Click += (s, args) =>
-          {
-            item.Color = color;
-            ChipConfigGrid.Items.Refresh();
-            colorWindow.Close();
-          };
-          
-          wrapPanel.Children.Add(button);
-        }
-
-        colorWindow.Content = wrapPanel;
-        colorWindow.ShowDialog();
-      }
-    }
-
-    private void ResetChips_Click(object sender, RoutedEventArgs e)
-    {
-      var result = MessageBox.Show(
-        "Reset all chip configurations to defaults?",
-        "Reset Chips", MessageBoxButton.YesNo, MessageBoxImage.Question);
-      
-      if (result == MessageBoxResult.Yes)
-      {
-        LoadChipConfiguration();
-      }
-    }
-
-    private void ApplyChipChanges_Click(object sender, RoutedEventArgs e)
-    {
-      try
-      {
-        // Validate the changes
-        var configs = ChipConfigGrid.ItemsSource.Cast<ChipConfigItem>().ToList();
-        var errors = new List<string>();
-
-        foreach (var config in configs.Where(c => c.IsEnabled))
-        {
-          if (config.NewValue <= 0)
-            errors.Add($"{config.Denomination}: Value must be greater than 0");
-          
-          if (config.NewValue % 5 != 0)
-            errors.Add($"{config.Denomination}: Value must be divisible by 5 cents");
-        }
-
-        if (errors.Any())
-        {
-          MessageBox.Show($"Please fix the following errors:\n\n{string.Join("\n", errors)}", 
-            "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-          return;
-        }
-
-        // Apply the changes
-        // TODO: Implement chip configuration storage and loading
-        MessageBox.Show("Chip configuration changes applied successfully.", "Success", 
-          MessageBoxButton.OK, MessageBoxImage.Information);
-        
-        SettingsChanged?.Invoke(this, EventArgs.Empty);
-      }
-      catch (Exception ex)
-      {
-        MessageBox.Show($"Error applying chip changes:\n{ex.Message}", "Apply Error", 
-          MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-    }
-
     private void LoadFoodItems()
     {
       try
@@ -424,14 +305,5 @@ namespace pokersoc_connect.Views
     {
       CloseRequested?.Invoke(this, EventArgs.Empty);
     }
-  }
-
-  public class ChipConfigItem
-  {
-    public string Denomination { get; set; } = "";
-    public int CurrentValue { get; set; }
-    public int NewValue { get; set; }
-    public Brush Color { get; set; } = Brushes.Gray;
-    public bool IsEnabled { get; set; }
   }
 }

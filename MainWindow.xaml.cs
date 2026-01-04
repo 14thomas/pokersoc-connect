@@ -20,12 +20,48 @@ namespace pokersoc_connect
     // All denominations including poker chips (for buy-ins, cash-outs, etc.)
     private static readonly int[] AllDenoms = { 5, 10, 20, 25, 50, 100, 200, 500, 1000, 2000, 2500, 5000, 10000 };
 
+    // Current player ID (persists across tabs)
+    private string _currentPlayerId = string.Empty;
+
     public MainWindow()
     {
       InitializeComponent();
       ShowTransactions();
       RefreshActivity();
       TxGrid.MouseDoubleClick += TxGrid_MouseDoubleClick;
+      UpdatePlayerButtons(); // Ensure buttons are disabled initially
+    }
+
+    // ===== Current Player Management =====
+    private void CurrentPlayerIdBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+      if (e.Key == System.Windows.Input.Key.Enter)
+      {
+        _currentPlayerId = CurrentPlayerIdBox.Text.Trim();
+        CurrentPlayerIdBox.Text = _currentPlayerId;
+        e.Handled = true;
+      }
+    }
+
+    private void CurrentPlayerIdBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      _currentPlayerId = CurrentPlayerIdBox.Text.Trim();
+      UpdatePlayerButtons();
+    }
+
+    private void ClearPlayer_Click(object sender, RoutedEventArgs e)
+    {
+      _currentPlayerId = string.Empty;
+      CurrentPlayerIdBox.Text = string.Empty;
+      CurrentPlayerIdBox.Focus();
+      UpdatePlayerButtons();
+    }
+
+    private void UpdatePlayerButtons()
+    {
+      bool hasPlayerId = !string.IsNullOrWhiteSpace(_currentPlayerId);
+      BuyInButton.IsEnabled = hasPlayerId;
+      CashOutButton.IsEnabled = hasPlayerId;
     }
 
     // ===== Fullscreen functionality =====
@@ -128,6 +164,13 @@ namespace pokersoc_connect
       
       // Show food content in ScreenHost
       var foodView = new FoodCatalogView();
+      
+      // Pre-fill player ID if one is set
+      if (!string.IsNullOrEmpty(_currentPlayerId))
+      {
+        foodView.SetPlayerID(_currentPlayerId);
+      }
+      
       foodView.BackToMain += (_, __) => ShowTransactions();
       foodView.GoToSettings += (_, __) => ShowSettings();
       foodView.ActivityRefreshRequested += (_, __) => RefreshActivity();
@@ -156,6 +199,13 @@ namespace pokersoc_connect
       if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
       var view = new BuyInView();
+      
+      // Pre-fill player ID if one is set
+      if (!string.IsNullOrEmpty(_currentPlayerId))
+      {
+        view.SetPlayerID(_currentPlayerId);
+      }
+      
       view.Cancelled += (_, __) => ShowTransactions();
       view.Confirmed += (_, args) =>
       {
@@ -208,6 +258,13 @@ namespace pokersoc_connect
       if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
       var view = new CashOutView();
+      
+      // Pre-fill player ID if one is set
+      if (!string.IsNullOrEmpty(_currentPlayerId))
+      {
+        view.SetPlayerID(_currentPlayerId);
+      }
+      
       view.Back += (_, __) => ShowTransactions();
       view.Confirmed += (_, args) =>
       {

@@ -60,6 +60,15 @@ namespace pokersoc_connect.Views
       Loaded += (s, e) => InitializeView();
     }
 
+    // Method to pre-fill player ID from main window
+    public void SetPlayerID(string playerId)
+    {
+      if (PaymentPlayerIdTextBox != null)
+      {
+        PaymentPlayerIdTextBox.Text = playerId;
+      }
+    }
+
     private void InitializeView()
     {
       try
@@ -685,20 +694,37 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void ChipMultiplier_Click(object sender, RoutedEventArgs e)
+    private void ChipMultiplier1x_Click(object sender, RoutedEventArgs e)
     {
       try
       {
-        // Cycle through 1x, 5x, 20x
-        _chipMultiplier = _chipMultiplier switch
-        {
-          1 => 5,
-          5 => 20,
-          20 => 1,
-          _ => 1
-        };
+        _chipMultiplier = 1;
+        UpdateChipMultiplierDisplay();
+      }
+      catch (Exception ex)
+      {
+        // Silently handle errors
+      }
+    }
 
-        // Update display to highlight current multiplier
+    private void ChipMultiplier5x_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        _chipMultiplier = 5;
+        UpdateChipMultiplierDisplay();
+      }
+      catch (Exception ex)
+      {
+        // Silently handle errors
+      }
+    }
+
+    private void ChipMultiplier20x_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        _chipMultiplier = 20;
         UpdateChipMultiplierDisplay();
       }
       catch (Exception ex)
@@ -711,28 +737,22 @@ namespace pokersoc_connect.Views
     {
       try
       {
-        // Reset all to normal size and opacity
-        Chip1xText.FontSize = 16;
-        Chip1xText.Opacity = 0.6;
-        Chip5xText.FontSize = 16;
-        Chip5xText.Opacity = 0.6;
-        Chip20xText.FontSize = 16;
-        Chip20xText.Opacity = 0.6;
+        // Reset all to default (light blue)
+        Chip1xButton.Background = Brushes.LightBlue;
+        Chip5xButton.Background = Brushes.LightBlue;
+        Chip20xButton.Background = Brushes.LightBlue;
 
-        // Highlight current multiplier
+        // Highlight current multiplier (light green)
         switch (_chipMultiplier)
         {
           case 1:
-            Chip1xText.FontSize = 24;
-            Chip1xText.Opacity = 1.0;
+            Chip1xButton.Background = Brushes.LightGreen;
             break;
           case 5:
-            Chip5xText.FontSize = 24;
-            Chip5xText.Opacity = 1.0;
+            Chip5xButton.Background = Brushes.LightGreen;
             break;
           case 20:
-            Chip20xText.FontSize = 24;
-            Chip20xText.Opacity = 1.0;
+            Chip20xButton.Background = Brushes.LightGreen;
             break;
         }
       }

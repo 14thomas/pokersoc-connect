@@ -67,26 +67,17 @@
             </StackPanel>
           </Button>
 
-          <!-- Row 2 - Green $2, Black $5, White Plaque $25 -->
-          <Button Grid.Row="1" Grid.Column="0" Margin="5" Click="AddChip2_Click" 
-                  Background="Green" BorderThickness="3" BorderBrush="DarkGreen">
-            <StackPanel>
-              <TextBlock Text="$2" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
-              <TextBlock Text="Green" FontSize="12" HorizontalAlignment="Center" Foreground="LightGreen"/>
-              <TextBlock x:Name="Chip2" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
-            </StackPanel>
-          </Button>
-
-          <Button Grid.Row="1" Grid.Column="1" Margin="5" Click="AddChip5_Click" 
-                  Background="Black" BorderThickness="3" BorderBrush="DarkGray">
+          <!-- Row 2 - Black $5, White Plaque $25, Red Plaque $100 -->
+          <Button Grid.Row="1" Grid.Column="0" Margin="5" Click="AddChip5_Click" 
+                  Background="Red" BorderThickness="3" BorderBrush="DarkRed">
             <StackPanel>
               <TextBlock Text="$5" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
-              <TextBlock Text="Black" FontSize="12" HorizontalAlignment="Center" Foreground="LightGray"/>
+              <TextBlock Text="Red" FontSize="12" HorizontalAlignment="Center" Foreground="LightGray"/>
               <TextBlock x:Name="Chip5" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
             </StackPanel>
           </Button>
 
-          <Button Grid.Row="1" Grid.Column="2" Margin="5" Click="AddChip25_Click" 
+          <Button Grid.Row="1" Grid.Column="1" Margin="5" Click="AddChip25_Click" 
                   Background="White" BorderThickness="3" BorderBrush="Black">
             <StackPanel>
               <TextBlock Text="$25" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="Black"/>
@@ -95,25 +86,13 @@
             </StackPanel>
           </Button>
 
-          <!-- Row 3 - Red Plaque $100 -->
-          <Button Grid.Row="2" Grid.Column="0" Margin="5" Click="AddChip100_Click" 
+          <Button Grid.Row="1" Grid.Column="2" Margin="5" Click="AddChip100_Click" 
                   Background="Red" BorderThickness="3" BorderBrush="DarkRed">
             <StackPanel>
               <TextBlock Text="$100" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
-              <TextBlock Text="Red Plaque" FontSize="10" HorizontalAlignment="Center" Foreground="LightGray"/>
+              <TextBlock Text="Red Plaque" FontSize="12" HorizontalAlignment="Center" Foreground="LightGray"/>
               <TextBlock x:Name="Chip100" Text="0" FontSize="16" HorizontalAlignment="Center" Opacity="0.7" Foreground="White"/>
             </StackPanel>
-          </Button>
-
-          <!-- Empty spaces for visual balance -->
-          <Button Grid.Row="2" Grid.Column="1" Margin="5" IsEnabled="False" 
-                  Background="LightGray" BorderThickness="2" BorderBrush="LightGray" Opacity="0.3">
-            <TextBlock Text="More" FontSize="16" HorizontalAlignment="Center" Opacity="0.5"/>
-          </Button>
-
-          <Button Grid.Row="2" Grid.Column="2" Margin="5" IsEnabled="False" 
-                  Background="LightGray" BorderThickness="2" BorderBrush="LightGray" Opacity="0.3">
-            <TextBlock Text="Chips" FontSize="16" HorizontalAlignment="Center" Opacity="0.5"/>
           </Button>
         </Grid>
       </StackPanel>

@@ -736,25 +736,55 @@
           </Button>
 
           <!-- Multiplier Controls -->
-          <Button Grid.Row="5" Grid.Column="1"
-                  Margin="5,5,0,0"
-                  Padding="15,20"
-                  BorderThickness="2"
-                  BorderBrush="Gray"
-                  Background="LightBlue"
-                  Click="ChipMultiplier_Click">
-            <StackPanel>
-              <TextBlock Text="×" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="Multiplier" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
-                <TextBlock x:Name="Chip1xText" Text="1x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
-                <TextBlock Text="|" FontSize="16" HorizontalAlignment="Center" Margin="5,0" Opacity="0.5"/>
-                <TextBlock x:Name="Chip5xText" Text="5x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
-                <TextBlock Text="|" FontSize="16" HorizontalAlignment="Center" Margin="5,0" Opacity="0.5"/>
-                <TextBlock x:Name="Chip20xText" Text="20x" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="5,0"/>
+          <Grid Grid.Row="5" Grid.Column="1" Margin="5,5,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 1x Button -->
+            <Button x:Name="Chip1xButton" Grid.Column="0"
+                    Margin="0,0,2,0"
+                    Padding="5,10"
+                    BorderThickness="2"
+                    BorderBrush="Gray"
+                    Background="LightGreen"
+                    Click="ChipMultiplier1x_Click">
+              <StackPanel>
+                <TextBlock Text="×1" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="1x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
-          </StackPanel>
-          </Button>
+            </Button>
+
+            <!-- 5x Button -->
+            <Button x:Name="Chip5xButton" Grid.Column="1"
+                    Margin="2,0,2,0"
+                    Padding="5,10"
+                    BorderThickness="2"
+                    BorderBrush="Gray"
+                    Background="LightBlue"
+                    Click="ChipMultiplier5x_Click">
+              <StackPanel>
+                <TextBlock Text="×5" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="5x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+
+            <!-- 20x Button -->
+            <Button x:Name="Chip20xButton" Grid.Column="2"
+                    Margin="2,0,0,0"
+                    Padding="5,10"
+                    BorderThickness="2"
+                    BorderBrush="Gray"
+                    Background="LightBlue"
+                    Click="ChipMultiplier20x_Click">
+              <StackPanel>
+                <TextBlock Text="×20" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="20x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+          </Grid>
         </Grid>
 
       </Grid>
