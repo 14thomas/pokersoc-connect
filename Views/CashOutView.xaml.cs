@@ -576,6 +576,7 @@ namespace pokersoc_connect.Views
           1000 => "$10",
           2000 => "$20",
           5000 => "$50",
+          10000 => "$100",
           _ => $"{kv.Key}c"
         };
 
@@ -1082,6 +1083,7 @@ namespace pokersoc_connect.Views
           1000 => "$10",
           2000 => "$20",
           5000 => "$50",
+          10000 => "$100",
           _ => $"{denomCents}c"
         };
         

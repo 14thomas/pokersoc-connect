@@ -216,24 +216,9 @@
             </StackPanel>
           </Button>
 
-          <!-- Empty space for balance -->
-          <Button Grid.Row="1" Grid.Column="1"
-                  Margin="5,5,0,5"
-                  Padding="15,20"
-                  BorderThickness="2"
-                  BorderBrush="Gray"
-                  IsEnabled="False">
-            <StackPanel>
-              <TextBlock Text="" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock Text="" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Row 3 -->
           <!-- $5 Chip Button -->
-          <Button x:Name="C500" Grid.Row="2" Grid.Column="0"
-                  Margin="0,5,5,5"
+          <Button x:Name="C500" Grid.Row="1" Grid.Column="1"
+                  Margin="5,5,0,5"
                   Padding="15,20"
                   Click="Chip_Click"
                   Tag="500"
@@ -246,9 +231,10 @@
             </StackPanel>
           </Button>
 
+          <!-- Row 3 -->
           <!-- $25 Plaque Button -->
-          <Button x:Name="P2500" Grid.Row="2" Grid.Column="1"
-                  Margin="5,5,0,5"
+          <Button x:Name="P2500" Grid.Row="2" Grid.Column="0"
+                  Margin="0,5,5,5"
                   Padding="15,20"
                   Click="Chip_Click"
                   Tag="2500"
@@ -261,10 +247,9 @@
             </StackPanel>
           </Button>
 
-          <!-- Row 4 -->
           <!-- $100 Plaque Button -->
-          <Button x:Name="P10000" Grid.Row="3" Grid.Column="0"
-                  Margin="0,5,5,5"
+          <Button x:Name="P10000" Grid.Row="2" Grid.Column="1"
+                  Margin="5,5,0,5"
                   Padding="15,20"
                   Click="Chip_Click"
                   Tag="10000"
