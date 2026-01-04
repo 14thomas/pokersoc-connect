@@ -55,6 +55,7 @@ namespace pokersoc_connect.Views
     public void SetPlayerID(string playerId)
     {
       _playerId = playerId;
+
       if (PlayerIdDisplay != null)
       {
         PlayerIdDisplay.Text = playerId;
