@@ -34,7 +34,8 @@ namespace pokersoc_connect.Views
     private double _extraCashAmount = 0.0;
     private readonly int[] _cashDenominations = { 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
 
-    public string MemberNumber => ScanBox.Text.Trim();
+    private string _playerId = string.Empty;
+    public string MemberNumber => _playerId;
     public int TotalCents => _chipCounts.Sum(kv => kv.Key * kv.Value);
     public double TotalDollars => TotalCents / 100.0;
     public IReadOnlyDictionary<int,int> PayoutPlan => _payout;
@@ -47,16 +48,38 @@ namespace pokersoc_connect.Views
         UpdateAllBadges(); 
         RecomputePlan(); 
         UpdateMultiplierDisplay();
-        ScanBox.Focus(); 
       };
     }
 
     // Method to pre-fill player ID from main window
     public void SetPlayerID(string playerId)
     {
-      if (ScanBox != null)
+      _playerId = playerId;
+      if (PlayerIdDisplay != null)
       {
-        ScanBox.Text = playerId;
+        PlayerIdDisplay.Text = playerId;
+        LoadPlayerName(playerId);
+      }
+    }
+
+    private void LoadPlayerName(string playerId)
+    {
+      try
+      {
+        var result = Database.Query("SELECT display_name FROM players WHERE player_id = $id", ("$id", playerId));
+        if (result.Rows.Count > 0)
+        {
+          var displayName = result.Rows[0]["display_name"]?.ToString() ?? "New Player";
+          PlayerNameDisplay.Text = displayName;
+        }
+        else
+        {
+          PlayerNameDisplay.Text = "Unknown";
+        }
+      }
+      catch
+      {
+        PlayerNameDisplay.Text = "Error loading name";
       }
     }
 
@@ -347,7 +370,7 @@ namespace pokersoc_connect.Views
     }
 
     private void Back_Click(object sender, RoutedEventArgs e) => Back?.Invoke(this, EventArgs.Empty);
-    private void ClearScan_Click(object sender, RoutedEventArgs e) => ScanBox.Clear();
+    // Player ID methods removed - now locked and passed from main window
 
     private void Next_Click(object sender, RoutedEventArgs e)
     {
@@ -455,10 +478,6 @@ namespace pokersoc_connect.Views
       ShowChipSelectionScreen();
     }
 
-    private void ScanBox_KeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key == Key.Enter && NextBtn.IsEnabled) Next_Click(sender, e);
-    }
 
     // New methods for second screen functionality
     private void ShowChipSelectionScreen()

@@ -38,9 +38,10 @@
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
-            <TextBlock Text="Current Player" 
+            <TextBlock Text="Current Player (Scan ID or Press Enter)" 
                        FontSize="14" 
                        FontWeight="Bold" 
                        Grid.Row="0" 
@@ -70,6 +71,51 @@
                       Background="LightCoral"
                       Click="ClearPlayer_Click"/>
             </Grid>
+            
+            <!-- New Player Verification Panel (Hidden by default) -->
+            <Border x:Name="NewPlayerPanel"
+                    Grid.Row="2"
+                    Visibility="Collapsed"
+                    BorderBrush="Orange"
+                    BorderThickness="2"
+                    Background="LightYellow"
+                    Padding="10"
+                    Margin="0,10,0,0">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" 
+                          Text="⚠️ NEW PLAYER DETECTED" 
+                          FontSize="14" 
+                          FontWeight="Bold" 
+                          Foreground="DarkOrange"
+                          Margin="0,0,0,5"/>
+                
+                <TextBlock x:Name="NewPlayerIdText"
+                          Grid.Row="1"
+                          Text="Player ID: "
+                          FontSize="12"
+                          Margin="0,0,0,8"/>
+                
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+                  <Button Content="✓ Verify &amp; Add Player"
+                          Click="VerifyNewPlayer_Click"
+                          Background="LightGreen"
+                          Padding="10,5"
+                          Margin="0,0,5,0"
+                          FontWeight="Bold"/>
+                  <Button Content="✕ Cancel"
+                          Click="CancelNewPlayer_Click"
+                          Background="LightCoral"
+                          Padding="10,5"
+                          FontWeight="Bold"/>
+                </StackPanel>
+              </Grid>
+            </Border>
           </Grid>
         </Border>
 
@@ -166,17 +212,17 @@
         </Button>
 
         <!-- Row 3 -->
-        <!-- Empty Button 5 -->
+        <!-- Players Button -->
         <Button Grid.Row="2" Grid.Column="0"
                 Margin="0,5,5,5"
                 Padding="15,20"
+                Click="Players_Click"
                 BorderThickness="2"
-                BorderBrush="LightGray"
-                IsEnabled="False">
+                BorderBrush="Gray">
           <StackPanel>
-            <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
-            <TextBlock Text="Button 5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
-            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="👥" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Players" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Manage player database" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
         </Button>
 

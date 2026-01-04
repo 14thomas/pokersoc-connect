@@ -65,6 +65,22 @@ namespace pokersoc_connect
         return;
       }
 
+      // Import players if requested
+      if (!string.IsNullOrWhiteSpace(start.PlayerImportPath) && File.Exists(start.PlayerImportPath))
+      {
+        try
+        {
+          Database.ImportPlayers(start.PlayerImportPath, merge: true);
+          MessageBox.Show($"Players imported successfully from:\n{start.PlayerImportPath}", 
+            "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+          MessageBox.Show($"Could not import players:\n{ex.Message}\n\nContinuing without import.", 
+            "Import Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+      }
+
       // Now create and show the real main window
       var main = new MainWindow();
       this.MainWindow = main;

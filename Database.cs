@@ -358,5 +358,142 @@ CREATE TABLE IF NOT EXISTS food_slot_assignments (
 
       return assignments;
     }
+
+    // ----------------- Player Database Management -----------------
+
+    public static void ExportPlayers(string filePath)
+    {
+      var players = Query("SELECT player_id, display_name, first_name, last_name, phone, notes, status, created_at FROM players ORDER BY player_id");
+      
+      using var writer = new StreamWriter(filePath);
+      // Write CSV header
+      writer.WriteLine("player_id,display_name,first_name,last_name,phone,notes,status,created_at");
+      
+      foreach (DataRow row in players.Rows)
+      {
+        var playerId = CsvEscape(row["player_id"]?.ToString() ?? "");
+        var displayName = CsvEscape(row["display_name"]?.ToString() ?? "");
+        var firstName = CsvEscape(row["first_name"]?.ToString() ?? "");
+        var lastName = CsvEscape(row["last_name"]?.ToString() ?? "");
+        var phone = CsvEscape(row["phone"]?.ToString() ?? "");
+        var notes = CsvEscape(row["notes"]?.ToString() ?? "");
+        var status = CsvEscape(row["status"]?.ToString() ?? "Active");
+        var createdAt = CsvEscape(row["created_at"]?.ToString() ?? "");
+        
+        writer.WriteLine($"{playerId},{displayName},{firstName},{lastName},{phone},{notes},{status},{createdAt}");
+      }
+    }
+
+    public static void ImportPlayers(string filePath, bool merge = true)
+    {
+      if (!File.Exists(filePath)) return;
+
+      var lines = File.ReadAllLines(filePath);
+      if (lines.Length == 0) return;
+
+      // Skip header row
+      for (int i = 1; i < lines.Length; i++)
+      {
+        var parts = CsvParseLine(lines[i]);
+        if (parts.Length < 2) continue;
+
+        var playerId = parts[0].Trim();
+        var displayName = parts.Length > 1 ? parts[1].Trim() : "New Player";
+        var firstName = parts.Length > 2 ? parts[2].Trim() : "";
+        var lastName = parts.Length > 3 ? parts[3].Trim() : "";
+        var phone = parts.Length > 4 ? parts[4].Trim() : "";
+        var notes = parts.Length > 5 ? parts[5].Trim() : "";
+        var status = parts.Length > 6 ? parts[6].Trim() : "Active";
+
+        if (string.IsNullOrWhiteSpace(playerId)) continue;
+
+        try
+        {
+          if (merge)
+          {
+            // Insert or replace (update if exists)
+            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, first_name, last_name, phone, notes, status) 
+                   VALUES ($id, $dn, $fn, $ln, $ph, $nt, $st)",
+                 ("$id", playerId),
+                 ("$dn", string.IsNullOrWhiteSpace(displayName) ? "New Player" : displayName),
+                 ("$fn", firstName),
+                 ("$ln", lastName),
+                 ("$ph", phone),
+                 ("$nt", notes),
+                 ("$st", status));
+          }
+          else
+          {
+            // Only insert if doesn't exist
+            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, first_name, last_name, phone, notes, status) 
+                   VALUES ($id, $dn, $fn, $ln, $ph, $nt, $st)",
+                 ("$id", playerId),
+                 ("$dn", string.IsNullOrWhiteSpace(displayName) ? "New Player" : displayName),
+                 ("$fn", firstName),
+                 ("$ln", lastName),
+                 ("$ph", phone),
+                 ("$nt", notes),
+                 ("$st", status));
+          }
+        }
+        catch
+        {
+          // Skip problematic rows
+        }
+      }
+    }
+
+    public static bool IsNewPlayer(string playerId)
+    {
+      var count = ScalarLong("SELECT COUNT(*) FROM players WHERE player_id = $id", ("$id", playerId));
+      return count == 0;
+    }
+
+    private static string CsvEscape(string value)
+    {
+      if (string.IsNullOrEmpty(value)) return "";
+      if (value.Contains(",") || value.Contains("\"") || value.Contains("\n"))
+      {
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
+      }
+      return value;
+    }
+
+    private static string[] CsvParseLine(string line)
+    {
+      var result = new List<string>();
+      var current = new System.Text.StringBuilder();
+      bool inQuotes = false;
+
+      for (int i = 0; i < line.Length; i++)
+      {
+        char c = line[i];
+        
+        if (c == '"')
+        {
+          if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+          {
+            current.Append('"');
+            i++; // Skip next quote
+          }
+          else
+          {
+            inQuotes = !inQuotes;
+          }
+        }
+        else if (c == ',' && !inQuotes)
+        {
+          result.Add(current.ToString());
+          current.Clear();
+        }
+        else
+        {
+          current.Append(c);
+        }
+      }
+      
+      result.Add(current.ToString());
+      return result.ToArray();
+    }
   }
 }

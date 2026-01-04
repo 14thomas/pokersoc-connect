@@ -24,7 +24,8 @@ namespace pokersoc_connect.Views
     private double _buyInAmount = 0.0;
     private string _buyInAmountString = "0.00";
 
-    public string MemberNumber => ScanBox.Text.Trim();
+    private string _playerId = string.Empty;
+    public string MemberNumber => _playerId;
     public int TotalCents => _cashCounts.Sum(kv => kv.Key * kv.Value);
     public double TotalDollars => TotalCents / 100.0;
     public IReadOnlyDictionary<int, int> DenomCounts => _cashCounts;
@@ -34,16 +35,38 @@ namespace pokersoc_connect.Views
       InitializeComponent();
       Loaded += (s, e) => { 
         InitializeCashInput(); 
-        ScanBox.Focus(); 
       };
     }
 
     // Method to pre-fill player ID from main window
     public void SetPlayerID(string playerId)
     {
-      if (ScanBox != null)
+      _playerId = playerId;
+      if (PlayerIdDisplay != null)
       {
-        ScanBox.Text = playerId;
+        PlayerIdDisplay.Text = playerId;
+        LoadPlayerName(playerId);
+      }
+    }
+
+    private void LoadPlayerName(string playerId)
+    {
+      try
+      {
+        var result = Database.Query("SELECT display_name FROM players WHERE player_id = $id", ("$id", playerId));
+        if (result.Rows.Count > 0)
+        {
+          var displayName = result.Rows[0]["display_name"]?.ToString() ?? "New Player";
+          PlayerNameDisplay.Text = displayName;
+        }
+        else
+        {
+          PlayerNameDisplay.Text = "Unknown";
+        }
+      }
+      catch
+      {
+        PlayerNameDisplay.Text = "Error loading name";
       }
     }
 
@@ -452,15 +475,7 @@ namespace pokersoc_connect.Views
 
     private void Back_Click(object sender, RoutedEventArgs e) => Cancelled?.Invoke(this, EventArgs.Empty);
 
-    private void ClearScan_Click(object sender, RoutedEventArgs e) => ScanBox.Clear();
-
-    private void ScanBox_KeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key == Key.Enter && TotalCents > 0)
-      {
-        NextToAmount_Click(sender, e);
-      }
-    }
+    // Player ID methods removed - now locked and passed from main window
   }
 
   public sealed class BuyInConfirmedEventArgs : EventArgs

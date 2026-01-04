@@ -52,12 +52,25 @@
           </StackPanel>
         </StackPanel>
 
-        <!-- Member Number Input -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-          <TextBlock Text="Member #:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-          <TextBox x:Name="ScanBox" Width="200" VerticalContentAlignment="Center" KeyDown="ScanBox_KeyDown"/>
-          <Button Content="Clear" Margin="10,0,0,0" Click="ClearScan_Click"/>
-        </StackPanel>
+        <!-- Player Info Display (Read-only) -->
+        <Border Grid.Row="2" 
+                BorderBrush="DarkGray" 
+                BorderThickness="2" 
+                Background="LightGray" 
+                Padding="10" 
+                Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="Current Player" FontWeight="Bold" FontSize="12" Margin="0,0,0,5"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+              <TextBlock Text="Player ID: " FontWeight="Bold" Width="80"/>
+              <TextBlock x:Name="PlayerIdDisplay" Text="" FontSize="14"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="Name: " FontWeight="Bold" Width="80"/>
+              <TextBlock x:Name="PlayerNameDisplay" Text="" FontSize="14"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
 
         <!-- Undo and Clear Buttons -->
         <Grid Grid.Row="3" Margin="0,0,0,10">

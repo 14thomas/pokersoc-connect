@@ -22,6 +22,8 @@ namespace pokersoc_connect
 
     // Current player ID (persists across tabs)
     private string _currentPlayerId = string.Empty;
+    private bool _playerVerified = false;
+    private string _pendingPlayerId = string.Empty;
 
     public MainWindow()
     {
@@ -37,31 +39,111 @@ namespace pokersoc_connect
     {
       if (e.Key == System.Windows.Input.Key.Enter)
       {
-        _currentPlayerId = CurrentPlayerIdBox.Text.Trim();
-        CurrentPlayerIdBox.Text = _currentPlayerId;
+        var playerId = CurrentPlayerIdBox.Text.Trim();
+        
+        if (!string.IsNullOrWhiteSpace(playerId))
+        {
+          // Check if this is a new player
+          try
+          {
+            var isNew = Database.IsNewPlayer(playerId);
+            
+            if (isNew)
+            {
+              // Show inline verification panel
+              _pendingPlayerId = playerId;
+              NewPlayerIdText.Text = $"Player ID: {playerId}\n\nPlease verify this player is over 18 years old before continuing.\nThis player will be added as 'New Player'.";
+              NewPlayerPanel.Visibility = Visibility.Visible;
+              _playerVerified = false;
+            }
+            else
+            {
+              // Existing player - set as current and enable buttons
+              _currentPlayerId = playerId;
+              _playerVerified = true;
+              NewPlayerPanel.Visibility = Visibility.Collapsed;
+            }
+          }
+          catch (Exception ex)
+          {
+            MessageBox.Show($"Error checking player: {ex.Message}", "Error", 
+              MessageBoxButton.OK, MessageBoxImage.Error);
+          }
+        }
+        
+        UpdatePlayerButtons();
         e.Handled = true;
       }
     }
 
     private void CurrentPlayerIdBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-      _currentPlayerId = CurrentPlayerIdBox.Text.Trim();
+      // When text changes (typing), clear verification state
+      if (!_playerVerified)
+      {
+        _currentPlayerId = string.Empty;
+      }
       UpdatePlayerButtons();
     }
 
     private void ClearPlayer_Click(object sender, RoutedEventArgs e)
     {
       _currentPlayerId = string.Empty;
+      _pendingPlayerId = string.Empty;
+      _playerVerified = false;
       CurrentPlayerIdBox.Text = string.Empty;
+      NewPlayerPanel.Visibility = Visibility.Collapsed;
       CurrentPlayerIdBox.Focus();
       UpdatePlayerButtons();
     }
 
+    private void VerifyNewPlayer_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        // Add the new player to the database
+        Database.Exec(
+          "INSERT INTO players(player_id, first_name, last_name, display_name) " +
+          "VALUES ($id,'','','New Player')",
+          ("$id", _pendingPlayerId)
+        );
+        
+        // Set as current player and enable buttons
+        _currentPlayerId = _pendingPlayerId;
+        _playerVerified = true;
+        CurrentPlayerIdBox.Text = _currentPlayerId;
+        NewPlayerPanel.Visibility = Visibility.Collapsed;
+        UpdatePlayerButtons();
+        
+        // Show success message briefly (optional - you can remove this if you want)
+        // MessageBox.Show($"Player {_currentPlayerId} added successfully!", "Success", 
+        //   MessageBoxButton.OK, MessageBoxImage.Information);
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error adding player: {ex.Message}", "Error", 
+          MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void CancelNewPlayer_Click(object sender, RoutedEventArgs e)
+    {
+      // Cancel - clear everything
+      _currentPlayerId = string.Empty;
+      _pendingPlayerId = string.Empty;
+      _playerVerified = false;
+      CurrentPlayerIdBox.Text = string.Empty;
+      NewPlayerPanel.Visibility = Visibility.Collapsed;
+      UpdatePlayerButtons();
+      CurrentPlayerIdBox.Focus();
+    }
+
     private void UpdatePlayerButtons()
     {
-      bool hasPlayerId = !string.IsNullOrWhiteSpace(_currentPlayerId);
-      BuyInButton.IsEnabled = hasPlayerId;
-      CashOutButton.IsEnabled = hasPlayerId;
+      // Only enable buttons if player is verified (Enter pressed AND new player verified OR existing player)
+      bool hasVerifiedPlayer = !string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified;
+      BuyInButton.IsEnabled = hasVerifiedPlayer;
+      CashOutButton.IsEnabled = hasVerifiedPlayer;
     }
 
     // ===== Fullscreen functionality =====
@@ -190,6 +272,21 @@ namespace pokersoc_connect
       var lostChipsView = new Views.LostChipsView();
       lostChipsView.CloseRequested += (s, e) => ShowTransactions();
       ScreenHost.Content = lostChipsView;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowPlayers()
+    {
+      // Hide main content and other overlays
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+      
+      // Show player management content in ScreenHost
+      var playerView = new Views.PlayerManagementView();
+      playerView.CloseRequested += (s, e) => ShowTransactions();
+      ScreenHost.Content = playerView;
       ScreenHost.Visibility = Visibility.Visible;
     }
 
@@ -447,6 +544,11 @@ namespace pokersoc_connect
         ShowLostChips();
     }
 
+    private void Players_Click(object sender, RoutedEventArgs e)
+    {
+        ShowPlayers();
+    }
+
     // ===== Activity feed =====
     private void RefreshActivity()
     {
@@ -481,13 +583,15 @@ ORDER BY time DESC
     // ===== helpers =====
     private void EnsurePlayer(string playerId, SqliteTransaction? tx)
     {
+      // Player should already exist (added during scan verification)
+      // But use INSERT OR IGNORE as a safety net
       Database.Exec(
         "INSERT OR IGNORE INTO players(player_id, first_name, last_name, display_name) " +
-        "VALUES ($id,'','','')",
+        "VALUES ($id,'','','New Player')",
         tx, ("$id", playerId)
       );
       Database.Exec(
-        "UPDATE players SET display_name = COALESCE(NULLIF(display_name,''), $id) WHERE player_id=$id",
+        "UPDATE players SET display_name = COALESCE(NULLIF(display_name,''), 'New Player') WHERE player_id=$id",
         tx, ("$id", playerId)
       );
     }

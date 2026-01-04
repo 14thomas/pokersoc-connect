@@ -33,7 +33,19 @@
       <Button x:Name="OpenBtn"
               Content="Open Session..."
               Width="320"
+              Margin="0,0,0,10"
               Click="Open_Click"/>
+      <Button x:Name="ImportPlayersBtn"
+              Content="📥 Import Player Database..."
+              Width="320"
+              Margin="0,0,0,10"
+              Click="ImportPlayers_Click"
+              ToolTip="Import players from a previous session"/>
+      <CheckBox x:Name="AutoImportCheck"
+                Content="Auto-import players on session open"
+                HorizontalAlignment="Center"
+                Margin="0,5,0,0"
+                IsChecked="True"/>
     </StackPanel>
 
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
