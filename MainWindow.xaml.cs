@@ -446,10 +446,13 @@ namespace pokersoc_connect
           
           if (args.TipAmount > 0) activityNotes += $" | Tip: {args.TipAmount:C}";
           if (args.ExtraCashAmount > 0) activityNotes += $" | Cash Added: {args.ExtraCashAmount:C}";
+          
+          // Use different activity type if food was purchased during cashout  
+          var activityType = args.FoodTotal > 0 ? "CASHOUT_SALE" : "CASHOUT";
             
           Database.Exec("INSERT INTO activity_log (activity_key, activity_type, activity_kind, player_id, tx_id, amount_cents, notes) VALUES (@key, @type, @kind, @player, @tx_id, @amount, @notes)", tx,
             ("@key", $"cashout_{txId}"),
-            ("@type", "CASHOUT"),
+            ("@type", activityType),
             ("@kind", "TX"),
             ("@player", playerId),
             ("@tx_id", txId),
@@ -525,6 +528,100 @@ namespace pokersoc_connect
               "ON CONFLICT(tx_id, denom_cents) DO UPDATE SET qty = qty + EXCLUDED.qty",
               tx, ("$tx", txId), ("$d", kv.Key), ("$q", kv.Value)
             );
+          }
+          
+          // 3) Record food sales if any were purchased during cashout
+          if (args.FoodTotal > 0 && args.FoodItems.Any())
+          {
+            System.Diagnostics.Debug.WriteLine($"Recording food sales during cashout: {args.FoodItems.Count} items");
+            
+            try
+            {
+              foreach (var foodItem in args.FoodItems)
+              {
+                // Parse item key: "ItemName_Price"
+                var parts = foodItem.Key.Split(new[] { '_' }, 2);
+                var itemName = parts[0];
+                var itemPrice = parts.Length > 1 ? double.Parse(parts[1], CultureInfo.InvariantCulture) : 0;
+                var quantity = foodItem.Value;
+                var totalPrice = itemPrice * quantity;
+              
+              System.Diagnostics.Debug.WriteLine($"  Food item: {itemName} x{quantity} @ ${itemPrice} = ${totalPrice}");
+              
+              // Create a food sale record (using sales table, not transactions)
+              Database.Exec(
+                "INSERT INTO sales(player_id, staff, notes) VALUES ($p, $staff, $notes)",
+                tx,
+                ("$p", playerId),
+                ("$staff", Environment.UserName),
+                ("$notes", $"Food sale (via cashout): {itemName} x{quantity}")
+              );
+              
+              var saleId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
+              
+              // Try to find the product ID by name (query without transaction parameter)
+              long? productId = null;
+              try
+              {
+                var productIdResult = Database.ScalarLong(
+                  "SELECT product_id FROM products WHERE name = $name LIMIT 1",
+                  tx, ("$name", itemName)
+                );
+                if (productIdResult > 0)
+                {
+                  productId = productIdResult;
+                }
+              }
+              catch
+              {
+                // Product not found, that's OK - we'll record the sale without product_id
+                System.Diagnostics.Debug.WriteLine($"Product '{itemName}' not found in database");
+              }
+              
+              // Add sale item
+              Database.Exec(
+                "INSERT INTO sale_items(sale_id, product_id, qty, unit_price) VALUES ($sale, $product, $qty, $price)",
+                tx,
+                ("$sale", saleId),
+                ("$product", (object?)productId ?? DBNull.Value),
+                ("$qty", quantity),
+                ("$price", itemPrice)
+              );
+              
+              // Add payment record (all cash, paid during cashout)
+              // Record as one payment of the full amount
+              Database.Exec(
+                "INSERT INTO sale_payments(sale_id, method, denom_cents, qty) VALUES ($sale, 'CASH', $denom, 1)",
+                tx,
+                ("$sale", saleId),
+                ("$denom", (int)(totalPrice * 100))
+              );
+              
+              // Add cash to cashbox (food sales add to the cashbox)
+              Database.Exec(
+                "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes) " +
+                "VALUES ($denom, $delta, 'SALE', $player, $tx, $notes)",
+                tx,
+                ("$denom", (int)(totalPrice * 100)),
+                ("$delta", 1), // One "unit" of this amount was added
+                ("$player", playerId),
+                ("$tx", saleId),
+                ("$notes", $"Food sale (via cashout): {itemName} x{quantity}")
+              );
+              
+              // Don't create separate FOOD activity log entry - it's already in the cashout details
+              }
+            }
+            catch (Exception ex)
+            {
+              System.Diagnostics.Debug.WriteLine($"Error recording food sales during cashout: {ex.Message}");
+              System.Windows.MessageBox.Show(
+                $"Error recording food sales: {ex.Message}\n\nCashout will continue without food sale records.",
+                "Food Sale Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning
+              );
+            }
           }
         });
 

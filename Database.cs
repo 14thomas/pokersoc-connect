@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS sales(
 CREATE TABLE IF NOT EXISTS sale_items(
   sale_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
   sale_id      INTEGER NOT NULL REFERENCES sales(sale_id) ON DELETE CASCADE,
-  product_id   INTEGER NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
+  product_id   INTEGER REFERENCES products(product_id) ON DELETE RESTRICT,
   qty          INTEGER NOT NULL,
   unit_price   REAL NOT NULL
 );
@@ -140,6 +140,25 @@ CREATE TABLE IF NOT EXISTS sale_payments(
       // Allow chip rows to link to a sale, so we can reuse chip stock reporting
       try { Exec("ALTER TABLE tx_chips ADD COLUMN sale_id INTEGER"); } catch { /* already */ }
       try { Exec("CREATE INDEX IF NOT EXISTS idx_txchips_sale ON tx_chips(sale_id)"); } catch { }
+      
+      // Make product_id nullable in sale_items (for food sales during cashout that may not have product in catalog)
+      try
+      {
+        // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
+        Exec(@"
+          CREATE TABLE IF NOT EXISTS sale_items_new(
+            sale_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sale_id      INTEGER NOT NULL REFERENCES sales(sale_id) ON DELETE CASCADE,
+            product_id   INTEGER REFERENCES products(product_id) ON DELETE RESTRICT,
+            qty          INTEGER NOT NULL,
+            unit_price   REAL NOT NULL
+          );
+        ");
+        Exec("INSERT INTO sale_items_new SELECT * FROM sale_items");
+        Exec("DROP TABLE sale_items");
+        Exec("ALTER TABLE sale_items_new RENAME TO sale_items");
+      }
+      catch { /* migration already done or table structure matches */ }
 
       // ----- NEW: Tips from Lost Chips -----
       Exec(@"
