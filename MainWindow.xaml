@@ -129,9 +129,9 @@
                   IsReadOnly="True">
           <DataGrid.Columns>
             <DataGridTextColumn Header="Time" Binding="{Binding time}" Width="120"/>
-            <DataGridTextColumn Header="Type" Binding="{Binding type}" Width="60"/>
-            <DataGridTextColumn Header="Player" Binding="{Binding player_id}" Width="100"/>
-            <DataGridTextColumn Header="Amount" Binding="{Binding cash_amt, StringFormat=C}" Width="80"/>
+            <DataGridTextColumn Header="Type" Binding="{Binding type}" Width="100"/>
+            <DataGridTextColumn Header="Player" Binding="{Binding player_id}" Width="120"/>
+            <DataGridTextColumn Header="Amount" Binding="{Binding cash_amt, StringFormat=C}" Width="*"/>
           </DataGrid.Columns>
         </DataGrid>
       </Grid>
@@ -276,5 +276,39 @@
     <ContentControl x:Name="ScreenHost" Visibility="Collapsed" Grid.Row="0"/>
     <ContentControl x:Name="SettingsHost" Visibility="Collapsed" Grid.Row="0"/>
     <ContentControl x:Name="FoodHost" Visibility="Collapsed" Grid.Row="0"/>
+
+    <!-- Close Session Confirmation Panel -->
+    <Border x:Name="CloseConfirmationPanel" 
+            Grid.Row="0"
+            Background="#DD000000" 
+            Visibility="Collapsed">
+      <Border Background="White" 
+              Padding="30" 
+              CornerRadius="10"
+              MaxWidth="500"
+              VerticalAlignment="Center"
+              HorizontalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="Close Session?" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+          <TextBlock Text="Are you sure you want to close the current session? Make sure you've saved any important data." 
+                     FontSize="14" 
+                     TextWrapping="Wrap" 
+                     Margin="0,0,0,20"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" 
+                    Click="CancelCloseSession_Click" 
+                    Padding="20,10" 
+                    Margin="0,0,10,0"
+                    FontSize="14"/>
+            <Button Content="Close Session" 
+                    Click="ConfirmCloseSession_Click" 
+                    Padding="20,10" 
+                    FontSize="14"
+                    FontWeight="Bold"
+                    Background="LightCoral"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
   </Grid>
 </Window>

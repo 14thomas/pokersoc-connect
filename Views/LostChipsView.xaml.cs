@@ -121,21 +121,41 @@ namespace pokersoc_connect.Views
 
         if (!tipsToRecord.Any())
         {
-          MessageBox.Show("Please click on at least one chip to record as tips.", "No Tips", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+          ConfirmationText.Text = "Please click on at least one chip to record as tips.";
+          ConfirmationPanel.Visibility = Visibility.Visible;
           return;
         }
 
         var totalValue = tipsToRecord.Sum(t => t.Value * t.Key);
         var totalChips = tipsToRecord.Sum(t => t.Value);
 
-        var result = MessageBox.Show(
-          $"Record {totalChips} lost chips as tips?\n\n" +
-          $"Total value: {(totalValue / 100.0).ToString("C", CultureInfo.GetCultureInfo("en-AU"))}",
-          "Confirm Lost Chips", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        // Show inline confirmation panel
+        ConfirmationText.Text = $"Record {totalChips} lost chips as tips?\n\nTotal value: {(totalValue / 100.0).ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
+        ConfirmationPanel.Visibility = Visibility.Visible;
+      }
+      catch (Exception ex)
+      {
+        ConfirmationText.Text = $"Error: {ex.Message}";
+        ConfirmationPanel.Visibility = Visibility.Visible;
+      }
+    }
 
-        if (result == MessageBoxResult.Yes)
+    private void ConfirmRecordTips_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var tipsToRecord = _chipValues.Where(kvp => kvp.Value > 0).ToList();
+        if (!tipsToRecord.Any())
         {
+          ConfirmationPanel.Visibility = Visibility.Collapsed;
+          return;
+        }
+
+        var totalValue = tipsToRecord.Sum(t => t.Value * t.Key);
+        
+        {
+          string batchId = Guid.NewGuid().ToString("N");
+          
           Database.InTransaction(tx =>
           {
             foreach (var (denom, qty) in tipsToRecord)
@@ -146,25 +166,48 @@ namespace pokersoc_connect.Views
                 tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip")
               );
 
-              // Record as cashbox movement (positive for tips)
+              // Record as cashbox movement (positive for tips) with batch_id
               Database.Exec(
-                "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, notes) VALUES ($d, $q, 'LOST_CHIP', $n)",
-                tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip")
+                "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, notes, batch_id) VALUES ($d, $q, 'LOST_CHIP', $n, $b)",
+                tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip"), ("$b", batchId)
               );
             }
+            
+            // Create an activity log entry for lost chips
+            var chipBreakdown = string.Join(", ", tipsToRecord.Select(t => 
+            {
+              var denomLabel = GetDenomLabel(t.Key);
+              return t.Value > 1 ? $"{denomLabel} x{t.Value}" : denomLabel;
+            }));
+            
+            Database.Exec(
+              "INSERT INTO activity_log(activity_key, activity_type, activity_kind, amount_cents, notes, batch_id) " +
+              "VALUES ($key, $type, $kind, $amount, $notes, $batch)",
+              tx, 
+              ("$key", $"lost_chips_{batchId}"),
+              ("$type", "LOST_CHIPS"),
+              ("$kind", "LOST_CHIP"),
+              ("$amount", totalValue),
+              ("$notes", $"Lost chips recorded: {chipBreakdown}"),
+              ("$batch", batchId)
+            );
           });
 
-          MessageBox.Show("Lost chips recorded as tips successfully!", "Success", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-          
+          // Hide confirmation panel and clear
+          ConfirmationPanel.Visibility = Visibility.Collapsed;
           ClearAll_Click(sender, e);
         }
       }
       catch (Exception ex)
       {
-        MessageBox.Show($"Error recording lost chips: {ex.Message}", "Error", 
-          MessageBoxButton.OK, MessageBoxImage.Error);
+        ConfirmationText.Text = $"Error recording lost chips: {ex.Message}";
+        ConfirmationPanel.Visibility = Visibility.Visible;
       }
+    }
+
+    private void CancelConfirmation_Click(object sender, RoutedEventArgs e)
+    {
+      ConfirmationPanel.Visibility = Visibility.Collapsed;
     }
 
     private void UndoLast_Click(object sender, RoutedEventArgs e)
@@ -203,5 +246,16 @@ namespace pokersoc_connect.Views
     {
       CloseRequested?.Invoke(this, EventArgs.Empty);
     }
+    
+    private static string GetDenomLabel(int cents) => cents switch
+    {
+      5 => "5c",
+      25 => "25c",
+      100 => "$1",
+      500 => "$5",
+      2500 => "$25",
+      10000 => "$100",
+      _ => $"{cents}c"
+    };
   }
 }

@@ -22,12 +22,13 @@
               IsReadOnly="True"
               Margin="0,0,0,20">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="Player ID" Binding="{Binding player_id}" Width="150"/>
-        <DataGridTextColumn Header="Display Name" Binding="{Binding display_name}" Width="200"/>
-        <DataGridTextColumn Header="First Name" Binding="{Binding first_name}" Width="150"/>
-        <DataGridTextColumn Header="Last Name" Binding="{Binding last_name}" Width="150"/>
-        <DataGridTextColumn Header="Phone" Binding="{Binding phone}" Width="120"/>
-        <DataGridTextColumn Header="Status" Binding="{Binding status}" Width="100"/>
+        <DataGridTextColumn Header="Player ID" Binding="{Binding player_id}" Width="120"/>
+        <DataGridTextColumn Header="Name" Binding="{Binding display_name}" Width="150"/>
+        <DataGridTextColumn Header="Email" Binding="{Binding email}" Width="150"/>
+        <DataGridTextColumn Header="Student Number" Binding="{Binding student_number}" Width="120"/>
+        <DataGridTextColumn Header="Degree" Binding="{Binding degree}" Width="120"/>
+        <DataGridTextColumn Header="Study Year" Binding="{Binding study_year}" Width="100"/>
+        <DataGridTextColumn Header="Arc Member" Binding="{Binding arc_member}" Width="100"/>
         <DataGridTextColumn Header="Created" Binding="{Binding created_at}" Width="150"/>
       </DataGrid.Columns>
     </DataGrid>

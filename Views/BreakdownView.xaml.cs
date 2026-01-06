@@ -15,10 +15,12 @@ namespace pokersoc_connect.Views
                          string? subtitle,
                          IEnumerable<(int denom, int qty)> chipsRows,
                          IEnumerable<(int denom, int qty)> cashRows,
-                         bool isCashOut)
+                         bool isCashOut,
+                         string? dateTime = null,
+                         string? additionalInfo = null)
     {
       InitializeComponent();
-      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, Enumerable.Empty<(int,int)>(), isCashOut);
+      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, Enumerable.Empty<(int,int)>(), isCashOut, dateTime, additionalInfo);
     }
 
     public BreakdownView(string title,
@@ -26,10 +28,12 @@ namespace pokersoc_connect.Views
                          IEnumerable<(int denom, int qty)> chipsRows,
                          IEnumerable<(int denom, int qty)> cashRows,
                          IEnumerable<(int denom, int qty)> changeRows,
-                         bool isCashOut)
+                         bool isCashOut,
+                         string? dateTime = null,
+                         string? additionalInfo = null)
     {
       InitializeComponent();
-      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, changeRows, isCashOut);
+      DataContext = BuildVm(title, subtitle, chipsRows, cashRows, changeRows, isCashOut, dateTime, additionalInfo);
     }
 
     private object BuildVm(string title,
@@ -37,7 +41,9 @@ namespace pokersoc_connect.Views
                            IEnumerable<(int denom, int qty)> chipsRows,
                            IEnumerable<(int denom, int qty)> cashRows,
                            IEnumerable<(int denom, int qty)> changeRows,
-                           bool isCashOut)
+                           bool isCashOut,
+                           string? dateTime = null,
+                           string? additionalInfo = null)
     {
       var au = CultureInfo.GetCultureInfo("en-AU");
 
@@ -75,13 +81,25 @@ namespace pokersoc_connect.Views
         })
         .ToList();
 
-      double total = chipList.Sum(r => MoneyCents(r.Value, au)) + cashList.Sum(r => MoneyCents(r.Value, au));
+      // For cashouts: only show cash paid out (not chips turned in)
+      // For buy-ins: show total of cash received + change given (chips + cash)
+      double total;
+      if (isCashOut)
+      {
+        total = cashList.Sum(r => MoneyCents(r.Value, au));
+      }
+      else
+      {
+        total = chipList.Sum(r => MoneyCents(r.Value, au)) + cashList.Sum(r => MoneyCents(r.Value, au));
+      }
       var grand = $"Total: {total.ToString("C", au)}";
 
       return new
       {
         Title        = title,
         Subtitle     = subtitle ?? "",
+        DateTime     = dateTime ?? "",
+        AdditionalInfo = additionalInfo ?? "",
         ChipsRows    = chipList,
         CashRows     = cashList,
         ChangeRows   = changeList,
@@ -90,6 +108,8 @@ namespace pokersoc_connect.Views
         HasChips     = chipList.Count > 0,
         HasCash      = cashList.Count > 0,
         HasChange    = changeList.Count > 0,
+        HasDateTime  = !string.IsNullOrEmpty(dateTime),
+        HasAdditionalInfo = !string.IsNullOrEmpty(additionalInfo),
         GrandTotal   = grand
       };
     }

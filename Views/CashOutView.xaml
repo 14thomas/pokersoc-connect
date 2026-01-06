@@ -262,6 +262,21 @@
             </StackPanel>
           </Button>
 
+          <!-- Row 4 -->
+          <!-- Empty space for balance -->
+          <Button Grid.Row="3" Grid.Column="0"
+                  Margin="0,5,5,5"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  IsEnabled="False">
+            <StackPanel>
+              <TextBlock Text="" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
           <!-- Empty space for balance -->
           <Button Grid.Row="3" Grid.Column="1"
                   Margin="5,5,0,5"
@@ -280,6 +295,20 @@
           <!-- Empty space for balance -->
           <Button Grid.Row="4" Grid.Column="0"
                   Margin="0,5,5,5"
+                  Padding="15,20"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  IsEnabled="False">
+            <StackPanel>
+              <TextBlock Text="" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Empty space for balance -->
+          <Button Grid.Row="4" Grid.Column="1"
+                  Margin="5,5,0,5"
                   Padding="15,20"
                   BorderThickness="2"
                   BorderBrush="Gray"

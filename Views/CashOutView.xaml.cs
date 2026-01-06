@@ -464,12 +464,19 @@ namespace pokersoc_connect.Views
       }
 
       // Final confirmation - process the cashout with all customizations
+      System.Diagnostics.Debug.WriteLine($"CashOutView: Confirming cashout with {_selectedFoodItems.Count} food items, total: {_foodTotal:C}");
+      foreach (var item in _selectedFoodItems)
+      {
+        System.Diagnostics.Debug.WriteLine($"  CashOutView Food Item: {item.Key} x{item.Value}");
+      }
+      
       Confirmed?.Invoke(this, new CashOutConfirmedEventArgs(
         MemberNumber,
         new Dictionary<int,int>(_changeDenominations),   // final change plan
         new Dictionary<int,int>(_chipCounts),            // chips turned in
         TotalCents,
         _foodTotal,
+        new Dictionary<string,int>(_selectedFoodItems),  // food items purchased
         _tipAmount,
         _extraCashAmount));
     }
@@ -1239,6 +1246,7 @@ namespace pokersoc_connect.Views
     public Dictionary<int,int> ChipsIn { get; }      // chips turned in
     public int TotalCents { get; }
     public double FoodTotal { get; }
+    public Dictionary<string,int> FoodItems { get; }  // individual food items
     public double TipAmount { get; }
     public double ExtraCashAmount { get; }
     
@@ -1247,9 +1255,10 @@ namespace pokersoc_connect.Views
                                      Dictionary<int,int> chipsIn,
                                      int totalCents,
                                      double foodTotal,
+                                     Dictionary<string,int> foodItems,
                                      double tipAmount,
                                      double extraCashAmount)
-      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents, FoodTotal, TipAmount, ExtraCashAmount) = 
-         (member, plan, chipsIn, totalCents, foodTotal, tipAmount, extraCashAmount);
+      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents, FoodTotal, FoodItems, TipAmount, ExtraCashAmount) = 
+         (member, plan, chipsIn, totalCents, foodTotal, foodItems, tipAmount, extraCashAmount);
   }
 }

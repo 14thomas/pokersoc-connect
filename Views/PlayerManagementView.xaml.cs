@@ -21,7 +21,7 @@ namespace pokersoc_connect.Views
       try
       {
         var players = Database.Query(@"
-          SELECT player_id, display_name, first_name, last_name, phone, notes, status, created_at 
+          SELECT player_id, display_name, email, student_number, degree, study_year, arc_member, created_at 
           FROM players 
           ORDER BY created_at DESC");
         PlayersGrid.ItemsSource = players.DefaultView;
@@ -108,4 +108,6 @@ namespace pokersoc_connect.Views
     }
   }
 }
+
+
 

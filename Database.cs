@@ -32,14 +32,14 @@ namespace pokersoc_connect
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS players (
-  player_id    TEXT PRIMARY KEY,          -- scanned barcode/id (or typed when no card present)
-  display_name TEXT NOT NULL,
-  first_name   TEXT,
-  last_name    TEXT,
-  phone        TEXT,
-  notes        TEXT,
-  status       TEXT DEFAULT 'Active',
-  created_at   TEXT DEFAULT CURRENT_TIMESTAMP
+  player_id      TEXT PRIMARY KEY,          -- scanned barcode/id (or typed when no card present)
+  display_name   TEXT NOT NULL DEFAULT 'New Player',
+  email          TEXT DEFAULT 'None',
+  student_number TEXT DEFAULT 'None',
+  degree         TEXT DEFAULT 'None',
+  study_year     TEXT DEFAULT 'None',
+  arc_member     TEXT DEFAULT 'None',
+  created_at     TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -72,6 +72,13 @@ CREATE INDEX IF NOT EXISTS idx_tx_player_time ON transactions(player_id, time);
 CREATE INDEX IF NOT EXISTS idx_moves_denom_time ON cashbox_movements(denom_cents, time);
 ";
       Exec(sql);
+
+      // Migrate player table to new schema (add new columns if they don't exist)
+      try { Exec("ALTER TABLE players ADD COLUMN email TEXT DEFAULT 'None'"); } catch { }
+      try { Exec("ALTER TABLE players ADD COLUMN student_number TEXT DEFAULT 'None'"); } catch { }
+      try { Exec("ALTER TABLE players ADD COLUMN degree TEXT DEFAULT 'None'"); } catch { }
+      try { Exec("ALTER TABLE players ADD COLUMN study_year TEXT DEFAULT 'None'"); } catch { }
+      try { Exec("ALTER TABLE players ADD COLUMN arc_member TEXT DEFAULT 'None'"); } catch { }
 
       // Grouping id for multi-denomination float add
       try { Exec("ALTER TABLE cashbox_movements ADD COLUMN batch_id TEXT"); } catch { }
@@ -141,10 +148,16 @@ CREATE TABLE IF NOT EXISTS tips (
   time        TEXT DEFAULT CURRENT_TIMESTAMP,
   denom_cents INTEGER NOT NULL,
   qty         INTEGER NOT NULL,
+  player_id   TEXT,
+  tx_id       INTEGER,
   notes       TEXT
 );
 ");
       try { Exec("CREATE INDEX IF NOT EXISTS idx_tips_denom_time ON tips(denom_cents, time)"); } catch { }
+
+      // Migrate tips table to add player_id and tx_id if they don't exist
+      try { Exec("ALTER TABLE tips ADD COLUMN player_id TEXT"); } catch { }
+      try { Exec("ALTER TABLE tips ADD COLUMN tx_id INTEGER"); } catch { }
 
       // ----- NEW: Activity Log -----
       Exec(@"
@@ -363,24 +376,24 @@ CREATE TABLE IF NOT EXISTS food_slot_assignments (
 
     public static void ExportPlayers(string filePath)
     {
-      var players = Query("SELECT player_id, display_name, first_name, last_name, phone, notes, status, created_at FROM players ORDER BY player_id");
+      var players = Query("SELECT player_id, display_name, email, student_number, degree, study_year, arc_member, created_at FROM players ORDER BY player_id");
       
       using var writer = new StreamWriter(filePath);
       // Write CSV header
-      writer.WriteLine("player_id,display_name,first_name,last_name,phone,notes,status,created_at");
+      writer.WriteLine("player_id,display_name,email,student_number,degree,study_year,arc_member,created_at");
       
       foreach (DataRow row in players.Rows)
       {
         var playerId = CsvEscape(row["player_id"]?.ToString() ?? "");
-        var displayName = CsvEscape(row["display_name"]?.ToString() ?? "");
-        var firstName = CsvEscape(row["first_name"]?.ToString() ?? "");
-        var lastName = CsvEscape(row["last_name"]?.ToString() ?? "");
-        var phone = CsvEscape(row["phone"]?.ToString() ?? "");
-        var notes = CsvEscape(row["notes"]?.ToString() ?? "");
-        var status = CsvEscape(row["status"]?.ToString() ?? "Active");
+        var displayName = CsvEscape(row["display_name"]?.ToString() ?? "New Player");
+        var email = CsvEscape(row["email"]?.ToString() ?? "None");
+        var studentNumber = CsvEscape(row["student_number"]?.ToString() ?? "None");
+        var degree = CsvEscape(row["degree"]?.ToString() ?? "None");
+        var studyYear = CsvEscape(row["study_year"]?.ToString() ?? "None");
+        var arcMember = CsvEscape(row["arc_member"]?.ToString() ?? "None");
         var createdAt = CsvEscape(row["created_at"]?.ToString() ?? "");
         
-        writer.WriteLine($"{playerId},{displayName},{firstName},{lastName},{phone},{notes},{status},{createdAt}");
+        writer.WriteLine($"{playerId},{displayName},{email},{studentNumber},{degree},{studyYear},{arcMember},{createdAt}");
       }
     }
 
@@ -399,41 +412,47 @@ CREATE TABLE IF NOT EXISTS food_slot_assignments (
 
         var playerId = parts[0].Trim();
         var displayName = parts.Length > 1 ? parts[1].Trim() : "New Player";
-        var firstName = parts.Length > 2 ? parts[2].Trim() : "";
-        var lastName = parts.Length > 3 ? parts[3].Trim() : "";
-        var phone = parts.Length > 4 ? parts[4].Trim() : "";
-        var notes = parts.Length > 5 ? parts[5].Trim() : "";
-        var status = parts.Length > 6 ? parts[6].Trim() : "Active";
+        var email = parts.Length > 2 ? parts[2].Trim() : "None";
+        var studentNumber = parts.Length > 3 ? parts[3].Trim() : "None";
+        var degree = parts.Length > 4 ? parts[4].Trim() : "None";
+        var studyYear = parts.Length > 5 ? parts[5].Trim() : "None";
+        var arcMember = parts.Length > 6 ? parts[6].Trim() : "None";
 
         if (string.IsNullOrWhiteSpace(playerId)) continue;
+        if (string.IsNullOrWhiteSpace(displayName)) displayName = "New Player";
+        if (string.IsNullOrWhiteSpace(email)) email = "None";
+        if (string.IsNullOrWhiteSpace(studentNumber)) studentNumber = "None";
+        if (string.IsNullOrWhiteSpace(degree)) degree = "None";
+        if (string.IsNullOrWhiteSpace(studyYear)) studyYear = "None";
+        if (string.IsNullOrWhiteSpace(arcMember)) arcMember = "None";
 
         try
         {
           if (merge)
           {
             // Insert or replace (update if exists)
-            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, first_name, last_name, phone, notes, status) 
-                   VALUES ($id, $dn, $fn, $ln, $ph, $nt, $st)",
+            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member) 
+                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc)",
                  ("$id", playerId),
-                 ("$dn", string.IsNullOrWhiteSpace(displayName) ? "New Player" : displayName),
-                 ("$fn", firstName),
-                 ("$ln", lastName),
-                 ("$ph", phone),
-                 ("$nt", notes),
-                 ("$st", status));
+                 ("$dn", displayName),
+                 ("$em", email),
+                 ("$sn", studentNumber),
+                 ("$deg", degree),
+                 ("$sy", studyYear),
+                 ("$arc", arcMember));
           }
           else
           {
             // Only insert if doesn't exist
-            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, first_name, last_name, phone, notes, status) 
-                   VALUES ($id, $dn, $fn, $ln, $ph, $nt, $st)",
+            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member) 
+                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc)",
                  ("$id", playerId),
-                 ("$dn", string.IsNullOrWhiteSpace(displayName) ? "New Player" : displayName),
-                 ("$fn", firstName),
-                 ("$ln", lastName),
-                 ("$ph", phone),
-                 ("$nt", notes),
-                 ("$st", status));
+                 ("$dn", displayName),
+                 ("$em", email),
+                 ("$sn", studentNumber),
+                 ("$deg", degree),
+                 ("$sy", studyYear),
+                 ("$arc", arcMember));
           }
         }
         catch

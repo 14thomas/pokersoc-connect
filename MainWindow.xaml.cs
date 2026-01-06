@@ -25,6 +25,8 @@ namespace pokersoc_connect
     private bool _playerVerified = false;
     private string _pendingPlayerId = string.Empty;
 
+    private bool _allowClose = false;
+
     public MainWindow()
     {
       InitializeComponent();
@@ -32,6 +34,27 @@ namespace pokersoc_connect
       RefreshActivity();
       TxGrid.MouseDoubleClick += TxGrid_MouseDoubleClick;
       UpdatePlayerButtons(); // Ensure buttons are disabled initially
+      this.Closing += MainWindow_Closing;
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+      if (!_allowClose)
+      {
+        e.Cancel = true;
+        CloseConfirmationPanel.Visibility = Visibility.Visible;
+      }
+    }
+
+    private void CancelCloseSession_Click(object sender, RoutedEventArgs e)
+    {
+      CloseConfirmationPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void ConfirmCloseSession_Click(object sender, RoutedEventArgs e)
+    {
+      _allowClose = true;
+      this.Close();
     }
 
     // ===== Current Player Management =====
@@ -101,10 +124,10 @@ namespace pokersoc_connect
     {
       try
       {
-        // Add the new player to the database
+        // Add the new player to the database with default values
         Database.Exec(
-          "INSERT INTO players(player_id, first_name, last_name, display_name) " +
-          "VALUES ($id,'','','New Player')",
+          "INSERT INTO players(player_id, display_name) " +
+          "VALUES ($id, 'New Player')",
           ("$id", _pendingPlayerId)
         );
         
@@ -270,7 +293,11 @@ namespace pokersoc_connect
       
       // Show lost chips content in ScreenHost
       var lostChipsView = new Views.LostChipsView();
-      lostChipsView.CloseRequested += (s, e) => ShowTransactions();
+      lostChipsView.CloseRequested += (s, e) =>
+      {
+        RefreshActivity();
+        ShowTransactions();
+      };
       ScreenHost.Content = lostChipsView;
       ScreenHost.Visibility = Visibility.Visible;
     }
@@ -392,16 +419,44 @@ namespace pokersoc_connect
           
           // Create ONE SINGLE activity log entry with complete cashout breakdown
           var activityNotes = $"Chips: {cashAmt:C} | Change: {changeGiven:C}";
-          if (args.FoodTotal > 0) activityNotes += $" | Food: {args.FoodTotal:C}";
+          
+          // Add detailed food items if any
+          if (args.FoodTotal > 0 && args.FoodItems.Any())
+          {
+            System.Diagnostics.Debug.WriteLine($"CashOut: Processing {args.FoodItems.Count} food items:");
+            foreach (var item in args.FoodItems)
+            {
+              System.Diagnostics.Debug.WriteLine($"  - {item.Key}: {item.Value}x");
+            }
+            
+            // Extract just the item name (before the underscore in "ItemName_Price" format)
+            var foodDetails = string.Join(", ", args.FoodItems.Select(item =>
+            {
+              var itemName = item.Key.Contains('_') ? item.Key.Substring(0, item.Key.LastIndexOf('_')) : item.Key;
+              return item.Value > 1 ? $"{itemName} x{item.Value}" : itemName;
+            }));
+            activityNotes += $" | Food ({args.FoodTotal:C}): {foodDetails}";
+            System.Diagnostics.Debug.WriteLine($"CashOut: Activity notes with food: '{activityNotes}'");
+          }
+          else if (args.FoodTotal > 0)
+          {
+            System.Diagnostics.Debug.WriteLine($"CashOut: Food total is {args.FoodTotal:C} but no items in dictionary");
+          }
+          else if (args.FoodTotal > 0)
+          {
+            activityNotes += $" | Food: {args.FoodTotal:C}";
+          }
+          
           if (args.TipAmount > 0) activityNotes += $" | Tip: {args.TipAmount:C}";
           if (args.ExtraCashAmount > 0) activityNotes += $" | Cash Added: {args.ExtraCashAmount:C}";
             
-          Database.Exec("INSERT INTO activity_log (activity_key, activity_type, activity_kind, tx_id, amount_cents, notes) VALUES (@key, @type, @kind, @tx_id, @amount, @notes)", tx,
+          Database.Exec("INSERT INTO activity_log (activity_key, activity_type, activity_kind, player_id, tx_id, amount_cents, notes) VALUES (@key, @type, @kind, @player, @tx_id, @amount, @notes)", tx,
             ("@key", $"cashout_{txId}"),
             ("@type", "CASHOUT"),
             ("@kind", "TX"),
+            ("@player", playerId),
             ("@tx_id", txId),
-            ("@amount", (int)(cashAmt * 100)),
+            ("@amount", (int)Math.Round(cashAmt * 100)),
             ("@notes", activityNotes));
             
           // Add extra cash to cashbox if any
@@ -555,24 +610,29 @@ namespace pokersoc_connect
       var dt = Database.Query(@"
 SELECT 
   tx_id,
-  time,
+  strftime('%H:%M:%S', datetime(time, 'localtime')) AS time,
   type,
   player_id,
   cash_amt,
   NULL AS batch_id,
-  'TX' AS activity_kind
+  'TX' AS activity_kind,
+  NULL AS notes,
+  time AS full_time
 FROM transactions
+WHERE tx_id NOT IN (SELECT tx_id FROM activity_log WHERE tx_id IS NOT NULL)
 UNION ALL
 SELECT 
   tx_id,
-  time,
+  strftime('%H:%M:%S', datetime(time, 'localtime')) AS time,
   activity_type AS type,
   player_id,
   amount_cents / 100.0 AS cash_amt,
   batch_id,
-  activity_kind
+  activity_kind,
+  notes,
+  time AS full_time
 FROM activity_log
-ORDER BY time DESC
+ORDER BY full_time DESC
 ");
       TxGrid.ItemsSource = dt.DefaultView;
     }
@@ -586,8 +646,8 @@ ORDER BY time DESC
       // Player should already exist (added during scan verification)
       // But use INSERT OR IGNORE as a safety net
       Database.Exec(
-        "INSERT OR IGNORE INTO players(player_id, first_name, last_name, display_name) " +
-        "VALUES ($id,'','','New Player')",
+        "INSERT OR IGNORE INTO players(player_id, display_name) " +
+        "VALUES ($id, 'New Player')",
         tx, ("$id", playerId)
       );
       Database.Exec(
@@ -617,12 +677,49 @@ ORDER BY time DESC
           long saleId = row["tx_id"] is DBNull ? 0 : Convert.ToInt64(row["tx_id"]);
           ShowFoodSaleDetails(saleId);
         }
+        else if (kind == "LOST_CHIP")
+        {
+          var batchId = row["batch_id"]?.ToString();
+          ShowLostChipsBreakdown(batchId);
+        }
       }
     }
 
     private void ShowTransactionBreakdown(long txId, string type)
     {
       var au = CultureInfo.GetCultureInfo("en-AU");
+
+      // Get transaction date/time and notes
+      var txInfo = Database.Query(@"
+SELECT 
+  datetime(time, 'localtime') AS formatted_time,
+  notes
+FROM transactions 
+WHERE tx_id = $tx
+UNION ALL
+SELECT 
+  datetime(time, 'localtime') AS formatted_time,
+  notes
+FROM activity_log 
+WHERE tx_id = $tx
+LIMIT 1", ("$tx", txId));
+      
+      string? dateTime = null;
+      string? additionalInfo = null;
+      
+      if (txInfo.Rows.Count > 0)
+      {
+        dateTime = txInfo.Rows[0]["formatted_time"]?.ToString();
+        var notesObj = txInfo.Rows[0]["notes"];
+        if (notesObj != null && notesObj != DBNull.Value)
+        {
+          additionalInfo = notesObj.ToString();
+          if (string.IsNullOrEmpty(additionalInfo))
+          {
+            additionalInfo = null;
+          }
+        }
+      }
 
       // Chips turned in (tx_chips)
       var chipsDt = Database.Query(@"
@@ -660,29 +757,107 @@ ORDER BY denom_cents DESC", ("$tx", txId));
         string title = "Buy-in breakdown";
         string subtitle = "Cash received + change given back";
 
-        var view = new BreakdownView(title, subtitle, Enumerable.Empty<(int,int)>(), cashReceived, changeGiven, isCashOut: false);
+        var view = new BreakdownView(title, subtitle, Enumerable.Empty<(int,int)>(), cashReceived, changeGiven, false, dateTime, additionalInfo);
         view.Back += (_, __) => ShowTransactions();
         ShowScreen(view);
       }
       else
       {
-        // For CASHOUT: show chips turned in + cash paid out
-        var cashDt = Database.Query(@"
-SELECT denom_cents, SUM(delta_qty) AS qty
+        // For CASHOUT: restructure to show GIVE vs TAKE
+        
+        try
+        {
+          // Cash paid out to player (negative qty in cashbox_movements with reason CASHOUT)
+          var cashPaidOutDt = Database.Query(@"
+SELECT denom_cents, ABS(SUM(delta_qty)) AS qty
 FROM cashbox_movements
-WHERE tx_id = $tx
+WHERE tx_id = $tx AND reason = 'CASHOUT'
 GROUP BY denom_cents
 ORDER BY denom_cents DESC", ("$tx", txId));
-        var cash = cashDt.Rows.Cast<DataRow>()
-          .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
-          .ToList();
+          var cashPaidOut = cashPaidOutDt.Rows.Cast<DataRow>()
+            .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+            .ToList();
 
-        string title = "Cash-out breakdown";
-        string subtitle = "Chips turned in + cash paid out";
+          // Extra cash added by player (positive qty in cashbox_movements with reason EXTRA_CASH)
+          var extraCashDt = Database.Query(@"
+SELECT denom_cents, SUM(delta_qty) AS qty
+FROM cashbox_movements
+WHERE tx_id = $tx AND reason = 'EXTRA_CASH'
+GROUP BY denom_cents
+ORDER BY denom_cents DESC", ("$tx", txId));
+          var extraCash = extraCashDt.Rows.Cast<DataRow>()
+            .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+            .ToList();
 
-        var view = new BreakdownView(title, subtitle, chips, cash, Enumerable.Empty<(int,int)>(), isCashOut: true);
-        view.Back += (_, __) => ShowTransactions();
-        ShowScreen(view);
+          // Get tips total - use COALESCE to handle NULL
+          double tipAmount = 0;
+          try
+          {
+            var tipsTotal = Database.Query(@"
+SELECT COALESCE(SUM(denom_cents * qty), 0) AS total
+FROM tips
+WHERE tx_id = $tx", ("$tx", txId));
+            if (tipsTotal.Rows.Count > 0)
+            {
+              var totalObj = tipsTotal.Rows[0]["total"];
+              if (totalObj != null && totalObj != DBNull.Value)
+              {
+                tipAmount = Convert.ToInt64(totalObj) / 100.0;
+              }
+            }
+          }
+          catch (Exception ex)
+          {
+            System.Diagnostics.Debug.WriteLine($"Error getting tips: {ex.Message}");
+            tipAmount = 0;
+          }
+
+          // Parse food total from additionalInfo
+          double foodTotal = 0;
+          try
+          {
+            if (!string.IsNullOrEmpty(additionalInfo))
+            {
+              System.Diagnostics.Debug.WriteLine($"Parsing food from: {additionalInfo}");
+              // Try two formats:
+              // 1. "Food ($5.00): items" (with items)
+              // 2. "Food: $5.00" (without items)
+              var foodMatch = System.Text.RegularExpressions.Regex.Match(additionalInfo, @"Food[:\s]+\(?[\$]?([\d,]+\.?\d*)\)?");
+              if (foodMatch.Success && double.TryParse(foodMatch.Groups[1].Value.Replace(",", ""), out var parsed))
+              {
+                foodTotal = parsed;
+                System.Diagnostics.Debug.WriteLine($"Food total parsed: {foodTotal}");
+              }
+              else
+              {
+                System.Diagnostics.Debug.WriteLine("Food regex didn't match");
+              }
+            }
+            else
+            {
+              System.Diagnostics.Debug.WriteLine("additionalInfo is empty when parsing food");
+            }
+          }
+          catch (Exception ex)
+          {
+            System.Diagnostics.Debug.WriteLine($"Error parsing food: {ex.Message}");
+            foodTotal = 0;
+          }
+
+          System.Diagnostics.Debug.WriteLine($"Creating CashOutBreakdownView with foodTotal: {foodTotal}, tipAmount: {tipAmount}");
+
+          string title = "Cash-out breakdown";
+          string subtitle = "Transaction balance (GIVE = TAKE)";
+
+          var view = new CashOutBreakdownView(title, subtitle, chips, cashPaidOut, extraCash, tipAmount, foodTotal, dateTime, additionalInfo);
+          view.Back += (_, __) => ShowTransactions();
+          ShowScreen(view);
+        }
+        catch (Exception ex)
+        {
+          MessageBox.Show(this, $"Error loading cashout breakdown: {ex.Message}\n\nStack trace: {ex.StackTrace}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+          ShowTransactions();
+        }
       }
     }
 
@@ -695,6 +870,7 @@ ORDER BY denom_cents DESC", ("$tx", txId));
       }
 
       DataTable dt;
+      string? dateTime = null;
 
       if (batchId.StartsWith("legacy-") && long.TryParse(batchId.AsSpan("legacy-".Length), out var moveId))
       {
@@ -703,6 +879,17 @@ SELECT denom_cents, delta_qty AS qty
 FROM cashbox_movements
 WHERE move_id = $id
 ORDER BY denom_cents DESC", ("$id", moveId));
+        
+        // Get date/time for legacy float
+        var timeInfo = Database.Query(@"
+SELECT datetime(time, 'localtime') AS formatted_time
+FROM cashbox_movements
+WHERE move_id = $id
+LIMIT 1", ("$id", moveId));
+        if (timeInfo.Rows.Count > 0)
+        {
+          dateTime = timeInfo.Rows[0]["formatted_time"]?.ToString();
+        }
       }
       else
       {
@@ -712,6 +899,17 @@ FROM cashbox_movements
 WHERE reason = 'FLOAT_ADD' AND batch_id = $b
 GROUP BY denom_cents
 ORDER BY denom_cents DESC", ("$b", batchId));
+        
+        // Get date/time for batch float
+        var timeInfo = Database.Query(@"
+SELECT datetime(time, 'localtime') AS formatted_time
+FROM cashbox_movements
+WHERE batch_id = $b
+LIMIT 1", ("$b", batchId));
+        if (timeInfo.Rows.Count > 0)
+        {
+          dateTime = timeInfo.Rows[0]["formatted_time"]?.ToString();
+        }
       }
 
       var lines = dt.Rows.Cast<DataRow>()
@@ -721,7 +919,8 @@ ORDER BY denom_cents DESC", ("$b", batchId));
       var view = new BreakdownView("Float addition", null,
                                    Enumerable.Empty<(int,int)>(),   // no chips for float add
                                    lines,
-                                   isCashOut: false);
+                                   isCashOut: false,
+                                   dateTime: dateTime);
       view.Back += (_, __) => ShowTransactions();
       ShowScreen(view);
     }
@@ -733,7 +932,53 @@ ORDER BY denom_cents DESC", ("$b", batchId));
       ShowScreen(view);
     }
 
+    private void ShowLostChipsBreakdown(string? batchId)
+    {
+      if (string.IsNullOrWhiteSpace(batchId))
+      {
+        MessageBox.Show(this, "Missing lost chips batch id.", "Details");
+        return;
+      }
 
+      // Get date/time and notes
+      var infoQuery = Database.Query(@"
+SELECT datetime(time, 'localtime') AS formatted_time, notes
+FROM activity_log
+WHERE batch_id = $b
+LIMIT 1", ("$b", batchId));
+      
+      string? dateTime = null;
+      string? notes = null;
+      
+      if (infoQuery.Rows.Count > 0)
+      {
+        dateTime = infoQuery.Rows[0]["formatted_time"]?.ToString();
+        var notesObj = infoQuery.Rows[0]["notes"];
+        if (notesObj != null && notesObj != DBNull.Value)
+        {
+          notes = notesObj.ToString();
+        }
+      }
+
+      // Get chip breakdown
+      var dt = Database.Query(@"
+SELECT denom_cents, delta_qty AS qty
+FROM cashbox_movements
+WHERE reason = 'LOST_CHIP' AND batch_id = $b
+ORDER BY denom_cents DESC", ("$b", batchId));
+
+      var lines = dt.Rows.Cast<DataRow>()
+        .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+        .ToList();
+
+      var view = new BreakdownView("Lost Chips (Tips)", notes,
+                                   lines,   // Show as chips
+                                   Enumerable.Empty<(int,int)>(),   // No cash
+                                   isCashOut: false,
+                                   dateTime: dateTime);
+      view.Back += (_, __) => ShowTransactions();
+      ShowScreen(view);
+    }
 
   }
 }
