@@ -441,9 +441,6 @@ namespace pokersoc_connect
           else if (args.FoodTotal > 0)
           {
             System.Diagnostics.Debug.WriteLine($"CashOut: Food total is {args.FoodTotal:C} but no items in dictionary");
-          }
-          else if (args.FoodTotal > 0)
-          {
             activityNotes += $" | Food: {args.FoodTotal:C}";
           }
           
@@ -689,14 +686,8 @@ ORDER BY full_time DESC
     {
       var au = CultureInfo.GetCultureInfo("en-AU");
 
-      // Get transaction date/time and notes
+      // Get transaction date/time and notes from activity_log (has detailed notes)
       var txInfo = Database.Query(@"
-SELECT 
-  datetime(time, 'localtime') AS formatted_time,
-  notes
-FROM transactions 
-WHERE tx_id = $tx
-UNION ALL
 SELECT 
   datetime(time, 'localtime') AS formatted_time,
   notes
