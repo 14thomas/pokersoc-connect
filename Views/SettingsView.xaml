@@ -109,11 +109,10 @@
         <!-- About Section -->
         <GroupBox Header="About" Margin="0,0,0,20">
           <StackPanel Margin="10">
-            <TextBlock Text="pokersoc-connect v1.1" FontWeight="Bold" Margin="0,0,0,5"/>
+            <TextBlock Text="pokersoc-connect v1.2" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="A poker society management application for tracking buy-ins, cash-outs, and food sales." Margin="0,0,0,10"/>
             <TextBlock Text="Features:" FontWeight="Bold" Margin="0,0,0,5"/>
-            <TextBlock Text="• Includes players who participated in this session to export to CSV" Margin="20,0,0,2"/>
-            <TextBlock Text="• Cash sales during cashout are correctly tracked" Margin="20,0,0,2"/>
+            <TextBlock Text="• Uses cash asset for cash boxes." Margin="20,0,0,2"/>
 
           </StackPanel>
         </GroupBox>
