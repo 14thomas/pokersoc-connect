@@ -85,6 +85,9 @@ namespace pokersoc_connect
               _currentPlayerId = playerId;
               _playerVerified = true;
               NewPlayerPanel.Visibility = Visibility.Collapsed;
+              
+              // Log attendance
+              Database.LogPlayerAttendance(playerId);
             }
           }
           catch (Exception ex)
@@ -137,6 +140,9 @@ namespace pokersoc_connect
         CurrentPlayerIdBox.Text = _currentPlayerId;
         NewPlayerPanel.Visibility = Visibility.Collapsed;
         UpdatePlayerButtons();
+        
+        // Log attendance
+        Database.LogPlayerAttendance(_currentPlayerId);
         
         // Show success message briefly (optional - you can remove this if you want)
         // MessageBox.Show($"Player {_currentPlayerId} added successfully!", "Success", 

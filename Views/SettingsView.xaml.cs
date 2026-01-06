@@ -177,6 +177,37 @@ namespace pokersoc_connect.Views
         Application.Current.Shutdown();
       }
     }
+    
+    private void ExportSessionPlayers_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var dlg = new SaveFileDialog
+        {
+          Filter = "CSV files (*.csv)|*.csv|All files|*.*",
+          Title = "Export Session Players",
+          FileName = $"session_players_{DateTime.Now:yyyy-MM-dd_HHmmss}.csv"
+        };
+        
+        if (dlg.ShowDialog() == true)
+        {
+          Database.ExportSessionPlayers(dlg.FileName);
+          MessageBox.Show(
+            $"Session players exported successfully to:\n{dlg.FileName}",
+            "Export Complete",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+        }
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show(
+          $"Error exporting session players: {ex.Message}",
+          "Export Error",
+          MessageBoxButton.OK,
+          MessageBoxImage.Error);
+      }
+    }
 
     private void LoadFoodItems()
     {

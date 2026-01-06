@@ -36,9 +36,13 @@
         <!-- Session Management Section -->
         <GroupBox Header="Session Management" Margin="0,0,0,20">
           <StackPanel Margin="10">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
               <Button Content="New Session..." Width="160" Margin="0,0,10,0" Click="NewSession_Click"/>
               <Button Content="Close Session" Width="160" Margin="0,0,10,0" Click="CloseSession_Click"/>
+            </StackPanel>
+            <TextBlock Text="Export players who participated in this session:" Margin="0,0,0,5"/>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Export Session Players..." Width="200" Margin="0,0,10,0" Click="ExportSessionPlayers_Click"/>
             </StackPanel>
           </StackPanel>
         </GroupBox>
@@ -108,11 +112,9 @@
             <TextBlock Text="pokersoc-connect v1.1" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="A poker society management application for tracking buy-ins, cash-outs, and food sales." Margin="0,0,0,10"/>
             <TextBlock Text="Features:" FontWeight="Bold" Margin="0,0,0,5"/>
-            <TextBlock Text="• Player buy-in and cash-out tracking" Margin="20,0,0,2"/>
-            <TextBlock Text="• Cashbox management with denomination tracking" Margin="20,0,0,2"/>
-            <TextBlock Text="• Food catalog and sales management" Margin="20,0,0,2"/>
-            <TextBlock Text="• Settings import/export" Margin="20,0,0,2"/>
-            <TextBlock Text="• Database backup and restore" Margin="20,0,0,2"/>
+            <TextBlock Text="• Includes players who participated in this session to export to CSV" Margin="20,0,0,2"/>
+            <TextBlock Text="• Cash sales during cashout are correctly tracked" Margin="20,0,0,2"/>
+
           </StackPanel>
         </GroupBox>
 

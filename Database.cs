@@ -172,6 +172,18 @@ CREATE TABLE IF NOT EXISTS tips (
   notes       TEXT
 );
 ");
+
+      // ----- Player Attendance Tracking -----
+      Exec(@"
+CREATE TABLE IF NOT EXISTS player_attendance (
+  attendance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id     TEXT NOT NULL,
+  scan_time     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE
+);
+");
+      Exec("CREATE INDEX IF NOT EXISTS idx_attendance_player ON player_attendance(player_id)");
+      Exec("CREATE INDEX IF NOT EXISTS idx_attendance_time ON player_attendance(scan_time)");
       try { Exec("CREATE INDEX IF NOT EXISTS idx_tips_denom_time ON tips(denom_cents, time)"); } catch { }
 
       // Migrate tips table to add player_id and tx_id if they don't exist
@@ -304,6 +316,49 @@ CREATE TABLE IF NOT EXISTS food_slot_assignments (
       tx.Commit();
     }
 
+    // ----------------- Player Attendance -----------------
+    
+    // Log player attendance (when ID is scanned/entered)
+    public static void LogPlayerAttendance(string playerId)
+    {
+      Exec("INSERT INTO player_attendance(player_id) VALUES ($id)", ("$id", playerId));
+    }
+    
+    // ----------------- Session players export -----------------
+    
+    // Export players who attended the current session (scanned their ID)
+    public static void ExportSessionPlayers(string filePath)
+    {
+      // Get all unique player_ids from attendance log
+      var sessionPlayers = Query(@"
+        SELECT DISTINCT p.player_id, p.display_name, p.email, p.student_number, p.degree, p.study_year, p.arc_member,
+               MIN(a.scan_time) as first_scan
+        FROM players p
+        INNER JOIN player_attendance a ON p.player_id = a.player_id
+        GROUP BY p.player_id
+        ORDER BY first_scan
+      ");
+      
+      var lines = new List<string>();
+      lines.Add("Timestamp, Full Name, Email Address, ARC member, ZID (N/A if non-UNSW), Player ID");
+      
+      foreach (System.Data.DataRow row in sessionPlayers.Rows)
+      {
+        var firstScan = row["first_scan"]?.ToString() ?? "";
+        var name = row["display_name"]?.ToString() ?? "New Player";
+        var email = row["email"]?.ToString() ?? "None";
+        var arcMember = row["arc_member"]?.ToString() ?? "None";
+        var studentNum = row["student_number"]?.ToString() ?? "None";
+        var playerId = row["player_id"]?.ToString() ?? "None";
+        
+        
+        // Simple CSV escaping - quote fields that might contain commas
+        lines.Add($"\"{firstScan}\",\"{name}\",\"{email}\",\"{arcMember}\",\"{studentNum}\",\"{playerId}\"");
+      }
+      
+      System.IO.File.WriteAllLines(filePath, lines);
+    }
+    
     // ----------------- Settings export/import -----------------
 
     // Exports just the reusable catalog (products) to JSON
