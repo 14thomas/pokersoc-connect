@@ -521,7 +521,6 @@
                     Click="FloatMultiplier1x_Click">
               <StackPanel>
                 <TextBlock Text="×1" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="1x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
             </Button>
 
@@ -535,7 +534,6 @@
                     Click="FloatMultiplier5x_Click">
               <StackPanel>
                 <TextBlock Text="×5" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="5x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
             </Button>
 
@@ -549,7 +547,6 @@
                     Click="FloatMultiplier20x_Click">
               <StackPanel>
                 <TextBlock Text="×20" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="20x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
             </Button>
           </Grid>

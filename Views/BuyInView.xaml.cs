@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace pokersoc_connect.Views
 {
@@ -34,7 +36,8 @@ namespace pokersoc_connect.Views
     {
       InitializeComponent();
       Loaded += (s, e) => { 
-        InitializeCashInput(); 
+        InitializeCashInput();
+        LoadCurrencyImages();
       };
     }
 
@@ -153,17 +156,64 @@ namespace pokersoc_connect.Views
 
     private void UpdateCashButtonCounts()
     {
-      Cash5cCount.Text = _cashCounts[5].ToString();
-      Cash10cCount.Text = _cashCounts[10].ToString();
-      Cash20cCount.Text = _cashCounts[20].ToString();
-      Cash50cCount.Text = _cashCounts[50].ToString();
-      Cash1Count.Text = _cashCounts[100].ToString();
-      Cash2Count.Text = _cashCounts[200].ToString();
-      Cash5Count.Text = _cashCounts[500].ToString();
-      Cash10Count.Text = _cashCounts[1000].ToString();
-      Cash20Count.Text = _cashCounts[2000].ToString();
-      Cash50Count.Text = _cashCounts[5000].ToString();
-      Cash100Count.Text = _cashCounts[10000].ToString();
+      Cash5cCount.Text = $"×{_cashCounts[5]}";
+      Cash10cCount.Text = $"×{_cashCounts[10]}";
+      Cash20cCount.Text = $"×{_cashCounts[20]}";
+      Cash50cCount.Text = $"×{_cashCounts[50]}";
+      Cash1Count.Text = $"×{_cashCounts[100]}";
+      Cash2Count.Text = $"×{_cashCounts[200]}";
+      Cash5Count.Text = $"×{_cashCounts[500]}";
+      Cash10Count.Text = $"×{_cashCounts[1000]}";
+      Cash20Count.Text = $"×{_cashCounts[2000]}";
+      Cash50Count.Text = $"×{_cashCounts[5000]}";
+      Cash100Count.Text = $"×{_cashCounts[10000]}";
+    }
+
+    private void LoadCurrencyImages()
+    {
+      string currencyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Currency");
+      
+      // Load coin images
+      LoadCurrencyImage(Cash5cImage, Cash5cText, Path.Combine(currencyPath, "coin_5c.png"));
+      LoadCurrencyImage(Cash10cImage, Cash10cText, Path.Combine(currencyPath, "coin_10c.png"));
+      LoadCurrencyImage(Cash20cImage, Cash20cText, Path.Combine(currencyPath, "coin_20c.png"));
+      LoadCurrencyImage(Cash50cImage, Cash50cText, Path.Combine(currencyPath, "coin_50c.png"));
+      LoadCurrencyImage(Cash1Image, Cash1Text, Path.Combine(currencyPath, "coin_1.png"));
+      LoadCurrencyImage(Cash2Image, Cash2Text, Path.Combine(currencyPath, "coin_2.png"));
+      
+      // Load note images
+      LoadCurrencyImage(Cash5Image, Cash5Text, Path.Combine(currencyPath, "note_5.png"));
+      LoadCurrencyImage(Cash10Image, Cash10Text, Path.Combine(currencyPath, "note_10.png"));
+      LoadCurrencyImage(Cash20Image, Cash20Text, Path.Combine(currencyPath, "note_20.png"));
+      LoadCurrencyImage(Cash50Image, Cash50Text, Path.Combine(currencyPath, "note_50.png"));
+      LoadCurrencyImage(Cash100Image, Cash100Text, Path.Combine(currencyPath, "note_100.png"));
+    }
+
+    private void LoadCurrencyImage(Image imageControl, TextBlock fallbackText, string imagePath)
+    {
+      try
+      {
+        if (File.Exists(imagePath))
+        {
+          var bitmap = new BitmapImage();
+          bitmap.BeginInit();
+          bitmap.UriSource = new Uri(imagePath, UriKind.Absolute);
+          bitmap.CacheOption = BitmapCacheOption.OnLoad;
+          bitmap.EndInit();
+          imageControl.Source = bitmap;
+          fallbackText.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+          // Show fallback text if image doesn't exist
+          fallbackText.Visibility = Visibility.Visible;
+        }
+      }
+      catch
+      {
+        // Show fallback text on error
+        fallbackText.Visibility = Visibility.Visible;
+      }
     }
 
     private string FormatDenom(int denom)

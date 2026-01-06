@@ -81,6 +81,9 @@ namespace pokersoc_connect
         }
       }
 
+      // Generate placeholder currency images if needed
+      CurrencyImageGenerator.GeneratePlaceholders();
+
       // Now create and show the real main window
       var main = new MainWindow();
       this.MainWindow = main;

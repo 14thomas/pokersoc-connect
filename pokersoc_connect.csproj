@@ -25,4 +25,9 @@
     <EmbeddedResource Include="schema.sql" />
   </ItemGroup>
 
+  <!-- Copy currency assets to output directory -->
+  <ItemGroup>
+    <None Include="Assets\Currency\**\*.*" CopyToOutputDirectory="PreserveNewest" LinkBase="Assets\Currency" />
+  </ItemGroup>
+
 </Project>

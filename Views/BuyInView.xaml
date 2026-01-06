@@ -170,171 +170,243 @@
           <!-- 5c Button -->
           <Button x:Name="Cash5c" Grid.Row="0" Grid.Column="0"
                   Margin="0,0,5,5"
-                  Padding="15,20"
+                  Padding="5"
                   Click="CashDenom_Click"
                   Tag="5"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="5c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="5c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash5cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  Background="#C0C0C0">
+            <Grid>
+              <Image x:Name="Cash5cImage" Stretch="Uniform"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash5cCount" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash5cText" Text="5c" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- 10c Button -->
           <Button x:Name="Cash10c" Grid.Row="0" Grid.Column="1"
                   Margin="5,0,0,5"
-                  Padding="15,20"
+                  Padding="5"
                   Click="CashDenom_Click"
                   Tag="10"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="10c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="10c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash10cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  Background="#C0C0C0">
+            <Grid>
+              <Image x:Name="Cash10cImage" Stretch="Uniform"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash10cCount" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash10cText" Text="10c" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 2 -->
           <!-- 20c Button -->
           <Button x:Name="Cash20c" Grid.Row="1" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="15,20"
+                  Padding="5"
                   Click="CashDenom_Click"
                   Tag="20"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="20c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="20c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash20cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  Background="#C0C0C0">
+            <Grid>
+              <Image x:Name="Cash20cImage" Stretch="Uniform"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash20cCount" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash20cText" Text="20c" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- 50c Button -->
           <Button x:Name="Cash50c" Grid.Row="1" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="15,20"
+                  Padding="5"
                   Click="CashDenom_Click"
                   Tag="50"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="50c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="50c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash50cCount" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  Background="#C0C0C0">
+            <Grid>
+              <Image x:Name="Cash50cImage" Stretch="Uniform"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash50cCount" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash50cText" Text="50c" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 3 -->
           <!-- $1 Button -->
           <Button x:Name="Cash1" Grid.Row="2" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="15,20"
+                  Padding="5"
                   Click="CashDenom_Click"
                   Tag="100"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$1" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$1" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash1Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  Background="#B8860B">
+            <Grid>
+              <Image x:Name="Cash1Image" Stretch="Uniform"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash1Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash1Text" Text="$1" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- $2 Button -->
           <Button x:Name="Cash2" Grid.Row="2" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="15,20"
+                  Padding="5"
                   Click="CashDenom_Click"
                   Tag="200"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$2" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash2Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  Background="#B8860B">
+            <Grid>
+              <Image x:Name="Cash2Image" Stretch="Uniform"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash2Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash2Text" Text="$2" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 4 -->
           <!-- $5 Button -->
           <Button x:Name="Cash5" Grid.Row="3" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="500"
                   BorderThickness="2"
                   BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$5" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash5Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+            <Grid>
+              <Image x:Name="Cash5Image" Stretch="Fill"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash5Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash5Text" Text="$5" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- $10 Button -->
           <Button x:Name="Cash10" Grid.Row="3" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="1000"
                   BorderThickness="2"
                   BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$10" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$10" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash10Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+            <Grid>
+              <Image x:Name="Cash10Image" Stretch="Fill"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash10Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash10Text" Text="$10" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 5 -->
           <!-- $20 Button -->
           <Button x:Name="Cash20" Grid.Row="4" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="2000"
                   BorderThickness="2"
                   BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$20" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$20" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash20Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+            <Grid>
+              <Image x:Name="Cash20Image" Stretch="Fill"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash20Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash20Text" Text="$20" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- $50 Button -->
           <Button x:Name="Cash50" Grid.Row="4" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="5000"
                   BorderThickness="2"
                   BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$50" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$50" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash50Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+            <Grid>
+              <Image x:Name="Cash50Image" Stretch="Fill"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash50Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash50Text" Text="$50" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 6 -->
           <!-- $100 Button -->
           <Button x:Name="Cash100" Grid.Row="5" Grid.Column="0"
                   Margin="0,5,5,0"
-                  Padding="15,20"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="10000"
                   BorderThickness="2"
                   BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$100" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$100" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="Cash100Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+            <Grid>
+              <Image x:Name="Cash100Image" Stretch="Fill"/>
+              <Rectangle Fill="#40000000"/>
+              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                       Padding="12,8" Margin="4">
+                <TextBlock x:Name="Cash100Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="Cash100Text" Text="$100" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Multiplier Controls -->
@@ -355,7 +427,6 @@
                     Click="CashMultiplier1x_Click">
               <StackPanel>
                 <TextBlock Text="×1" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="1x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
             </Button>
 
@@ -369,7 +440,6 @@
                     Click="CashMultiplier5x_Click">
               <StackPanel>
                 <TextBlock Text="×5" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="5x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
             </Button>
 
@@ -383,7 +453,6 @@
                     Click="CashMultiplier20x_Click">
               <StackPanel>
                 <TextBlock Text="×20" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="20x" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
               </StackPanel>
             </Button>
           </Grid>
