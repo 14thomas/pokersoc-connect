@@ -39,7 +39,6 @@
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
       <Button Grid.Column="0" Content="Import Players" 
@@ -56,14 +55,7 @@
               FontSize="14" 
               FontWeight="Bold"/>
 
-      <Button Grid.Column="2" Content="Refresh" 
-              Click="Refresh_Click" 
-              Padding="15,10" 
-              Margin="5,0,5,0"
-              FontSize="14" 
-              FontWeight="Bold"/>
-
-      <Button Grid.Column="3" Content="Close" 
+      <Button Grid.Column="2" Content="Close" 
               Click="Close_Click" 
               Padding="15,10" 
               Margin="5,0,0,0"

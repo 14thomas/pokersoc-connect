@@ -97,11 +97,6 @@ namespace pokersoc_connect.Views
       }
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e)
-    {
-      LoadPlayers();
-    }
-
     private void Close_Click(object sender, RoutedEventArgs e)
     {
       CloseRequested?.Invoke(this, EventArgs.Empty);
