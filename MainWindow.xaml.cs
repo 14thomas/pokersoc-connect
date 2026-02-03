@@ -852,7 +852,9 @@ ORDER BY denom_cents DESC", ("$tx", txId));
         string subtitle = "Cash received + change given back";
 
         var view = new BreakdownView(title, subtitle, Enumerable.Empty<(int,int)>(), cashReceived, changeGiven, false, dateTime, additionalInfo);
+        view.EnableDeletion(txId, "BUYIN");
         view.Back += (_, __) => ShowTransactions();
+        view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };
         ShowScreen(view);
       }
       else
@@ -944,7 +946,9 @@ WHERE tx_id = $tx", ("$tx", txId));
           string subtitle = "Transaction balance (GIVE = TAKE)";
 
           var view = new CashOutBreakdownView(title, subtitle, chips, cashPaidOut, extraCash, tipAmount, foodTotal, dateTime, additionalInfo);
+          view.EnableDeletion(txId, type);
           view.Back += (_, __) => ShowTransactions();
+          view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };
           ShowScreen(view);
         }
         catch (Exception ex)
@@ -1015,7 +1019,12 @@ LIMIT 1", ("$b", batchId));
                                    lines,
                                    isCashOut: false,
                                    dateTime: dateTime);
+      if (!string.IsNullOrEmpty(batchId))
+      {
+        view.EnableDeletionForFloat(batchId);
+      }
       view.Back += (_, __) => ShowTransactions();
+      view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };
       ShowScreen(view);
     }
 
@@ -1070,7 +1079,12 @@ ORDER BY denom_cents DESC", ("$b", batchId));
                                    Enumerable.Empty<(int,int)>(),   // No cash
                                    isCashOut: false,
                                    dateTime: dateTime);
+      if (!string.IsNullOrEmpty(batchId))
+      {
+        view.EnableDeletionForLostChips(batchId);
+      }
       view.Back += (_, __) => ShowTransactions();
+      view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };
       ShowScreen(view);
     }
 

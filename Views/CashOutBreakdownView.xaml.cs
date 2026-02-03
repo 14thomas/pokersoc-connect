@@ -10,6 +10,101 @@ namespace pokersoc_connect.Views
   public partial class CashOutBreakdownView : UserControl
   {
     public event EventHandler? Back;
+    public event EventHandler<TransactionDeletedEventArgs>? Deleted;
+
+    private long? _txId;
+    private string? _txType;
+    private string _enteredPassword = "";
+
+    // Enable deletion for transactions
+    public void EnableDeletion(long txId, string txType)
+    {
+      _txId = txId;
+      _txType = txType;
+      DeleteButton.Visibility = Visibility.Visible;
+    }
+
+    private void Delete_Click(object sender, RoutedEventArgs e)
+    {
+      _enteredPassword = "";
+      UpdatePasswordDisplay();
+      PasswordErrorText.Visibility = Visibility.Collapsed;
+      PasswordPanel.Visibility = Visibility.Visible;
+    }
+
+    private void Keypad_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && button.Tag is string digit)
+      {
+        _enteredPassword += digit;
+        UpdatePasswordDisplay();
+        PasswordErrorText.Visibility = Visibility.Collapsed;
+      }
+    }
+
+    private void KeypadBackspace_Click(object sender, RoutedEventArgs e)
+    {
+      if (_enteredPassword.Length > 0)
+      {
+        _enteredPassword = _enteredPassword.Substring(0, _enteredPassword.Length - 1);
+        UpdatePasswordDisplay();
+      }
+    }
+
+    private void KeypadClear_Click(object sender, RoutedEventArgs e)
+    {
+      _enteredPassword = "";
+      UpdatePasswordDisplay();
+      PasswordErrorText.Visibility = Visibility.Collapsed;
+    }
+
+    private void UpdatePasswordDisplay()
+    {
+      PasswordDisplay.Text = _enteredPassword.Length > 0 
+        ? new string('●', _enteredPassword.Length) 
+        : "****";
+    }
+
+    private void PasswordCancel_Click(object sender, RoutedEventArgs e)
+    {
+      PasswordPanel.Visibility = Visibility.Collapsed;
+      _enteredPassword = "";
+    }
+
+    private void PasswordConfirm_Click(object sender, RoutedEventArgs e)
+    {
+      var correctPassword = Database.GetAdminPassword();
+
+      if (_enteredPassword == correctPassword)
+      {
+        PasswordPanel.Visibility = Visibility.Collapsed;
+        _enteredPassword = "";
+        PerformDeletion();
+      }
+      else
+      {
+        PasswordErrorText.Visibility = Visibility.Visible;
+        _enteredPassword = "";
+        UpdatePasswordDisplay();
+      }
+    }
+
+    private void PerformDeletion()
+    {
+      try
+      {
+        if (_txId.HasValue && !string.IsNullOrEmpty(_txType))
+        {
+          Database.DeleteTransaction(_txId.Value, _txType);
+        }
+        
+        Deleted?.Invoke(this, new TransactionDeletedEventArgs(_txId, null, _txType));
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error deleting: {ex.Message}", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
 
     public CashOutBreakdownView(string title,
                                 string? subtitle,

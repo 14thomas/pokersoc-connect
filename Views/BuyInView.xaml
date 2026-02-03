@@ -612,5 +612,57 @@
       </Grid>
     </Grid>
 
+    <!-- TIMEOUT CONFIRMATION OVERLAY -->
+    <Grid x:Name="TimeoutConfirmationPanel" Grid.Row="0" Visibility="Collapsed" Background="#CC000000">
+      <Border Background="White" CornerRadius="10" Padding="30" 
+              HorizontalAlignment="Center" VerticalAlignment="Center"
+              MinWidth="400" MaxWidth="600">
+        <StackPanel>
+          <TextBlock Text="⚠️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+          <TextBlock Text="Buy-in Limit Warning" FontSize="24" FontWeight="Bold" 
+                     HorizontalAlignment="Center" Margin="0,0,0,15" Foreground="DarkOrange"/>
+          <TextBlock x:Name="TimeoutWarningText" TextWrapping="Wrap" FontSize="16" 
+                     HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,10"/>
+          <TextBlock Text="This player's total buy-ins for this session will exceed $500." 
+                     TextWrapping="Wrap" FontSize="14" HorizontalAlignment="Center" 
+                     TextAlignment="Center" Margin="0,0,0,20" Foreground="Gray"/>
+          
+          <Border Background="LightYellow" BorderBrush="Orange" BorderThickness="2" 
+                  CornerRadius="5" Padding="15" Margin="0,0,0,20">
+            <TextBlock Text="Has this player had a 15-minute timeout?" 
+                       FontSize="18" FontWeight="Bold" TextWrapping="Wrap"
+                       HorizontalAlignment="Center" TextAlignment="Center"/>
+          </Border>
+          
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- No Button (Reject) -->
+            <Button Grid.Column="0" Margin="0,0,10,0" Click="TimeoutNo_Click"
+                    Padding="20,15" Background="LightCoral">
+              <StackPanel>
+                <TextBlock Text="❌" FontSize="32" HorizontalAlignment="Center"/>
+                <TextBlock Text="No" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock Text="Reject buy-in" FontSize="11" HorizontalAlignment="Center" Opacity="0.7"/>
+              </StackPanel>
+            </Button>
+            
+            <!-- Yes Button (Proceed) -->
+            <Button Grid.Column="1" Margin="10,0,0,0" Click="TimeoutYes_Click"
+                    Padding="20,15" Background="LightGreen">
+              <StackPanel>
+                <TextBlock Text="✅" FontSize="32" HorizontalAlignment="Center"/>
+                <TextBlock Text="Yes" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock Text="Proceed with buy-in" FontSize="11" HorizontalAlignment="Center" Opacity="0.7"/>
+              </StackPanel>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+
   </Grid>
 </UserControl>

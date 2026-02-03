@@ -29,3 +29,5 @@ Notes:
 - If an image is missing, a colored placeholder will be shown
 - For best appearance, use images with similar aspect ratios to the recommended sizes
 
+
+

@@ -106,13 +106,31 @@
           </StackPanel>
         </GroupBox>
 
+        <!-- Admin Settings Section -->
+        <GroupBox Header="Admin Settings" Margin="0,0,0,20">
+          <StackPanel Margin="10">
+            <TextBlock Text="Admin Password (for deleting transactions):" Margin="0,0,0,5"/>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <PasswordBox x:Name="AdminPasswordBox" Grid.Column="0" Margin="0,0,10,0" PasswordChanged="AdminPasswordBox_PasswordChanged"/>
+              <Button Grid.Column="1" Content="Save Password" Width="120" Click="SaveAdminPassword_Click"/>
+            </Grid>
+            <TextBlock Text="Default password: 1234" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
+          </StackPanel>
+        </GroupBox>
+
         <!-- About Section -->
         <GroupBox Header="About" Margin="0,0,0,20">
           <StackPanel Margin="10">
-            <TextBlock Text="pokersoc-connect v1.2" FontWeight="Bold" Margin="0,0,0,5"/>
+            <TextBlock Text="pokersoc-connect v1.3" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="A poker society management application for tracking buy-ins, cash-outs, and food sales." Margin="0,0,0,10"/>
             <TextBlock Text="Features:" FontWeight="Bold" Margin="0,0,0,5"/>
-            <TextBlock Text="• Uses cash asset for cash boxes." Margin="20,0,0,2"/>
+            <TextBlock Text="• Can now delete actions from the activity feed." Margin="20,0,0,2"/>
+            <TextBlock Text="• Alert for when player has attempted to buyin for >500." Margin="20,0,0,2"/>
+            
 
           </StackPanel>
         </GroupBox>

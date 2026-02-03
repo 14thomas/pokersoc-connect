@@ -4,17 +4,18 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace pokersoc_connect.Views
 {
   public partial class LostChipsView : UserControl
   {
-    // Poker chip denominations only (removed $2 chip - 200)
+    // Poker chip denominations only
     private static readonly int[] PokerChipDenoms = { 5, 25, 100, 500, 2500, 10000 };
     private readonly Dictionary<int, TextBlock> _chipCounts = new Dictionary<int, TextBlock>();
     private readonly Dictionary<int, int> _chipValues = new Dictionary<int, int>();
-    private int _currentMultiplier = 1; // Current multiplier (1, 5, or 20)
-    private readonly List<(int denom, int count)> _undoStack = new List<(int, int)>(); // For undo functionality
+    private int _currentMultiplier = 1;
+    private readonly List<(int denom, int count)> _undoStack = new List<(int, int)>();
 
     public event EventHandler? CloseRequested;
 
@@ -23,22 +24,19 @@ namespace pokersoc_connect.Views
       InitializeComponent();
       InitializeChipCounts();
       UpdateTotal();
-      
-      // Set default multiplier to 1x
-      Toggle1x.IsChecked = true;
-      _currentMultiplier = 1;
+      RefreshSummaryTable();
+      UpdateMultiplierDisplay();
     }
 
     private void InitializeChipCounts()
     {
-      _chipCounts[5] = Chip5c;    // White 5c
-      _chipCounts[25] = Chip25c;  // Red 25c
-      _chipCounts[100] = Chip1;   // Blue $1
-      _chipCounts[500] = Chip5;   // Black $5
-      _chipCounts[2500] = Chip25; // White Plaque $25
-      _chipCounts[10000] = Chip100; // Red Plaque $100
+      _chipCounts[5] = Chip5c;
+      _chipCounts[25] = Chip25c;
+      _chipCounts[100] = Chip1;
+      _chipCounts[500] = Chip5;
+      _chipCounts[2500] = Chip25;
+      _chipCounts[10000] = Chip100;
 
-      // Initialize all values to 0
       foreach (var denom in PokerChipDenoms)
       {
         _chipValues[denom] = 0;
@@ -47,22 +45,130 @@ namespace pokersoc_connect.Views
 
     private void AddChip(int denom, int count = 1)
     {
-      // Save current state for undo
       _undoStack.Add((denom, _chipValues[denom]));
       
       _chipValues[denom] += count * _currentMultiplier;
-      _chipCounts[denom].Text = _chipValues[denom].ToString();
+      _chipCounts[denom].Text = $"×{_chipValues[denom]}";
       UpdateTotal();
+      RefreshSummaryTable();
     }
 
     private void UpdateTotal()
     {
       double totalCents = _chipValues.Sum(kvp => kvp.Value * kvp.Key);
       var au = CultureInfo.GetCultureInfo("en-AU");
-      TotalTipsText.Text = $"Total Tips: {(totalCents / 100.0).ToString("C", au)}";
+      TotalTipsText.Text = (totalCents / 100.0).ToString("C", au);
     }
 
-    // Add chip handlers - one click adds chips based on current multiplier
+    private void RefreshSummaryTable()
+    {
+      ChipSummaryPanel.Children.Clear();
+      var au = CultureInfo.GetCultureInfo("en-AU");
+
+      foreach (var denom in PokerChipDenoms)
+      {
+        if (_chipValues[denom] > 0)
+        {
+          var row = new Border
+          {
+            BorderBrush = new SolidColorBrush(Colors.Gray),
+            BorderThickness = new Thickness(1, 0, 1, 1),
+            Height = 36
+          };
+
+          var grid = new Grid();
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+
+          var chipText = new TextBlock
+          {
+            Text = GetDenomLabel(denom) + " " + GetChipColor(denom),
+            FontSize = 13,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(5)
+          };
+          Grid.SetColumn(chipText, 0);
+
+          var countText = new TextBlock
+          {
+            Text = _chipValues[denom].ToString(),
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(5)
+          };
+          Grid.SetColumn(countText, 1);
+
+          var valueText = new TextBlock
+          {
+            Text = ((_chipValues[denom] * denom) / 100.0).ToString("C", au),
+            FontSize = 13,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(5)
+          };
+          Grid.SetColumn(valueText, 2);
+
+          grid.Children.Add(chipText);
+          grid.Children.Add(countText);
+          grid.Children.Add(valueText);
+          row.Child = grid;
+          ChipSummaryPanel.Children.Add(row);
+        }
+      }
+
+      // Show placeholder if no chips
+      if (!_chipValues.Any(kvp => kvp.Value > 0))
+      {
+        var placeholder = new Border
+        {
+          BorderBrush = new SolidColorBrush(Colors.Gray),
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Height = 50,
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
+        };
+
+        var text = new TextBlock
+        {
+          Text = "Click chips on the right to add them",
+          FontSize = 13,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center
+        };
+
+        placeholder.Child = text;
+        ChipSummaryPanel.Children.Add(placeholder);
+      }
+    }
+
+    private void UpdateMultiplierDisplay()
+    {
+      // Reset all to default (light blue)
+      Toggle1x.Background = Brushes.LightBlue;
+      Toggle5x.Background = Brushes.LightBlue;
+      Toggle20x.Background = Brushes.LightBlue;
+
+      // Highlight current multiplier (light green)
+      switch (_currentMultiplier)
+      {
+        case 1:
+          Toggle1x.Background = Brushes.LightGreen;
+          break;
+        case 5:
+          Toggle5x.Background = Brushes.LightGreen;
+          break;
+        case 20:
+          Toggle20x.Background = Brushes.LightGreen;
+          break;
+      }
+    }
+
+    // Add chip handlers
     private void AddChip5c_Click(object sender, RoutedEventArgs e) => AddChip(5);
     private void AddChip25c_Click(object sender, RoutedEventArgs e) => AddChip(25);
     private void AddChip1_Click(object sender, RoutedEventArgs e) => AddChip(100);
@@ -73,44 +179,20 @@ namespace pokersoc_connect.Views
     // Toggle button handlers
     private void Toggle1x_Click(object sender, RoutedEventArgs e)
     {
-      if (Toggle1x.IsChecked == true)
-      {
-        Toggle5x.IsChecked = false;
-        Toggle20x.IsChecked = false;
-        _currentMultiplier = 1;
-      }
-      else
-      {
-        _currentMultiplier = 1; // Default to 1x if all are unchecked
-      }
+      _currentMultiplier = 1;
+      UpdateMultiplierDisplay();
     }
 
     private void Toggle5x_Click(object sender, RoutedEventArgs e)
     {
-      if (Toggle5x.IsChecked == true)
-      {
-        Toggle1x.IsChecked = false;
-        Toggle20x.IsChecked = false;
-        _currentMultiplier = 5;
-      }
-      else
-      {
-        _currentMultiplier = 1; // Default to 1x if all are unchecked
-      }
+      _currentMultiplier = 5;
+      UpdateMultiplierDisplay();
     }
 
     private void Toggle20x_Click(object sender, RoutedEventArgs e)
     {
-      if (Toggle20x.IsChecked == true)
-      {
-        Toggle1x.IsChecked = false;
-        Toggle5x.IsChecked = false;
-        _currentMultiplier = 20;
-      }
-      else
-      {
-        _currentMultiplier = 1; // Default to 1x if all are unchecked
-      }
+      _currentMultiplier = 20;
+      UpdateMultiplierDisplay();
     }
 
     private void RecordTips_Click(object sender, RoutedEventArgs e)
@@ -128,9 +210,12 @@ namespace pokersoc_connect.Views
 
         var totalValue = tipsToRecord.Sum(t => t.Value * t.Key);
         var totalChips = tipsToRecord.Sum(t => t.Value);
+        var au = CultureInfo.GetCultureInfo("en-AU");
 
-        // Show inline confirmation panel
-        ConfirmationText.Text = $"Record {totalChips} lost chips as tips?\n\nTotal value: {(totalValue / 100.0).ToString("C", CultureInfo.GetCultureInfo("en-AU"))}";
+        var chipBreakdown = string.Join("\n", tipsToRecord.Select(t => 
+          $"  • {GetDenomLabel(t.Key)} ({GetChipColor(t.Key)}): {t.Value}"));
+
+        ConfirmationText.Text = $"Record {totalChips} lost chip{(totalChips > 1 ? "s" : "")} as tips?\n\n{chipBreakdown}\n\nTotal value: {(totalValue / 100.0).ToString("C", au)}";
         ConfirmationPanel.Visibility = Visibility.Visible;
       }
       catch (Exception ex)
@@ -153,50 +238,44 @@ namespace pokersoc_connect.Views
 
         var totalValue = tipsToRecord.Sum(t => t.Value * t.Key);
         
+        string batchId = Guid.NewGuid().ToString("N");
+        
+        Database.InTransaction(tx =>
         {
-          string batchId = Guid.NewGuid().ToString("N");
-          
-          Database.InTransaction(tx =>
+          foreach (var (denom, qty) in tipsToRecord)
           {
-            foreach (var (denom, qty) in tipsToRecord)
-            {
-              // Record as tip
-              Database.Exec(
-                "INSERT INTO tips(denom_cents, qty, notes) VALUES ($d, $q, $n)",
-                tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip")
-              );
-
-              // Record as cashbox movement (positive for tips) with batch_id
-              Database.Exec(
-                "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, notes, batch_id) VALUES ($d, $q, 'LOST_CHIP', $n, $b)",
-                tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip"), ("$b", batchId)
-              );
-            }
-            
-            // Create an activity log entry for lost chips
-            var chipBreakdown = string.Join(", ", tipsToRecord.Select(t => 
-            {
-              var denomLabel = GetDenomLabel(t.Key);
-              return t.Value > 1 ? $"{denomLabel} x{t.Value}" : denomLabel;
-            }));
-            
             Database.Exec(
-              "INSERT INTO activity_log(activity_key, activity_type, activity_kind, amount_cents, notes, batch_id) " +
-              "VALUES ($key, $type, $kind, $amount, $notes, $batch)",
-              tx, 
-              ("$key", $"lost_chips_{batchId}"),
-              ("$type", "LOST_CHIPS"),
-              ("$kind", "LOST_CHIP"),
-              ("$amount", totalValue),
-              ("$notes", $"Lost chips recorded: {chipBreakdown}"),
-              ("$batch", batchId)
+              "INSERT INTO tips(denom_cents, qty, notes) VALUES ($d, $q, $n)",
+              tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip")
             );
-          });
 
-          // Hide confirmation panel and clear
-          ConfirmationPanel.Visibility = Visibility.Collapsed;
-          ClearAll_Click(sender, e);
-        }
+            Database.Exec(
+              "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, notes, batch_id) VALUES ($d, $q, 'LOST_CHIP', $n, $b)",
+              tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip"), ("$b", batchId)
+            );
+          }
+          
+          var chipBreakdown = string.Join(", ", tipsToRecord.Select(t => 
+          {
+            var denomLabel = GetDenomLabel(t.Key);
+            return t.Value > 1 ? $"{denomLabel} x{t.Value}" : denomLabel;
+          }));
+          
+          Database.Exec(
+            "INSERT INTO activity_log(activity_key, activity_type, activity_kind, amount_cents, notes, batch_id) " +
+            "VALUES ($key, $type, $kind, $amount, $notes, $batch)",
+            tx, 
+            ("$key", $"lost_chips_{batchId}"),
+            ("$type", "LOST_CHIPS"),
+            ("$kind", "LOST_CHIP"),
+            ("$amount", totalValue),
+            ("$notes", $"Lost chips recorded: {chipBreakdown}"),
+            ("$batch", batchId)
+          );
+        });
+
+        ConfirmationPanel.Visibility = Visibility.Collapsed;
+        ClearAllChips();
       }
       catch (Exception ex)
       {
@@ -218,8 +297,9 @@ namespace pokersoc_connect.Views
         _undoStack.RemoveAt(_undoStack.Count - 1);
         
         _chipValues[denom] = previousCount;
-        _chipCounts[denom].Text = _chipValues[denom].ToString();
+        _chipCounts[denom].Text = $"×{_chipValues[denom]}";
         UpdateTotal();
+        RefreshSummaryTable();
       }
     }
 
@@ -234,12 +314,18 @@ namespace pokersoc_connect.Views
         }
       }
       
+      ClearAllChips();
+    }
+
+    private void ClearAllChips()
+    {
       foreach (var denom in PokerChipDenoms)
       {
         _chipValues[denom] = 0;
-        _chipCounts[denom].Text = "0";
+        _chipCounts[denom].Text = "×0";
       }
       UpdateTotal();
+      RefreshSummaryTable();
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)
@@ -256,6 +342,17 @@ namespace pokersoc_connect.Views
       2500 => "$25",
       10000 => "$100",
       _ => $"{cents}c"
+    };
+
+    private static string GetChipColor(int cents) => cents switch
+    {
+      5 => "White",
+      25 => "Red",
+      100 => "Blue",
+      500 => "Black",
+      2500 => "White Plaque",
+      10000 => "Red Plaque",
+      _ => ""
     };
   }
 }

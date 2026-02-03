@@ -88,59 +88,87 @@ namespace pokersoc_connect.Views
 
       var culture = CultureInfo.GetCultureInfo("en-AU");
 
-      // Create rows for each denomination
-      for (int i = 0; i < CashDenoms.Length; i++)
+      // Only show denominations that have been added (count > 0)
+      var addedDenoms = CashDenoms.Where(d => _cashCounts.ContainsKey(d) && _cashCounts[d] > 0).ToList();
+
+      if (addedDenoms.Count == 0)
       {
-        int denom = CashDenoms[i];
-        bool isLastRow = (i == CashDenoms.Length - 1);
-        
-        var row = new Border
+        // Show placeholder when no cash has been added
+        var placeholder = new Border
         {
           BorderBrush = new SolidColorBrush(Colors.Gray),
-          BorderThickness = isLastRow ? new Thickness(1, 0, 1, 1) : new Thickness(1, 0, 1, 1),
-          Height = 36
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Height = 50,
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
         };
 
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-
-        var denominationText = new TextBlock
+        var text = new TextBlock
         {
-          Text = FormatDenom(denom),
+          Text = "Click currency buttons to add cash",
           FontSize = 13,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
           VerticalAlignment = VerticalAlignment.Center,
-          HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          HorizontalAlignment = HorizontalAlignment.Center
         };
-        Grid.SetColumn(denominationText, 0);
 
-        var countText = new TextBlock
+        placeholder.Child = text;
+        CashInputRowsPanel.Children.Add(placeholder);
+      }
+      else
+      {
+        // Create rows only for denominations with count > 0
+        foreach (int denom in addedDenoms)
         {
-          Text = _cashCounts[denom].ToString(),
-          FontSize = 13,
-          VerticalAlignment = VerticalAlignment.Center,
-          HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
-        };
-        Grid.SetColumn(countText, 1);
+          var row = new Border
+          {
+            BorderBrush = new SolidColorBrush(Colors.Gray),
+            BorderThickness = new Thickness(1, 0, 1, 1),
+            Height = 36
+          };
 
-        var valueText = new TextBlock
-        {
-          Text = (_cashCounts[denom] * denom / 100.0).ToString("C", culture),
-          FontSize = 13,
-          VerticalAlignment = VerticalAlignment.Center,
-          HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
-        };
-        Grid.SetColumn(valueText, 2);
+          var grid = new Grid();
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
 
-        grid.Children.Add(denominationText);
-        grid.Children.Add(countText);
-        grid.Children.Add(valueText);
-        row.Child = grid;
-        CashInputRowsPanel.Children.Add(row);
+          var denominationText = new TextBlock
+          {
+            Text = FormatDenom(denom),
+            FontSize = 13,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(5)
+          };
+          Grid.SetColumn(denominationText, 0);
+
+          var countText = new TextBlock
+          {
+            Text = _cashCounts[denom].ToString(),
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(5)
+          };
+          Grid.SetColumn(countText, 1);
+
+          var valueText = new TextBlock
+          {
+            Text = (_cashCounts[denom] * denom / 100.0).ToString("C", culture),
+            FontSize = 13,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(5)
+          };
+          Grid.SetColumn(valueText, 2);
+
+          grid.Children.Add(denominationText);
+          grid.Children.Add(countText);
+          grid.Children.Add(valueText);
+          row.Child = grid;
+          CashInputRowsPanel.Children.Add(row);
+        }
       }
 
       UpdateCashButtonCounts();
@@ -497,6 +525,8 @@ namespace pokersoc_connect.Views
       }
     }
 
+    private const double BuyInLimitDollars = 500.00;
+
     private void ConfirmBuyIn_Click(object sender, RoutedEventArgs e)
     {
       if (_buyInAmount <= 0)
@@ -511,6 +541,42 @@ namespace pokersoc_connect.Views
         return;
       }
 
+      // Check if this buy-in would exceed the $500 session limit
+      var existingBuyInsCents = Database.GetPlayerSessionBuyInsCents(MemberNumber);
+      var existingBuyInsDollars = existingBuyInsCents / 100.0;
+      var proposedTotalDollars = existingBuyInsDollars + _buyInAmount;
+
+      // $500 is okay, but anything over $500 requires timeout confirmation
+      if (proposedTotalDollars > BuyInLimitDollars)
+      {
+        // Show timeout confirmation overlay
+        TimeoutWarningText.Text = $"Current session buy-ins: ${existingBuyInsDollars:F2}\n" +
+                                   $"This buy-in: ${_buyInAmount:F2}\n" +
+                                   $"New total: ${proposedTotalDollars:F2}";
+        TimeoutConfirmationPanel.Visibility = Visibility.Visible;
+        return;
+      }
+
+      // Proceed with buy-in
+      ProcessBuyIn();
+    }
+
+    private void TimeoutYes_Click(object sender, RoutedEventArgs e)
+    {
+      // Player confirmed they had the timeout - proceed with buy-in
+      TimeoutConfirmationPanel.Visibility = Visibility.Collapsed;
+      ProcessBuyIn();
+    }
+
+    private void TimeoutNo_Click(object sender, RoutedEventArgs e)
+    {
+      // Player did not have the timeout - reject and go back to main screen
+      TimeoutConfirmationPanel.Visibility = Visibility.Collapsed;
+      Cancelled?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ProcessBuyIn()
+    {
       // Calculate change breakdown for the actual transaction
       var changeBreakdown = CalculateMinimumChange(TotalDollars - _buyInAmount);
       

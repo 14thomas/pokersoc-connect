@@ -19,6 +19,45 @@ namespace pokersoc_connect.Views
     {
       InitializeComponent();
       LoadFoodItems();
+      LoadAdminPassword();
+    }
+
+    private void LoadAdminPassword()
+    {
+      try
+      {
+        if (Database.Conn != null)
+        {
+          var password = Database.GetAdminPassword();
+          AdminPasswordBox.Password = password;
+        }
+      }
+      catch { }
+    }
+
+    private void AdminPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+      // Just track changes - save on button click
+    }
+
+    private void SaveAdminPassword_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var newPassword = AdminPasswordBox.Password;
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+          MessageBox.Show("Password cannot be empty.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+          return;
+        }
+
+        Database.SetAdminPassword(newPassword);
+        MessageBox.Show("Admin password updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error saving password: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
     }
 
     private void ImportSettings_Click(object sender, RoutedEventArgs e)

@@ -217,6 +217,16 @@ CREATE TABLE IF NOT EXISTS food_slot_assignments (
   UNIQUE(slot_id)
 );
 ");
+
+      // ----- NEW: App Settings (including admin password) -----
+      Exec(@"
+CREATE TABLE IF NOT EXISTS app_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+");
+      // Set default admin password if not exists
+      Exec("INSERT OR IGNORE INTO app_settings(key, value) VALUES ('admin_password', '1234')");
     }
 
     // ----------------- Public helpers -----------------
@@ -540,6 +550,119 @@ CREATE TABLE IF NOT EXISTS food_slot_assignments (
     {
       var count = ScalarLong("SELECT COUNT(*) FROM players WHERE player_id = $id", ("$id", playerId));
       return count == 0;
+    }
+
+    // Get total buy-ins for a player in the current session (in cents)
+    public static long GetPlayerSessionBuyInsCents(string playerId)
+    {
+      var result = ScalarLong(
+        "SELECT COALESCE(SUM(CAST(cash_amt * 100 AS INTEGER)), 0) FROM transactions WHERE player_id = $id AND type = 'BUYIN'",
+        ("$id", playerId)
+      );
+      return result;
+    }
+
+    // ----------------- Admin Password -----------------
+
+    public static string GetAdminPassword()
+    {
+      try
+      {
+        var result = Query("SELECT value FROM app_settings WHERE key = 'admin_password'");
+        if (result.Rows.Count > 0)
+        {
+          return result.Rows[0]["value"]?.ToString() ?? "1234";
+        }
+      }
+      catch { }
+      return "1234"; // Default password
+    }
+
+    public static void SetAdminPassword(string password)
+    {
+      Exec("INSERT OR REPLACE INTO app_settings(key, value) VALUES ('admin_password', $pwd)", ("$pwd", password));
+    }
+
+    // ----------------- Transaction Deletion (Undo) -----------------
+
+    public static void DeleteTransaction(long txId, string txType)
+    {
+      InTransaction(tx =>
+      {
+        if (txType == "BUYIN")
+        {
+          // Undo BUYIN: reverse all cashbox movements for this transaction
+          // Cash received was added (positive), so we subtract
+          // Change given was subtracted (negative), so we add back
+          Exec(@"
+            INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes)
+            SELECT denom_cents, -delta_qty, 'UNDO_BUYIN', player_id, NULL, 'Undo of tx_id ' || $tx
+            FROM cashbox_movements WHERE tx_id = $tx", tx, ("$tx", txId));
+        }
+        else if (txType == "CASHOUT" || txType == "CASHOUT_SALE")
+        {
+          // Undo CASHOUT: reverse all cashbox movements
+          // Cash paid out was subtracted (negative), so we add back
+          // Extra cash was added (positive), so we subtract
+          Exec(@"
+            INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes)
+            SELECT denom_cents, -delta_qty, 'UNDO_CASHOUT', player_id, NULL, 'Undo of tx_id ' || $tx
+            FROM cashbox_movements WHERE tx_id = $tx", tx, ("$tx", txId));
+
+          // Delete tips associated with this transaction
+          Exec("DELETE FROM tips WHERE tx_id = $tx", tx, ("$tx", txId));
+
+          // Delete chips record
+          Exec("DELETE FROM tx_chips WHERE tx_id = $tx", tx, ("$tx", txId));
+
+          // Delete any sales associated with this cashout (food sales)
+          // First find and delete sale_payments and sale_items, then sales
+          var salesResult = Query("SELECT sale_id FROM sales WHERE notes LIKE '%via cashout%' AND player_id = (SELECT player_id FROM transactions WHERE tx_id = $tx)", tx, ("$tx", txId));
+          foreach (System.Data.DataRow row in salesResult.Rows)
+          {
+            var saleId = Convert.ToInt64(row["sale_id"]);
+            Exec("DELETE FROM sale_payments WHERE sale_id = $sid", tx, ("$sid", saleId));
+            Exec("DELETE FROM sale_items WHERE sale_id = $sid", tx, ("$sid", saleId));
+            Exec("DELETE FROM sales WHERE sale_id = $sid", tx, ("$sid", saleId));
+          }
+        }
+
+        // Delete the activity log entry
+        Exec("DELETE FROM activity_log WHERE tx_id = $tx", tx, ("$tx", txId));
+
+        // Delete the transaction itself
+        Exec("DELETE FROM transactions WHERE tx_id = $tx", tx, ("$tx", txId));
+      });
+    }
+
+    public static void DeleteFloatAddition(string batchId)
+    {
+      InTransaction(tx =>
+      {
+        // Reverse float addition by adding negative movements
+        Exec(@"
+          INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, notes)
+          SELECT denom_cents, -delta_qty, 'UNDO_FLOAT', NULL, NULL, 'Undo of batch ' || $batch
+          FROM cashbox_movements WHERE batch_id = $batch AND reason = 'FLOAT_ADD'", tx, ("$batch", batchId));
+
+        // Delete activity log entry
+        Exec("DELETE FROM activity_log WHERE batch_id = $batch", tx, ("$batch", batchId));
+      });
+    }
+
+    public static void DeleteLostChips(string batchId)
+    {
+      InTransaction(tx =>
+      {
+        // Delete the tips entries linked to this batch
+        Exec("DELETE FROM tips WHERE tx_id IN (SELECT move_id FROM cashbox_movements WHERE batch_id = $batch)", tx, ("$batch", batchId));
+        
+        // Delete the cashbox movements
+        Exec("DELETE FROM cashbox_movements WHERE batch_id = $batch AND reason = 'LOST_CHIP'", tx, ("$batch", batchId));
+
+        // Delete activity log entry
+        Exec("DELETE FROM activity_log WHERE batch_id = $batch", tx, ("$batch", batchId));
+      });
     }
 
     private static string CsvEscape(string value)

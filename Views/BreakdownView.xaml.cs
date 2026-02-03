@@ -10,6 +10,12 @@ namespace pokersoc_connect.Views
   public partial class BreakdownView : UserControl
   {
     public event EventHandler? Back;
+    public event EventHandler<TransactionDeletedEventArgs>? Deleted;
+
+    private long? _txId;
+    private string? _txType;
+    private string? _batchId;
+    private string _enteredPassword = "";
 
     public BreakdownView(string title,
                          string? subtitle,
@@ -34,6 +40,120 @@ namespace pokersoc_connect.Views
     {
       InitializeComponent();
       DataContext = BuildVm(title, subtitle, chipsRows, cashRows, changeRows, isCashOut, dateTime, additionalInfo);
+    }
+
+    // Enable deletion for transactions
+    public void EnableDeletion(long txId, string txType)
+    {
+      _txId = txId;
+      _txType = txType;
+      DeleteButton.Visibility = Visibility.Visible;
+    }
+
+    // Enable deletion for float additions
+    public void EnableDeletionForFloat(string batchId)
+    {
+      _batchId = batchId;
+      _txType = "FLOAT";
+      DeleteButton.Visibility = Visibility.Visible;
+    }
+
+    // Enable deletion for lost chips
+    public void EnableDeletionForLostChips(string batchId)
+    {
+      _batchId = batchId;
+      _txType = "LOST_CHIP";
+      DeleteButton.Visibility = Visibility.Visible;
+    }
+
+    private void Delete_Click(object sender, RoutedEventArgs e)
+    {
+      _enteredPassword = "";
+      UpdatePasswordDisplay();
+      PasswordErrorText.Visibility = Visibility.Collapsed;
+      PasswordPanel.Visibility = Visibility.Visible;
+    }
+
+    private void Keypad_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && button.Tag is string digit)
+      {
+        _enteredPassword += digit;
+        UpdatePasswordDisplay();
+        PasswordErrorText.Visibility = Visibility.Collapsed;
+      }
+    }
+
+    private void KeypadBackspace_Click(object sender, RoutedEventArgs e)
+    {
+      if (_enteredPassword.Length > 0)
+      {
+        _enteredPassword = _enteredPassword.Substring(0, _enteredPassword.Length - 1);
+        UpdatePasswordDisplay();
+      }
+    }
+
+    private void KeypadClear_Click(object sender, RoutedEventArgs e)
+    {
+      _enteredPassword = "";
+      UpdatePasswordDisplay();
+      PasswordErrorText.Visibility = Visibility.Collapsed;
+    }
+
+    private void UpdatePasswordDisplay()
+    {
+      PasswordDisplay.Text = _enteredPassword.Length > 0 
+        ? new string('●', _enteredPassword.Length) 
+        : "****";
+    }
+
+    private void PasswordCancel_Click(object sender, RoutedEventArgs e)
+    {
+      PasswordPanel.Visibility = Visibility.Collapsed;
+      _enteredPassword = "";
+    }
+
+    private void PasswordConfirm_Click(object sender, RoutedEventArgs e)
+    {
+      var correctPassword = Database.GetAdminPassword();
+
+      if (_enteredPassword == correctPassword)
+      {
+        PasswordPanel.Visibility = Visibility.Collapsed;
+        _enteredPassword = "";
+        PerformDeletion();
+      }
+      else
+      {
+        PasswordErrorText.Visibility = Visibility.Visible;
+        _enteredPassword = "";
+        UpdatePasswordDisplay();
+      }
+    }
+
+    private void PerformDeletion()
+    {
+      try
+      {
+        if (_txType == "FLOAT" && !string.IsNullOrEmpty(_batchId))
+        {
+          Database.DeleteFloatAddition(_batchId);
+        }
+        else if (_txType == "LOST_CHIP" && !string.IsNullOrEmpty(_batchId))
+        {
+          Database.DeleteLostChips(_batchId);
+        }
+        else if (_txId.HasValue && !string.IsNullOrEmpty(_txType))
+        {
+          Database.DeleteTransaction(_txId.Value, _txType);
+        }
+        
+        Deleted?.Invoke(this, new TransactionDeletedEventArgs(_txId, _batchId, _txType));
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error deleting: {ex.Message}", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
     }
 
     private object BuildVm(string title,
@@ -154,5 +274,19 @@ namespace pokersoc_connect.Views
     };
 
     private void Back_Click(object sender, RoutedEventArgs e) => Back?.Invoke(this, EventArgs.Empty);
+  }
+
+  public class TransactionDeletedEventArgs : EventArgs
+  {
+    public long? TxId { get; }
+    public string? BatchId { get; }
+    public string? TxType { get; }
+
+    public TransactionDeletedEventArgs(long? txId, string? batchId, string? txType)
+    {
+      TxId = txId;
+      BatchId = batchId;
+      TxType = txType;
+    }
   }
 }
