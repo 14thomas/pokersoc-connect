@@ -28,14 +28,19 @@
         <TextBlock Text="Cash Received" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
         <!-- Custom Cash input table -->
-        <StackPanel Grid.Row="1" Background="White">
+        <Grid Grid.Row="1" Background="White">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
           <!-- Header Row -->
-          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+          <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
             <Grid Height="40">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="110"/>
-                <ColumnDefinition Width="80"/>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
@@ -46,11 +51,15 @@
             </Grid>
           </Border>
           
-          <!-- Data Rows -->
-          <StackPanel x:Name="CashInputRowsPanel">
-            <!-- Rows will be populated dynamically -->
-          </StackPanel>
-        </StackPanel>
+          <!-- Data Rows Container - ItemsControl shares available vertical space -->
+          <ItemsControl x:Name="CashInputRowsPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
 
         <!-- Player Info Display (Read-only) -->
         <Border Grid.Row="2" 

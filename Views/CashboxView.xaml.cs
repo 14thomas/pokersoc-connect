@@ -232,7 +232,7 @@ namespace pokersoc_connect.Views
 
     private void BackToMain_Click(object sender, RoutedEventArgs e)
     {
-      if (FloatInputView.Visibility == Visibility.Visible)
+      if (FloatInputView.Visibility == Visibility.Visible || ExchangeView.Visibility == Visibility.Visible)
       {
         ShowMainCashboxView();
       }
@@ -246,6 +246,7 @@ namespace pokersoc_connect.Views
     {
       MainCashboxView.Visibility = Visibility.Visible;
       FloatInputView.Visibility = Visibility.Collapsed;
+      ExchangeView.Visibility = Visibility.Collapsed;
     }
 
     private void ShowFloatInputView()
@@ -266,63 +267,136 @@ namespace pokersoc_connect.Views
     private void RefreshFloatInput()
     {
       // Clear existing rows
-      FloatInputRowsPanel.Children.Clear();
+      FloatInputRowsPanel.Items.Clear();
 
       var culture = CultureInfo.GetCultureInfo("en-AU");
 
-      // Create rows for each denomination
-      for (int i = 0; i < CashDenoms.Length; i++)
+      // Only show denominations that have been added (count > 0)
+      var addedDenoms = CashDenoms.Where(d => _floatCounts.ContainsKey(d) && _floatCounts[d] > 0).ToList();
+
+      if (addedDenoms.Count == 0)
       {
-        int denom = CashDenoms[i];
-        bool isLastRow = (i == CashDenoms.Length - 1);
-        
-        var row = new Border
+        // Show placeholder when no cash has been added
+        var placeholder = new Border
         {
           BorderBrush = new SolidColorBrush(Colors.Gray),
-          BorderThickness = isLastRow ? new Thickness(1, 0, 1, 1) : new Thickness(1, 0, 1, 1),
-          Height = 36
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
         };
 
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-
-        var denominationText = new TextBlock
+        var text = new TextBlock
         {
-          Text = FormatDenom(denom),
-          FontSize = 13,
+          Text = "Click currency buttons to add float",
+          FontSize = 16,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(0, 20, 0, 20)
         };
-        Grid.SetColumn(denominationText, 0);
 
-        var countText = new TextBlock
+        placeholder.Child = text;
+        FloatInputRowsPanel.Items.Add(placeholder);
+      }
+      else
+      {
+        // Scale font down when there are many items
+        int fontSize;
+        int countFontSize;
+        if (addedDenoms.Count <= 4)
         {
-          Text = _floatCounts[denom].ToString(),
-          FontSize = 13,
-          VerticalAlignment = VerticalAlignment.Center,
-          HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
-        };
-        Grid.SetColumn(countText, 1);
-
-        var valueText = new TextBlock
+          fontSize = 22;
+          countFontSize = 28;
+        }
+        else if (addedDenoms.Count <= 6)
         {
-          Text = (_floatCounts[denom] * denom / 100.0).ToString("C", culture),
-          FontSize = 13,
-          VerticalAlignment = VerticalAlignment.Center,
-          HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
-        };
-        Grid.SetColumn(valueText, 2);
+          fontSize = 18;
+          countFontSize = 24;
+        }
+        else if (addedDenoms.Count <= 8)
+        {
+          fontSize = 14;
+          countFontSize = 18;
+        }
+        else
+        {
+          fontSize = 12;
+          countFontSize = 14;
+        }
 
-        grid.Children.Add(denominationText);
-        grid.Children.Add(countText);
-        grid.Children.Add(valueText);
-        row.Child = grid;
-        FloatInputRowsPanel.Children.Add(row);
+        // Add the actual denomination rows (ordered by descending value)
+        foreach (int denom in addedDenoms.OrderByDescending(d => d))
+        {
+          // Consistent boxed look for all rows
+          var row = new Border
+          {
+            BorderBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
+            BorderThickness = new Thickness(2),
+            Background = new SolidColorBrush(Color.FromRgb(245, 255, 245)),
+            CornerRadius = new CornerRadius(5),
+            Margin = new Thickness(0, 1, 0, 1)
+          };
+
+          var grid = new Grid();
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+          var denominationText = new TextBlock
+          {
+            Text = FormatDenom(denom),
+            FontSize = fontSize,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(4)
+          };
+          Grid.SetColumn(denominationText, 0);
+
+          var countText = new TextBlock
+          {
+            Text = "×" + _floatCounts[denom].ToString(),
+            FontSize = countFontSize,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(0, 100, 0)),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(4)
+          };
+          Grid.SetColumn(countText, 1);
+
+          var valueText = new TextBlock
+          {
+            Text = (_floatCounts[denom] * denom / 100.0).ToString("C", culture),
+            FontSize = fontSize,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(4)
+          };
+          Grid.SetColumn(valueText, 2);
+
+          grid.Children.Add(denominationText);
+          grid.Children.Add(countText);
+          grid.Children.Add(valueText);
+          row.Child = grid;
+          FloatInputRowsPanel.Items.Add(row);
+        }
+
+        // When 1-3 items, add invisible spacers so they're sized as if there were 4
+        if (addedDenoms.Count < 4)
+        {
+          int spacersNeeded = 4 - addedDenoms.Count;
+          for (int i = 0; i < spacersNeeded; i++)
+          {
+            var spacer = new Border
+            {
+              Background = Brushes.Transparent,
+              Margin = new Thickness(0, 1, 0, 1)
+            };
+            FloatInputRowsPanel.Items.Add(spacer);
+          }
+        }
       }
 
       UpdateFloatButtonCounts();
@@ -508,6 +582,298 @@ WHERE activity_kind = 'FOOD'
         TotalSalesAmount.Text = "$0.00";
         System.Diagnostics.Debug.WriteLine($"Error updating total sales: {ex.Message}");
       }
+    }
+
+    // ===== EXCHANGE FUNCTIONALITY =====
+    private Dictionary<int, int> _exchangeGiveOut = new();
+    private Dictionary<int, int> _exchangeReceive = new();
+    private bool _exchangeGiveOutMode = true; // true = adding to Give Out, false = adding to Receive
+
+    private void Exchange_Click(object sender, RoutedEventArgs e)
+    {
+      ShowExchangeView();
+    }
+
+    private void ShowExchangeView()
+    {
+      MainCashboxView.Visibility = Visibility.Collapsed;
+      FloatInputView.Visibility = Visibility.Collapsed;
+      ExchangeView.Visibility = Visibility.Visible;
+      
+      // Initialize exchange
+      _exchangeGiveOut = CashDenoms.ToDictionary(d => d, d => 0);
+      _exchangeReceive = CashDenoms.ToDictionary(d => d, d => 0);
+      _exchangeGiveOutMode = true;
+      
+      RefreshExchangePanels();
+      UpdateExchangeModeButtons();
+    }
+
+    private void ExchangeGiveOutMode_Click(object sender, RoutedEventArgs e)
+    {
+      _exchangeGiveOutMode = true;
+      UpdateExchangeModeButtons();
+    }
+
+    private void ExchangeReceiveMode_Click(object sender, RoutedEventArgs e)
+    {
+      _exchangeGiveOutMode = false;
+      UpdateExchangeModeButtons();
+    }
+
+    private void UpdateExchangeModeButtons()
+    {
+      if (_exchangeGiveOutMode)
+      {
+        ExchangeGiveOutModeBtn.Background = new SolidColorBrush(Color.FromRgb(255, 224, 224));
+        ExchangeGiveOutModeBtn.BorderBrush = new SolidColorBrush(Colors.Crimson);
+        ExchangeGiveOutModeBtn.BorderThickness = new Thickness(3);
+        
+        ExchangeReceiveModeBtn.Background = new SolidColorBrush(Colors.LightGray);
+        ExchangeReceiveModeBtn.BorderBrush = new SolidColorBrush(Colors.Gray);
+        ExchangeReceiveModeBtn.BorderThickness = new Thickness(2);
+      }
+      else
+      {
+        ExchangeGiveOutModeBtn.Background = new SolidColorBrush(Colors.LightGray);
+        ExchangeGiveOutModeBtn.BorderBrush = new SolidColorBrush(Colors.Gray);
+        ExchangeGiveOutModeBtn.BorderThickness = new Thickness(2);
+        
+        ExchangeReceiveModeBtn.Background = new SolidColorBrush(Color.FromRgb(224, 255, 224));
+        ExchangeReceiveModeBtn.BorderBrush = new SolidColorBrush(Colors.Green);
+        ExchangeReceiveModeBtn.BorderThickness = new Thickness(3);
+      }
+    }
+
+    private void ExchangeDenom_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int denom))
+      {
+        if (_exchangeGiveOutMode)
+        {
+          _exchangeGiveOut[denom]++;
+        }
+        else
+        {
+          _exchangeReceive[denom]++;
+        }
+        RefreshExchangePanels();
+      }
+    }
+
+    private void ExchangeClear_Click(object sender, RoutedEventArgs e)
+    {
+      _exchangeGiveOut = CashDenoms.ToDictionary(d => d, d => 0);
+      _exchangeReceive = CashDenoms.ToDictionary(d => d, d => 0);
+      RefreshExchangePanels();
+    }
+
+    private void RefreshExchangePanels()
+    {
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      
+      // Refresh Give Out panel
+      RefreshExchangePanel(ExchangeGiveOutPanel, _exchangeGiveOut, Colors.Crimson);
+      
+      // Refresh Receive panel
+      RefreshExchangePanel(ExchangeReceivePanel, _exchangeReceive, Colors.Green);
+      
+      // Update totals
+      int giveOutTotal = _exchangeGiveOut.Sum(kv => kv.Key * kv.Value);
+      int receiveTotal = _exchangeReceive.Sum(kv => kv.Key * kv.Value);
+      int balance = receiveTotal - giveOutTotal;
+      
+      ExchangeGiveOutTotal.Text = (giveOutTotal / 100.0).ToString("C", culture);
+      ExchangeReceiveTotal.Text = (receiveTotal / 100.0).ToString("C", culture);
+      ExchangeBalanceText.Text = (balance / 100.0).ToString("C", culture);
+      
+      // Update balance color and confirm button
+      if (balance == 0 && giveOutTotal > 0)
+      {
+        ExchangeBalanceText.Foreground = new SolidColorBrush(Colors.Green);
+        ExchangeBalanceBorder.Background = new SolidColorBrush(Color.FromRgb(224, 255, 224));
+        ExchangeBalanceBorder.BorderBrush = new SolidColorBrush(Colors.Green);
+        ExchangeConfirmButton.IsEnabled = true;
+      }
+      else
+      {
+        ExchangeBalanceText.Foreground = balance < 0 ? new SolidColorBrush(Colors.Crimson) : new SolidColorBrush(Colors.Orange);
+        ExchangeBalanceBorder.Background = new SolidColorBrush(Colors.LightYellow);
+        ExchangeBalanceBorder.BorderBrush = new SolidColorBrush(Colors.Orange);
+        ExchangeConfirmButton.IsEnabled = false;
+      }
+    }
+
+    private void RefreshExchangePanel(ItemsControl panel, Dictionary<int, int> counts, Color borderColor)
+    {
+      panel.Items.Clear();
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      
+      var addedDenoms = counts.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Key).ToList();
+      
+      if (addedDenoms.Count == 0)
+      {
+        var placeholder = new Border
+        {
+          BorderBrush = new SolidColorBrush(borderColor),
+          BorderThickness = new Thickness(2, 0, 2, 2),
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
+        };
+
+        var text = new TextBlock
+        {
+          Text = "Click denominations",
+          FontSize = 12,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(0, 10, 0, 10)
+        };
+
+        placeholder.Child = text;
+        panel.Items.Add(placeholder);
+        return;
+      }
+
+      int fontSize = addedDenoms.Count <= 3 ? 14 : addedDenoms.Count <= 5 ? 12 : 10;
+      int countFontSize = addedDenoms.Count <= 3 ? 16 : addedDenoms.Count <= 5 ? 14 : 12;
+
+      foreach (var kv in addedDenoms)
+      {
+        var row = new Border
+        {
+          BorderBrush = new SolidColorBrush(borderColor),
+          BorderThickness = new Thickness(2, 0, 2, 1),
+          Background = new SolidColorBrush(Color.FromRgb(255, 255, 255)),
+          Margin = new Thickness(0, 0, 0, 1)
+        };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var denomText = new TextBlock
+        {
+          Text = FormatDenom(kv.Key),
+          FontSize = fontSize,
+          FontWeight = FontWeights.SemiBold,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(2)
+        };
+        Grid.SetColumn(denomText, 0);
+
+        var countText = new TextBlock
+        {
+          Text = "×" + kv.Value.ToString(),
+          FontSize = countFontSize,
+          FontWeight = FontWeights.Bold,
+          Foreground = new SolidColorBrush(borderColor),
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(2)
+        };
+        Grid.SetColumn(countText, 1);
+
+        var valueText = new TextBlock
+        {
+          Text = (kv.Value * kv.Key / 100.0).ToString("C", culture),
+          FontSize = fontSize,
+          FontWeight = FontWeights.SemiBold,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(2)
+        };
+        Grid.SetColumn(valueText, 2);
+
+        grid.Children.Add(denomText);
+        grid.Children.Add(countText);
+        grid.Children.Add(valueText);
+        row.Child = grid;
+        panel.Items.Add(row);
+      }
+
+      // Add spacers if less than 3 items
+      if (addedDenoms.Count < 3)
+      {
+        int spacersNeeded = 3 - addedDenoms.Count;
+        for (int i = 0; i < spacersNeeded; i++)
+        {
+          var spacer = new Border
+          {
+            Background = Brushes.Transparent,
+            Margin = new Thickness(0, 0, 0, 1)
+          };
+          panel.Items.Add(spacer);
+        }
+      }
+    }
+
+    private void ExchangeCancel_Click(object sender, RoutedEventArgs e)
+    {
+      ShowMainCashboxView();
+    }
+
+    private void ExchangeConfirm_Click(object sender, RoutedEventArgs e)
+    {
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      int giveOutTotal = _exchangeGiveOut.Sum(kv => kv.Key * kv.Value);
+      int receiveTotal = _exchangeReceive.Sum(kv => kv.Key * kv.Value);
+      
+      if (giveOutTotal != receiveTotal || giveOutTotal == 0)
+      {
+        MessageBox.Show("Exchange amounts must be equal and greater than zero.", "Invalid Exchange");
+        return;
+      }
+
+      Database.InTransaction(tx =>
+      {
+        var batchId = Guid.NewGuid().ToString("N");
+        
+        // Remove give out amounts from cashbox
+        foreach (var kv in _exchangeGiveOut)
+        {
+          if (kv.Value <= 0) continue;
+          Database.Exec(
+            "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, batch_id) " +
+            "VALUES ($d, $q, 'EXCHANGE', NULL, NULL, $batch)",
+            tx, ("$d", kv.Key), ("$q", -kv.Value), ("$batch", batchId)
+          );
+        }
+        
+        // Add receive amounts to cashbox
+        foreach (var kv in _exchangeReceive)
+        {
+          if (kv.Value <= 0) continue;
+          Database.Exec(
+            "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id, batch_id) " +
+            "VALUES ($d, $q, 'EXCHANGE', NULL, NULL, $batch)",
+            tx, ("$d", kv.Key), ("$q", kv.Value), ("$batch", batchId)
+          );
+        }
+        
+        // Build notes describing the exchange
+        var giveOutDesc = string.Join(", ", _exchangeGiveOut.Where(kv => kv.Value > 0).Select(kv => $"{kv.Value}×{FormatDenom(kv.Key)}"));
+        var receiveDesc = string.Join(", ", _exchangeReceive.Where(kv => kv.Value > 0).Select(kv => $"{kv.Value}×{FormatDenom(kv.Key)}"));
+        
+        Database.Exec(
+          "INSERT INTO activity_log(activity_key, activity_type, activity_kind, method, staff, player_id, tx_id, batch_id, amount_cents, notes) " +
+          "VALUES ($key, 'EXCHANGE', 'EXCHANGE', 'MANUAL', 'STAFF', NULL, NULL, $batch, $amount, $notes)",
+          tx, 
+          ("$key", Guid.NewGuid().ToString("N")),
+          ("$batch", batchId),
+          ("$amount", giveOutTotal),
+          ("$notes", $"Exchange: Gave [{giveOutDesc}] for [{receiveDesc}]")
+        );
+      });
+
+      // Reset and return to main view
+      _exchangeGiveOut = CashDenoms.ToDictionary(d => d, d => 0);
+      _exchangeReceive = CashDenoms.ToDictionary(d => d, d => 0);
+      ShowMainCashboxView();
+      RefreshCashbox();
     }
   }
 }

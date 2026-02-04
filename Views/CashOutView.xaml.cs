@@ -181,74 +181,79 @@ namespace pokersoc_connect.Views
     {
       var culture = CultureInfo.GetCultureInfo("en-AU");
       if (ChangeRowsPanel != null)
-      ChangeRowsPanel.Children.Clear();
+        ChangeRowsPanel.Items.Clear();
       if (TotalText != null)
         TotalText.Text = (TotalDollars).ToString("C", culture);
 
-      // Debug: Check if we have any chips
-      System.Diagnostics.Debug.WriteLine($"RefreshChipTable called. _chipCounts.Count = {_chipCounts.Count}");
-      foreach (var kv in _chipCounts)
-      {
-        System.Diagnostics.Debug.WriteLine($"  {kv.Key}: {kv.Value}");
-      }
+      // Get chips with count > 0
+      var addedChips = _chipCounts.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Key).ToList();
 
-      if (_chipCounts.Count == 0)
+      if (addedChips.Count == 0)
       {
-        // Show empty state message
-        var emptyRow = new Border
+        // Show placeholder when no chips have been added
+        var placeholder = new Border
         {
-          BorderBrush = Brushes.Gray,
+          BorderBrush = new SolidColorBrush(Colors.Gray),
           BorderThickness = new Thickness(1, 0, 1, 1),
-          Background = Brushes.LightGray
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
         };
 
-        var emptyGrid = new Grid { Height = 36 };
-        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-
-        var emptyText = new TextBlock
+        var text = new TextBlock
         {
-          Text = "No chips selected",
-          FontSize = 14,
+          Text = "Click chip buttons to add chips",
+          FontSize = 16,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          FontStyle = FontStyles.Italic,
-          Opacity = 0.7
+          Margin = new Thickness(0, 20, 0, 20)
         };
-        Grid.SetColumn(emptyText, 0);
-        Grid.SetColumnSpan(emptyText, 3);
 
-        emptyGrid.Children.Add(emptyText);
-        emptyRow.Child = emptyGrid;
-        if (ChangeRowsPanel != null)
-          ChangeRowsPanel.Children.Add(emptyRow);
+        placeholder.Child = text;
+        ChangeRowsPanel?.Items.Add(placeholder);
         return;
       }
 
-      // Show the selected chips (not the change calculation)
-      var orderedChips = _chipCounts.OrderByDescending(kv => kv.Key).ToList();
-      
-      foreach (var kv in orderedChips)
+      // Scale font down when there are many items
+      int fontSize;
+      int countFontSize;
+      if (addedChips.Count <= 4)
       {
-        if (kv.Value <= 0) continue;
+        fontSize = 22;
+        countFontSize = 28;
+      }
+      else if (addedChips.Count <= 6)
+      {
+        fontSize = 18;
+        countFontSize = 24;
+      }
+      else
+      {
+        fontSize = 12;
+        countFontSize = 14;
+      }
 
+      // Add the actual chip rows
+      foreach (var kv in addedChips)
+      {
         var row = new Border
         {
-          BorderBrush = Brushes.Gray,
-          BorderThickness = new Thickness(1, 0, 1, 1),
-          Background = Brushes.White
+          BorderBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
+          BorderThickness = new Thickness(2),
+          Background = new SolidColorBrush(Color.FromRgb(245, 255, 245)),
+          CornerRadius = new CornerRadius(5),
+          Margin = new Thickness(0, 1, 0, 1)
         };
 
-        var grid = new Grid { Height = 36 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var denomination = kv.Key switch
         {
           5 => "5c",
-          25 => "25c", 
+          25 => "25c",
           100 => "$1",
           500 => "$5",
           2500 => "$25",
@@ -256,35 +261,37 @@ namespace pokersoc_connect.Views
           _ => $"{kv.Key}c"
         };
 
-        var value = (kv.Key * kv.Value / 100.0).ToString("C", culture);
-
         var denomText = new TextBlock
         {
           Text = denomination,
-          FontSize = 14,
+          FontSize = fontSize,
+          FontWeight = FontWeights.SemiBold,
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(4)
         };
         Grid.SetColumn(denomText, 0);
 
         var countText = new TextBlock
         {
-          Text = kv.Value.ToString(),
-          FontSize = 14,
+          Text = "×" + kv.Value.ToString(),
+          FontSize = countFontSize,
+          FontWeight = FontWeights.Bold,
+          Foreground = new SolidColorBrush(Color.FromRgb(0, 100, 0)),
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(4)
         };
         Grid.SetColumn(countText, 1);
 
         var valueText = new TextBlock
         {
-          Text = value,
-          FontSize = 14,
+          Text = (kv.Key * kv.Value / 100.0).ToString("C", culture),
+          FontSize = fontSize,
+          FontWeight = FontWeights.SemiBold,
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(4)
         };
         Grid.SetColumn(valueText, 2);
 
@@ -292,8 +299,22 @@ namespace pokersoc_connect.Views
         grid.Children.Add(countText);
         grid.Children.Add(valueText);
         row.Child = grid;
-        if (ChangeRowsPanel != null)
-        ChangeRowsPanel.Children.Add(row);
+        ChangeRowsPanel?.Items.Add(row);
+      }
+
+      // When 1-3 items, add invisible spacers so they're sized as if there were 4
+      if (addedChips.Count < 4)
+      {
+        int spacersNeeded = 4 - addedChips.Count;
+        for (int i = 0; i < spacersNeeded; i++)
+        {
+          var spacer = new Border
+          {
+            Background = Brushes.Transparent,
+            Margin = new Thickness(0, 1, 0, 1)
+          };
+          ChangeRowsPanel?.Items.Add(spacer);
+        }
       }
     }
 
@@ -514,62 +535,79 @@ namespace pokersoc_connect.Views
     {
       var culture = CultureInfo.GetCultureInfo("en-AU");
       if (ChangeCustomizationRowsPanel != null)
-        ChangeCustomizationRowsPanel.Children.Clear();
+        ChangeCustomizationRowsPanel.Items.Clear();
       if (ChangeTotalText != null)
         ChangeTotalText.Text = (_changeDenominations.Sum(kv => kv.Key * kv.Value) / 100.0).ToString("C", culture);
 
-      if (_changeDenominations.Count == 0)
+      // Get denominations with count > 0
+      var addedDenoms = _changeDenominations.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Key).ToList();
+
+      if (addedDenoms.Count == 0)
       {
-        // Show empty state message
-        var emptyRow = new Border
+        // Show placeholder when no change
+        var placeholder = new Border
         {
-          BorderBrush = Brushes.Gray,
+          BorderBrush = new SolidColorBrush(Colors.Gray),
           BorderThickness = new Thickness(1, 0, 1, 1),
-          Background = Brushes.LightGray
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
         };
 
-        var emptyGrid = new Grid { Height = 36 };
-        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-        emptyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-
-        var emptyText = new TextBlock
+        var text = new TextBlock
         {
-          Text = "No change calculated",
-          FontSize = 14,
+          Text = "No change to give",
+          FontSize = 16,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          FontStyle = FontStyles.Italic,
-          Opacity = 0.7
+          Margin = new Thickness(0, 20, 0, 20)
         };
-        Grid.SetColumn(emptyText, 0);
-        Grid.SetColumnSpan(emptyText, 3);
 
-        emptyGrid.Children.Add(emptyText);
-        emptyRow.Child = emptyGrid;
-        if (ChangeCustomizationRowsPanel != null)
-          ChangeCustomizationRowsPanel.Children.Add(emptyRow);
+        placeholder.Child = text;
+        ChangeCustomizationRowsPanel?.Items.Add(placeholder);
         return;
       }
 
-      // Show the change denominations
-      var orderedChange = _changeDenominations.OrderByDescending(kv => kv.Key).ToList();
-      
-      foreach (var kv in orderedChange)
+      // Scale font down when there are many items
+      int fontSize;
+      int countFontSize;
+      if (addedDenoms.Count <= 4)
       {
-        if (kv.Value <= 0) continue;
+        fontSize = 22;
+        countFontSize = 28;
+      }
+      else if (addedDenoms.Count <= 6)
+      {
+        fontSize = 18;
+        countFontSize = 24;
+      }
+      else if (addedDenoms.Count <= 8)
+      {
+        fontSize = 14;
+        countFontSize = 18;
+      }
+      else
+      {
+        fontSize = 12;
+        countFontSize = 14;
+      }
 
+      // Add the actual denomination rows
+      foreach (var kv in addedDenoms)
+      {
         var row = new Border
         {
-          BorderBrush = Brushes.Gray,
-          BorderThickness = new Thickness(1, 0, 1, 1),
-          Background = Brushes.White
+          BorderBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
+          BorderThickness = new Thickness(2),
+          Background = new SolidColorBrush(Color.FromRgb(245, 255, 245)),
+          CornerRadius = new CornerRadius(5),
+          Margin = new Thickness(0, 1, 0, 1)
         };
 
-        var grid = new Grid { Height = 36 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var denomination = kv.Key switch
         {
@@ -587,35 +625,37 @@ namespace pokersoc_connect.Views
           _ => $"{kv.Key}c"
         };
 
-        var value = (kv.Key * kv.Value / 100.0).ToString("C", culture);
-
         var denomText = new TextBlock
         {
           Text = denomination,
-          FontSize = 14,
+          FontSize = fontSize,
+          FontWeight = FontWeights.SemiBold,
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(4)
         };
         Grid.SetColumn(denomText, 0);
 
         var countText = new TextBlock
         {
-          Text = kv.Value.ToString(),
-          FontSize = 14,
+          Text = "×" + kv.Value.ToString(),
+          FontSize = countFontSize,
+          FontWeight = FontWeights.Bold,
+          Foreground = new SolidColorBrush(Color.FromRgb(0, 100, 0)),
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(4)
         };
         Grid.SetColumn(countText, 1);
 
         var valueText = new TextBlock
         {
-          Text = value,
-          FontSize = 14,
+          Text = (kv.Key * kv.Value / 100.0).ToString("C", culture),
+          FontSize = fontSize,
+          FontWeight = FontWeights.SemiBold,
           VerticalAlignment = VerticalAlignment.Center,
           HorizontalAlignment = HorizontalAlignment.Center,
-          Margin = new Thickness(5)
+          Margin = new Thickness(4)
         };
         Grid.SetColumn(valueText, 2);
 
@@ -623,8 +663,22 @@ namespace pokersoc_connect.Views
         grid.Children.Add(countText);
         grid.Children.Add(valueText);
         row.Child = grid;
-        if (ChangeCustomizationRowsPanel != null)
-          ChangeCustomizationRowsPanel.Children.Add(row);
+        ChangeCustomizationRowsPanel?.Items.Add(row);
+      }
+
+      // When 1-3 items, add invisible spacers so they're sized as if there were 4
+      if (addedDenoms.Count < 4)
+      {
+        int spacersNeeded = 4 - addedDenoms.Count;
+        for (int i = 0; i < spacersNeeded; i++)
+        {
+          var spacer = new Border
+          {
+            Background = Brushes.Transparent,
+            Margin = new Thickness(0, 1, 0, 1)
+          };
+          ChangeCustomizationRowsPanel?.Items.Add(spacer);
+        }
       }
     }
 

@@ -28,17 +28,22 @@
         <!-- Chips to Cash Out header -->
         <TextBlock Text="Chips to Cash Out" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
-        <!-- Custom Change table -->
-        <StackPanel Grid.Row="1" Background="White">
+        <!-- Custom Chip table -->
+        <Grid Grid.Row="1" Background="White">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
           <!-- Header Row -->
-          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+          <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
             <Grid Height="40">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="110"/>
-                <ColumnDefinition Width="80"/>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
-              <TextBlock Grid.Column="0" Text="Chip Denomination" FontWeight="Bold" FontSize="14"
+              <TextBlock Grid.Column="0" Text="Chip" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
               <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
@@ -47,11 +52,15 @@
             </Grid>
           </Border>
           
-          <!-- Data Rows -->
-          <StackPanel x:Name="ChangeRowsPanel">
-            <!-- Rows will be populated dynamically -->
-          </StackPanel>
-        </StackPanel>
+          <!-- Data Rows Container - ItemsControl shares available vertical space -->
+          <ItemsControl x:Name="ChangeRowsPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
 
         <!-- Player Info Display (Read-only) -->
         <Border Grid.Row="2" 
@@ -419,14 +428,19 @@
         <TextBlock Text="Change Breakdown" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
         <!-- Change table -->
-        <StackPanel Grid.Row="1" Background="White">
+        <Grid Grid.Row="1" Background="White">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
           <!-- Header Row -->
-          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+          <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
             <Grid Height="40">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="110"/>
-                <ColumnDefinition Width="80"/>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
@@ -437,11 +451,15 @@
             </Grid>
           </Border>
           
-          <!-- Data Rows -->
-          <StackPanel x:Name="ChangeCustomizationRowsPanel">
-            <!-- Rows will be populated dynamically -->
-          </StackPanel>
-        </StackPanel>
+          <!-- Data Rows Container - ItemsControl shares available vertical space -->
+          <ItemsControl x:Name="ChangeCustomizationRowsPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
 
         <!-- Total Panel -->
         <Border Grid.Row="2"

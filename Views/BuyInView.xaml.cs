@@ -84,7 +84,7 @@ namespace pokersoc_connect.Views
     private void RefreshCashInput()
     {
       // Clear existing rows
-      CashInputRowsPanel.Children.Clear();
+      CashInputRowsPanel.Items.Clear();
 
       var culture = CultureInfo.GetCultureInfo("en-AU");
 
@@ -98,68 +98,98 @@ namespace pokersoc_connect.Views
         {
           BorderBrush = new SolidColorBrush(Colors.Gray),
           BorderThickness = new Thickness(1, 0, 1, 1),
-          Height = 50,
           Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
         };
 
         var text = new TextBlock
         {
           Text = "Click currency buttons to add cash",
-          FontSize = 13,
+          FontSize = 16,
           FontStyle = FontStyles.Italic,
           Foreground = new SolidColorBrush(Colors.Gray),
           VerticalAlignment = VerticalAlignment.Center,
-          HorizontalAlignment = HorizontalAlignment.Center
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(0, 20, 0, 20)
         };
 
         placeholder.Child = text;
-        CashInputRowsPanel.Children.Add(placeholder);
+        CashInputRowsPanel.Items.Add(placeholder);
       }
       else
       {
-        // Create rows only for denominations with count > 0
+        // Scale font down when there are many items
+        int fontSize;
+        int countFontSize;
+        if (addedDenoms.Count <= 4)
+        {
+          fontSize = 22;
+          countFontSize = 28;
+        }
+        else if (addedDenoms.Count <= 6)
+        {
+          fontSize = 18;
+          countFontSize = 24;
+        }
+        else if (addedDenoms.Count <= 8)
+        {
+          fontSize = 14;
+          countFontSize = 18;
+        }
+        else
+        {
+          fontSize = 12;
+          countFontSize = 14;
+        }
+
+        // Add the actual denomination rows
         foreach (int denom in addedDenoms)
         {
+          // Consistent boxed look for all rows
           var row = new Border
           {
-            BorderBrush = new SolidColorBrush(Colors.Gray),
-            BorderThickness = new Thickness(1, 0, 1, 1),
-            Height = 36
+            BorderBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
+            BorderThickness = new Thickness(2),
+            Background = new SolidColorBrush(Color.FromRgb(245, 255, 245)),
+            CornerRadius = new CornerRadius(5),
+            Margin = new Thickness(0, 1, 0, 1)
           };
 
           var grid = new Grid();
-          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
           var denominationText = new TextBlock
           {
             Text = FormatDenom(denom),
-            FontSize = 13,
+            FontSize = fontSize,
+            FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(5)
+            Margin = new Thickness(4)
           };
           Grid.SetColumn(denominationText, 0);
 
           var countText = new TextBlock
           {
-            Text = _cashCounts[denom].ToString(),
-            FontSize = 13,
+            Text = "×" + _cashCounts[denom].ToString(),
+            FontSize = countFontSize,
             FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(0, 100, 0)),
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(5)
+            Margin = new Thickness(4)
           };
           Grid.SetColumn(countText, 1);
 
           var valueText = new TextBlock
           {
             Text = (_cashCounts[denom] * denom / 100.0).ToString("C", culture),
-            FontSize = 13,
+            FontSize = fontSize,
+            FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(5)
+            Margin = new Thickness(4)
           };
           Grid.SetColumn(valueText, 2);
 
@@ -167,7 +197,23 @@ namespace pokersoc_connect.Views
           grid.Children.Add(countText);
           grid.Children.Add(valueText);
           row.Child = grid;
-          CashInputRowsPanel.Children.Add(row);
+          CashInputRowsPanel.Items.Add(row);
+        }
+
+        // When 1-3 items, add invisible spacers so they're sized as if there were 4
+        // This makes 4 items fill the space perfectly, and 1-3 items be the same size
+        if (addedDenoms.Count < 4)
+        {
+          int spacersNeeded = 4 - addedDenoms.Count;
+          for (int i = 0; i < spacersNeeded; i++)
+          {
+            var spacer = new Border
+            {
+              Background = Brushes.Transparent,
+              Margin = new Thickness(0, 1, 0, 1)
+            };
+            CashInputRowsPanel.Items.Add(spacer);
+          }
         }
       }
 

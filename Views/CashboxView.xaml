@@ -109,17 +109,17 @@
         </Border>
 
         <!-- Row 2 -->
-        <!-- Empty Button 2 -->
+        <!-- Exchange Button -->
         <Button Grid.Row="1" Grid.Column="0"
                 Margin="0,5,5,5"
                 Padding="15,20"
+                Click="Exchange_Click"
                 BorderThickness="2"
-                BorderBrush="LightGray"
-                IsEnabled="False">
+                BorderBrush="Gray">
           <StackPanel>
-            <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
-            <TextBlock Text="Button 2" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
-            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="🔄" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Exchange" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Swap denominations" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
         </Button>
 
@@ -221,14 +221,19 @@
         <TextBlock Text="Add Float" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
         <!-- Custom Float input table -->
-        <StackPanel Grid.Row="1" Background="White">
+        <Grid Grid.Row="1" Background="White" Margin="0,0,0,5">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
           <!-- Header Row -->
-          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+          <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
             <Grid Height="40">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="110"/>
-                <ColumnDefinition Width="80"/>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
@@ -239,14 +244,18 @@
             </Grid>
           </Border>
           
-          <!-- Data Rows -->
-          <StackPanel x:Name="FloatInputRowsPanel">
-            <!-- Rows will be populated dynamically -->
-          </StackPanel>
-        </StackPanel>
+          <!-- Data Rows Container - ItemsControl shares available vertical space -->
+          <ItemsControl x:Name="FloatInputRowsPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
 
         <!-- Undo and Clear Buttons -->
-        <Grid Grid.Row="2" Margin="0,0,0,10">
+        <Grid Grid.Row="2" Margin="0,10,0,10">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -262,9 +271,9 @@
             </StackPanel>
           </Button>
 
-                  <!-- Undo Button -->
-                  <Button Grid.Column="1" Margin="5,0,0,0" Click="FloatUndo_Click"
-                          Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Yellow">
+          <!-- Undo Button -->
+          <Button Grid.Column="1" Margin="5,0,0,0" Click="FloatUndo_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Yellow">
             <StackPanel>
               <TextBlock Text="↶" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
               <TextBlock Text="Undo" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -550,6 +559,286 @@
               </StackPanel>
             </Button>
           </Grid>
+      </Grid>
+    </Grid>
+
+    <!-- EXCHANGE VIEW -->
+    <Grid x:Name="ExchangeView" Grid.Row="0" Visibility="Collapsed">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT SIDE: EXCHANGE PANELS -->
+      <Grid Grid.Column="0" Margin="12,12,6,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Give Out header -->
+        <TextBlock Text="Give Out (Remove from Cashbox)" FontSize="16" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,5" Foreground="Crimson"/>
+
+        <!-- Give Out table -->
+        <Grid Grid.Row="1" Background="White" Margin="0,0,0,5">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
+          <Border Grid.Row="0" BorderBrush="Crimson" BorderThickness="2,2,2,1" Background="#FFE0E0">
+            <Grid Height="30">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Denom" FontWeight="Bold" FontSize="12"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="12"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+              <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="12"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Grid>
+          </Border>
+          
+          <ItemsControl x:Name="ExchangeGiveOutPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
+
+        <!-- Give Out Total -->
+        <Border Grid.Row="2" Background="#FFE0E0" BorderBrush="Crimson" BorderThickness="2" Padding="8" Margin="0,0,0,10">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <TextBlock Text="Give Out Total: " FontWeight="Bold" FontSize="14"/>
+            <TextBlock x:Name="ExchangeGiveOutTotal" Text="$0.00" FontWeight="Bold" FontSize="14" Foreground="Crimson"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Receive header -->
+        <TextBlock Text="Receive (Add to Cashbox)" FontSize="16" FontWeight="Bold" Grid.Row="3" Margin="0,0,0,5" Foreground="Green"/>
+
+        <!-- Receive table -->
+        <Grid Grid.Row="4" Background="White" Margin="0,0,0,5">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
+          <Border Grid.Row="0" BorderBrush="Green" BorderThickness="2,2,2,1" Background="#E0FFE0">
+            <Grid Height="30">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Denom" FontWeight="Bold" FontSize="12"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="12"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+              <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="12"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Grid>
+          </Border>
+          
+          <ItemsControl x:Name="ExchangeReceivePanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
+
+        <!-- Receive Total + Balance -->
+        <Grid Grid.Row="5">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          
+          <Border Grid.Row="0" Background="#E0FFE0" BorderBrush="Green" BorderThickness="2" Padding="8" Margin="0,0,0,5">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <TextBlock Text="Receive Total: " FontWeight="Bold" FontSize="14"/>
+              <TextBlock x:Name="ExchangeReceiveTotal" Text="$0.00" FontWeight="Bold" FontSize="14" Foreground="Green"/>
+            </StackPanel>
+          </Border>
+          
+          <Border x:Name="ExchangeBalanceBorder" Grid.Row="1" Background="LightYellow" BorderBrush="Orange" BorderThickness="2" Padding="8" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <TextBlock Text="Balance: " FontWeight="Bold" FontSize="16"/>
+              <TextBlock x:Name="ExchangeBalanceText" Text="$0.00" FontWeight="Bold" FontSize="16"/>
+            </StackPanel>
+          </Border>
+          
+          <!-- Action Buttons -->
+          <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Column="0" Margin="0,0,5,0" Click="ExchangeCancel_Click"
+                    Padding="15,15" BorderThickness="2" BorderBrush="Gray" Background="LightCoral">
+              <StackPanel>
+                <TextBlock Text="❌" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                <TextBlock Text="Cancel" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+
+            <Button x:Name="ExchangeConfirmButton" Grid.Column="1" Margin="5,0,0,0" Click="ExchangeConfirm_Click"
+                    Padding="15,15" BorderThickness="2" BorderBrush="Gray" Background="LightGreen" IsEnabled="False">
+              <StackPanel>
+                <TextBlock Text="✅" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                <TextBlock Text="Exchange" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+          </Grid>
+        </Grid>
+      </Grid>
+
+      <!-- RIGHT SIDE: DENOMINATION BUTTONS -->
+      <Grid Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Mode Toggle -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          
+          <Button x:Name="ExchangeGiveOutModeBtn" Grid.Column="0" Margin="0,0,5,0" Click="ExchangeGiveOutMode_Click"
+                  Padding="15,15" BorderThickness="2" BorderBrush="Crimson" Background="#FFE0E0">
+            <StackPanel>
+              <TextBlock Text="➖" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+              <TextBlock Text="Give Out" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Foreground="Crimson"/>
+            </StackPanel>
+          </Button>
+          
+          <Button x:Name="ExchangeReceiveModeBtn" Grid.Column="1" Margin="5,0,0,0" Click="ExchangeReceiveMode_Click"
+                  Padding="15,15" BorderThickness="2" BorderBrush="Gray" Background="LightGray">
+            <StackPanel>
+              <TextBlock Text="➕" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+              <TextBlock Text="Receive" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+        
+        <!-- Denomination Buttons Grid -->
+        <Grid Grid.Row="1">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+
+          <!-- Row 0: 5c, 10c -->
+          <Button Grid.Row="0" Grid.Column="0" Margin="0,0,5,5" Tag="5" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+            <StackPanel>
+              <TextBlock Text="5c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button Grid.Row="0" Grid.Column="1" Margin="5,0,0,5" Tag="10" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+            <StackPanel>
+              <TextBlock Text="10c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 1: 20c, 50c -->
+          <Button Grid.Row="1" Grid.Column="0" Margin="0,5,5,5" Tag="20" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+            <StackPanel>
+              <TextBlock Text="20c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button Grid.Row="1" Grid.Column="1" Margin="5,5,0,5" Tag="50" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+            <StackPanel>
+              <TextBlock Text="50c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 2: $1, $2 -->
+          <Button Grid.Row="2" Grid.Column="0" Margin="0,5,5,5" Tag="100" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#B8860B">
+            <StackPanel>
+              <TextBlock Text="$1" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button Grid.Row="2" Grid.Column="1" Margin="5,5,0,5" Tag="200" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#B8860B">
+            <StackPanel>
+              <TextBlock Text="$2" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 3: $5, $10 -->
+          <Button Grid.Row="3" Grid.Column="0" Margin="0,5,5,5" Tag="500" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#CDA9E5">
+            <StackPanel>
+              <TextBlock Text="$5" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button Grid.Row="3" Grid.Column="1" Margin="5,5,0,5" Tag="1000" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#AED5F2">
+            <StackPanel>
+              <TextBlock Text="$10" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 4: $20, $50 -->
+          <Button Grid.Row="4" Grid.Column="0" Margin="0,5,5,5" Tag="2000" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#F6B0A7">
+            <StackPanel>
+              <TextBlock Text="$20" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button Grid.Row="4" Grid.Column="1" Margin="5,5,0,5" Tag="5000" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#F7E89A">
+            <StackPanel>
+              <TextBlock Text="$50" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Row 5: $100, Clear/Undo -->
+          <Button Grid.Row="5" Grid.Column="0" Margin="0,5,5,0" Tag="10000" Click="ExchangeDenom_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="#BFE7C0">
+            <StackPanel>
+              <TextBlock Text="$100" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Clear Button -->
+          <Button Grid.Row="5" Grid.Column="1" Margin="5,5,0,0" Click="ExchangeClear_Click"
+                  BorderThickness="2" BorderBrush="Gray" Background="Orange">
+            <StackPanel>
+              <TextBlock Text="🗑️" FontSize="28" HorizontalAlignment="Center"/>
+              <TextBlock Text="Clear All" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+        </Grid>
       </Grid>
     </Grid>
 

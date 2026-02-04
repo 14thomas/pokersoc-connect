@@ -3,154 +3,258 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Set Float" Height="680" Width="900"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
-  <Window.Resources>
 
-    <!-- reuse same templates as BuyIn -->
-    <Style x:Key="CoinButtonStyle" TargetType="Button">
-      <Setter Property="Width" Value="110"/>
-      <Setter Property="Height" Value="110"/>
-      <Setter Property="Margin" Value="10"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Grid>
-              <Ellipse>
-                <Ellipse.Fill>
-                  <RadialGradientBrush GradientOrigin="0.35,0.35">
-                    <GradientStop Color="#FFF5F5F5" Offset="0"/>
-                    <GradientStop Color="#FFD0D0D0" Offset="1"/>
-                  </RadialGradientBrush>
-                </Ellipse.Fill>
-                <Ellipse.StrokeThickness>2</Ellipse.StrokeThickness>
-                <Ellipse.Stroke>
-                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                    <GradientStop Color="#FF9E9E9E" Offset="1"/>
-                  </LinearGradientBrush>
-                </Ellipse.Stroke>
-              </Ellipse>
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                TextElement.FontWeight="Bold" TextElement.FontSize="28"/>
-              <Border x:Name="Badge" Background="#DD2E7D32" CornerRadius="12"
-                      HorizontalAlignment="Right" VerticalAlignment="Top"
-                      Margin="0,8,8,0" Padding="8,3" Visibility="Collapsed">
-                <TextBlock x:Name="BadgeText" Foreground="White" FontWeight="Bold" FontSize="16"/>
-              </Border>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+  <Grid Margin="12">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="2*"/>
+      <ColumnDefinition Width="3*"/>
+    </Grid.ColumnDefinitions>
 
-    <Style x:Key="GoldCoinButtonStyle" TargetType="Button" BasedOn="{StaticResource CoinButtonStyle}">
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Grid>
-              <Ellipse>
-                <Ellipse.Fill>
-                  <RadialGradientBrush GradientOrigin="0.35,0.35">
-                    <GradientStop Color="#FFFFF7CC" Offset="0"/>
-                    <GradientStop Color="#FFDEBF3E" Offset="1"/>
-                  </RadialGradientBrush>
-                </Ellipse.Fill>
-                <Ellipse.StrokeThickness>2</Ellipse.StrokeThickness>
-                <Ellipse.Stroke>
-                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                    <GradientStop Color="#FF8C7A1F" Offset="1"/>
-                  </LinearGradientBrush>
-                </Ellipse.Stroke>
-              </Ellipse>
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                TextElement.FontWeight="Bold" TextElement.FontSize="28"/>
-              <Border x:Name="Badge" Background="#DD2E7D32" CornerRadius="12"
-                      HorizontalAlignment="Right" VerticalAlignment="Top"
-                      Margin="0,8,8,0" Padding="8,3" Visibility="Collapsed">
-                <TextBlock x:Name="BadgeText" Foreground="White" FontWeight="Bold" FontSize="16"/>
-              </Border>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+    <!-- LEFT SIDE: CASH INPUT TABLE -->
+    <Grid Grid.Column="0" Margin="0,0,6,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
 
-    <Style x:Key="NoteButtonStyle" TargetType="Button">
-      <Setter Property="Width" Value="180"/>
-      <Setter Property="Height" Value="100"/>
-      <Setter Property="Margin" Value="10"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Grid>
-              <Border CornerRadius="10" BorderThickness="2" BorderBrush="#AA333333">
-                <Border.Background>
-                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#FFF4F4F4" Offset="0"/>
-                    <GradientStop Color="#FFE0E0E0" Offset="1"/>
-                  </LinearGradientBrush>
-                </Border.Background>
-              </Border>
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                TextElement.FontWeight="Bold" TextElement.FontSize="30"/>
-              <Border x:Name="Badge" Background="#DD2E7D32" CornerRadius="12"
-                      HorizontalAlignment="Right" VerticalAlignment="Top"
-                      Margin="0,8,8,0" Padding="8,3" Visibility="Collapsed">
-                <TextBlock x:Name="BadgeText" Foreground="White" FontWeight="Bold" FontSize="16"/>
-              </Border>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+      <!-- Cash input header -->
+      <TextBlock Text="Float Breakdown" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
-  </Window.Resources>
+      <!-- Custom Cash input table -->
+      <Grid Grid.Row="1" Background="White">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header Row -->
+        <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
+          <Grid Height="40">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
+                       VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+            <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
+                       VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+            <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="14"
+                       VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+          </Grid>
+        </Border>
+        
+        <!-- Data Rows Container - ItemsControl shares available vertical space -->
+        <ItemsControl x:Name="CashInputRowsPanel" Grid.Row="1">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="1"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </Grid>
 
-  <Grid Margin="16">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
+      <!-- Undo and Clear Buttons -->
+      <Grid Grid.Row="2" Margin="0,10,0,10">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Clear Button -->
+        <Button Grid.Column="0" Margin="0,0,5,0" Click="Clear_Click"
+                Padding="10,15" BorderThickness="1" BorderBrush="Gray" Background="Orange">
+          <StackPanel>
+            <TextBlock Text="🗑️" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+            <TextBlock Text="Clear" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </Button>
 
-    <Grid>
+        <!-- Undo Button -->
+        <Button Grid.Column="1" Margin="5,0,0,0" Click="Undo_Click"
+                Padding="10,15" BorderThickness="1" BorderBrush="Gray" Background="Yellow">
+          <StackPanel>
+            <TextBlock Text="↶" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+            <TextBlock Text="Undo" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <!-- Total Cash Panel -->
+      <Border Grid.Row="3"
+              Margin="0,0,0,0"
+              Padding="10,15"
+              BorderThickness="1"
+              BorderBrush="Gray"
+              Background="LightGreen">
+        <StackPanel>
+          <TextBlock Text="💰" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+          <TextBlock Text="Total Float" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="TotalText" Text="$0.00" FontSize="18" FontWeight="Bold" 
+                     HorizontalAlignment="Center" Margin="0,5,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Action Buttons -->
+      <Grid Grid.Row="4" Margin="0,10,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Cancel Button -->
+        <Button Grid.Column="0" Margin="0,0,5,0" Click="Cancel_Click"
+                Padding="10,15" BorderThickness="1" BorderBrush="Gray" Background="LightCoral">
+          <StackPanel>
+            <TextBlock Text="❌" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+            <TextBlock Text="Cancel" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Save Button -->
+        <Button Grid.Column="1" Margin="5,0,0,0" Click="Save_Click" IsDefault="True"
+                Padding="10,15" BorderThickness="1" BorderBrush="Gray" Background="LightGreen">
+          <StackPanel>
+            <TextBlock Text="✅" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+            <TextBlock Text="Save" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Grid>
+
+    <!-- RIGHT SIDE: DENOMINATION BUTTONS AND CONTROLS -->
+    <Grid Grid.Column="1" Margin="6,0,0,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
-      <GroupBox Header="Coins">
-        <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-          <Button x:Name="B5"    Style="{StaticResource CoinButtonStyle}" Tag="5"    Click="Denom_Click"><TextBlock>5c</TextBlock></Button>
-          <Button x:Name="B10"   Style="{StaticResource CoinButtonStyle}" Tag="10"   Click="Denom_Click"><TextBlock>10c</TextBlock></Button>
-          <Button x:Name="B20"   Style="{StaticResource CoinButtonStyle}" Tag="20"   Click="Denom_Click"><TextBlock>20c</TextBlock></Button>
-          <Button x:Name="B50"   Style="{StaticResource CoinButtonStyle}" Tag="50"   Click="Denom_Click"><TextBlock>50c</TextBlock></Button>
-          <Button x:Name="B100"  Style="{StaticResource GoldCoinButtonStyle}" Tag="100"  Click="Denom_Click"><TextBlock>$1</TextBlock></Button>
-          <Button x:Name="B200"  Style="{StaticResource GoldCoinButtonStyle}" Tag="200"  Click="Denom_Click"><TextBlock>$2</TextBlock></Button>
-        </WrapPanel>
-      </GroupBox>
+      <!-- Row 0: 5c, 10c -->
+      <Button x:Name="B5" Grid.Row="0" Grid.Column="0" Margin="0,0,5,5" Tag="5" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+        <StackPanel>
+          <TextBlock Text="5c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B5Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+      <Button x:Name="B10" Grid.Row="0" Grid.Column="1" Margin="5,0,0,5" Tag="10" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+        <StackPanel>
+          <TextBlock Text="10c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B10Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
 
-      <GroupBox Header="Notes" Grid.Column="1">
-        <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-          <Button x:Name="B500"   Style="{StaticResource NoteButtonStyle}" Tag="500"   Click="Denom_Click" Background="#FFCDA9E5"><TextBlock>$5</TextBlock></Button>
-          <Button x:Name="B1000"  Style="{StaticResource NoteButtonStyle}" Tag="1000"  Click="Denom_Click" Background="#FFAED5F2"><TextBlock>$10</TextBlock></Button>
-          <Button x:Name="B2000"  Style="{StaticResource NoteButtonStyle}" Tag="2000"  Click="Denom_Click" Background="#FFF6B0A7"><TextBlock>$20</TextBlock></Button>
-          <Button x:Name="B5000"  Style="{StaticResource NoteButtonStyle}" Tag="5000"  Click="Denom_Click" Background="#FFF7E89A"><TextBlock>$50</TextBlock></Button>
-          <Button x:Name="B10000" Style="{StaticResource NoteButtonStyle}" Tag="10000" Click="Denom_Click" Background="#FFBFE7C0"><TextBlock>$100</TextBlock></Button>
-        </WrapPanel>
-      </GroupBox>
+      <!-- Row 1: 20c, 50c -->
+      <Button x:Name="B20" Grid.Row="1" Grid.Column="0" Margin="0,5,5,5" Tag="20" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+        <StackPanel>
+          <TextBlock Text="20c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B20Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+      <Button x:Name="B50" Grid.Row="1" Grid.Column="1" Margin="5,5,0,5" Tag="50" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0">
+        <StackPanel>
+          <TextBlock Text="50c" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B50Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+
+      <!-- Row 2: $1, $2 -->
+      <Button x:Name="B100" Grid.Row="2" Grid.Column="0" Margin="0,5,5,5" Tag="100" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#B8860B">
+        <StackPanel>
+          <TextBlock Text="$1" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B100Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+      <Button x:Name="B200" Grid.Row="2" Grid.Column="1" Margin="5,5,0,5" Tag="200" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#B8860B">
+        <StackPanel>
+          <TextBlock Text="$2" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B200Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+
+      <!-- Row 3: $5, $10 -->
+      <Button x:Name="B500" Grid.Row="3" Grid.Column="0" Margin="0,5,5,5" Tag="500" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#CDA9E5">
+        <StackPanel>
+          <TextBlock Text="$5" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B500Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+      <Button x:Name="B1000" Grid.Row="3" Grid.Column="1" Margin="5,5,0,5" Tag="1000" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#AED5F2">
+        <StackPanel>
+          <TextBlock Text="$10" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B1000Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+
+      <!-- Row 4: $20, $50 -->
+      <Button x:Name="B2000" Grid.Row="4" Grid.Column="0" Margin="0,5,5,5" Tag="2000" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#F6B0A7">
+        <StackPanel>
+          <TextBlock Text="$20" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B2000Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+      <Button x:Name="B5000" Grid.Row="4" Grid.Column="1" Margin="5,5,0,5" Tag="5000" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#F7E89A">
+        <StackPanel>
+          <TextBlock Text="$50" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B5000Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+
+      <!-- Row 5: $100, Multipliers -->
+      <Button x:Name="B10000" Grid.Row="5" Grid.Column="0" Margin="0,5,5,0" Tag="10000" Click="Denom_Click"
+              BorderThickness="2" BorderBrush="Gray" Background="#BFE7C0">
+        <StackPanel>
+          <TextBlock Text="$100" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="B10000Count" Text="×0" FontSize="16" HorizontalAlignment="Center" Foreground="#006400"/>
+        </StackPanel>
+      </Button>
+
+      <!-- Multiplier Controls -->
+      <Grid Grid.Row="5" Grid.Column="1" Margin="5,5,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 1x Button -->
+        <Button x:Name="X1" Grid.Column="0" Margin="0,0,2,0" BorderThickness="2" BorderBrush="Gray"
+                Background="LightGreen" Click="Multiplier_Click" Tag="1">
+          <TextBlock Text="×1" FontSize="18" FontWeight="Bold"/>
+        </Button>
+
+        <!-- 5x Button -->
+        <Button x:Name="X5" Grid.Column="1" Margin="2,0,2,0" BorderThickness="2" BorderBrush="Gray"
+                Background="LightBlue" Click="Multiplier_Click" Tag="5">
+          <TextBlock Text="×5" FontSize="18" FontWeight="Bold"/>
+        </Button>
+
+        <!-- 10x Button -->
+        <Button x:Name="X10" Grid.Column="2" Margin="2,0,0,0" BorderThickness="2" BorderBrush="Gray"
+                Background="LightBlue" Click="Multiplier_Click" Tag="10">
+          <TextBlock Text="×10" FontSize="18" FontWeight="Bold"/>
+        </Button>
+      </Grid>
     </Grid>
-
-    <DockPanel Grid.Row="1" LastChildFill="False" Margin="0,16,0,0">
-      <TextBlock x:Name="TotalText" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" DockPanel.Dock="Left" Text="$0.00"/>
-      <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-        <ToggleButton x:Name="X1"  Content="×1"  IsChecked="True" Margin="0,0,6,0" Width="70" Click="Multiplier_Click"/>
-        <ToggleButton x:Name="X5"  Content="×5"               Margin="0,0,6,0" Width="70" Click="Multiplier_Click"/>
-        <ToggleButton x:Name="X10" Content="×10"              Margin="0,0,16,0" Width="80" Click="Multiplier_Click"/>
-
-        <Button Content="Clear"  Margin="0,0,8,0" Click="Clear_Click"/>
-        <Button Content="Cancel" Margin="0,0,8,0" Click="Cancel_Click"/>
-        <Button Content="Save"   Margin="0,0,0,0" Click="Save_Click" IsDefault="True"/>
-      </StackPanel>
-    </DockPanel>
   </Grid>
 </Window>
