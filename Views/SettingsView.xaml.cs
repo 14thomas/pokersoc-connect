@@ -24,15 +24,9 @@ namespace pokersoc_connect.Views
 
     private void LoadAdminPassword()
     {
-      try
-      {
-        if (Database.Conn != null)
-        {
-          var password = Database.GetAdminPassword();
-          AdminPasswordBox.Password = password;
-        }
-      }
-      catch { }
+      // Don't pre-fill the password box - leave it empty for security
+      // User can enter a new password to change it
+      AdminPasswordBox.Password = string.Empty;
     }
 
     private void AdminPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

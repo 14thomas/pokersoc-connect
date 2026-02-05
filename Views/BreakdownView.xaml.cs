@@ -104,7 +104,7 @@ namespace pokersoc_connect.Views
     {
       PasswordDisplay.Text = _enteredPassword.Length > 0 
         ? new string('●', _enteredPassword.Length) 
-        : "****";
+        : "";
     }
 
     private void PasswordCancel_Click(object sender, RoutedEventArgs e)

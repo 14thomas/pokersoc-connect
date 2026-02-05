@@ -101,20 +101,55 @@
                           FontSize="12"
                           Margin="0,0,0,8"/>
                 
-                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
-                  <Button Content="✓ Verify &amp; Add Player"
+                <Grid Grid.Row="2">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <Button Grid.Column="0" Content="✓ 18+"
                           Click="VerifyNewPlayer_Click"
                           Background="LightGreen"
-                          Padding="10,5"
-                          Margin="0,0,5,0"
+                          Padding="8,5"
+                          Margin="0,0,3,0"
                           FontWeight="Bold"/>
-                  <Button Content="✕ Cancel"
+                  <Button Grid.Column="1" Content="👶 Underage"
+                          Click="VerifyNewPlayerUnderage_Click"
+                          Background="#FFFFCC"
+                          Padding="8,5"
+                          Margin="3,0,3,0"
+                          FontWeight="Bold"/>
+                  <Button Grid.Column="2" Content="✕ Cancel"
                           Click="CancelNewPlayer_Click"
                           Background="LightCoral"
-                          Padding="10,5"
+                          Padding="8,5"
+                          Margin="3,0,0,0"
                           FontWeight="Bold"/>
-                </StackPanel>
+                </Grid>
               </Grid>
+            </Border>
+            
+            <!-- Underage Player Indicator (Hidden by default) -->
+            <Border x:Name="UnderagePlayerPanel"
+                    Grid.Row="2"
+                    Visibility="Collapsed"
+                    BorderBrush="Red"
+                    BorderThickness="2"
+                    Background="#FFDDDD"
+                    Padding="10"
+                    Margin="0,10,0,0">
+              <StackPanel>
+                <TextBlock Text="🚫 UNDERAGE PLAYER" 
+                          FontSize="14" 
+                          FontWeight="Bold" 
+                          Foreground="Red"
+                          HorizontalAlignment="Center"
+                          Margin="0,0,0,3"/>
+                <TextBlock Text="Cannot buy-in or cash-out" 
+                          FontSize="11" 
+                          Foreground="DarkRed"
+                          HorizontalAlignment="Center"/>
+              </StackPanel>
             </Border>
           </Grid>
         </Border>

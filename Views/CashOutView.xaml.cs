@@ -165,16 +165,16 @@ namespace pokersoc_connect.Views
         NextBtn.IsEnabled = false; return;
       }
 
+      // Try to make change, but allow proceeding even if not possible
+      // Validation will happen on the confirmation screen
       var avail = _available.ToDictionary(kv => kv.Key, kv => kv.Value);
       if (TryMakeChange(TotalCents, avail, out var plan))
       {
         foreach (var kv in plan) _payout[kv.Key] = kv.Value;
-        NextBtn.IsEnabled = true;
       }
-      else
-      {
-        NextBtn.IsEnabled = false;
-      }
+      
+      // Always enable Next if chips are selected - change validation happens on confirmation screen
+      NextBtn.IsEnabled = true;
     }
 
     private void RefreshChipTable()
@@ -426,63 +426,8 @@ namespace pokersoc_connect.Views
 
     private void ConfirmCashOut_Click(object sender, RoutedEventArgs e)
     {
-      try
-      {
-        Database.InTransaction(transaction =>
-        {
-          // Add extra cash to cashbox if any
-          if (_extraCashAmount > 0)
-          {
-            // Add extra cash as received money (break down into denominations)
-            var extraCashCents = (int)(_extraCashAmount * 100);
-            var denominations = new[] { 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 }; // $50, $20, $10, $5, $2, $1, 50c, 20c, 10c, 5c
-            
-            foreach (var denom in denominations)
-            {
-              if (extraCashCents >= denom)
-              {
-                var count = extraCashCents / denom;
-                extraCashCents -= count * denom;
-                
-                Database.Exec("INSERT INTO cashbox_movements (denom_cents, delta_qty, reason, notes) VALUES (@denom, @qty, 'CASHOUT', @notes)", transaction,
-                  ("@denom", denom),
-                  ("@qty", count),
-                  ("@notes", $"Extra cash from cashout - Member {MemberNumber}"));
-              }
-            }
-          }
-
-          // Add tip to tips table if any
-          if (_tipAmount > 0)
-          {
-            // Break down tip into currency denominations for proper display in cashbox
-            var tipCents = (int)(_tipAmount * 100);
-            var denominations = new[] { 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 }; // $50, $20, $10, $5, $2, $1, 50c, 20c, 10c, 5c
-            
-            foreach (var denom in denominations)
-            {
-              if (tipCents >= denom)
-              {
-                var count = tipCents / denom;
-                tipCents -= count * denom;
-                
-                Database.Exec("INSERT INTO tips (denom_cents, qty, notes) VALUES (@denom, @qty, @notes)", transaction,
-                  ("@denom", denom),
-                  ("@qty", count),
-                  ("@notes", $"Tip from cashout - Member {MemberNumber}"));
-              }
-            }
-          }
-
-          // Food sales are included in the consolidated activity log entry in main window
-
-          // Extra cash and other details are now handled in the main window's consolidated activity log
-        });
-      }
-      catch (Exception ex)
-      {
-        System.Diagnostics.Debug.WriteLine($"Error processing cashout: {ex.Message}");
-      }
+      // All database operations (tips, extra cash, food sales) are handled in MainWindow
+      // when the Confirmed event is processed - no duplicate insertions here
 
       // Final confirmation - process the cashout with all customizations
       System.Diagnostics.Debug.WriteLine($"CashOutView: Confirming cashout with {_selectedFoodItems.Count} food items, total: {_foodTotal:C}");
@@ -565,6 +510,57 @@ namespace pokersoc_connect.Views
 
         placeholder.Child = text;
         ChangeCustomizationRowsPanel?.Items.Add(placeholder);
+        return;
+      }
+
+      // Check if change can be given from cashbox
+      if (!ValidateChangeCanBeGiven())
+      {
+        // Show error when change can't be given
+        var errorBorder = new Border
+        {
+          BorderBrush = new SolidColorBrush(Colors.Red),
+          BorderThickness = new Thickness(2),
+          Background = new SolidColorBrush(Color.FromRgb(255, 230, 230)),
+          CornerRadius = new CornerRadius(5),
+          Padding = new Thickness(10)
+        };
+
+        var errorStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        
+        var errorIcon = new TextBlock
+        {
+          Text = "⚠️",
+          FontSize = 36,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(0, 0, 0, 10)
+        };
+        
+        var errorText = new TextBlock
+        {
+          Text = "Cannot give this change",
+          FontSize = 16,
+          FontWeight = FontWeights.Bold,
+          Foreground = new SolidColorBrush(Colors.Red),
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(0, 0, 0, 5)
+        };
+        
+        var errorDetail = new TextBlock
+        {
+          Text = "Not enough cash in cashbox.\nAdjust denominations or add more float.",
+          FontSize = 12,
+          Foreground = new SolidColorBrush(Colors.DarkRed),
+          HorizontalAlignment = HorizontalAlignment.Center,
+          TextAlignment = TextAlignment.Center,
+          TextWrapping = TextWrapping.Wrap
+        };
+
+        errorStack.Children.Add(errorIcon);
+        errorStack.Children.Add(errorText);
+        errorStack.Children.Add(errorDetail);
+        errorBorder.Child = errorStack;
+        ChangeCustomizationRowsPanel?.Items.Add(errorBorder);
         return;
       }
 
@@ -737,6 +733,8 @@ namespace pokersoc_connect.Views
       // Extra cash INCREASES the change needed (player pays extra cash, gets more change)
       var totalCashoutValue = chipValue - foodValue - tipValue + extraCashValue;
       var changeValue = _changeDenominations.Sum(kv => kv.Key * kv.Value) / 100.0;
+      var requiredChangeCents = (int)Math.Round(totalCashoutValue * 100);
+      var actualChangeCents = _changeDenominations.Sum(kv => kv.Key * kv.Value);
 
       if (ChipValueText != null)
         ChipValueText.Text = $"Chip Value: {chipValue:C}";
@@ -749,9 +747,31 @@ namespace pokersoc_connect.Views
       if (FinalChangeText != null)
         FinalChangeText.Text = $"Final Change: {totalCashoutValue:C}";
 
-      // Enable confirm button only if we have chips selected
+      // Validate change: check if change amount matches required and can be given from cashbox
+      // If required change is $0 (or negative due to food/tip), clear the change denominations
+      bool isChangeValid;
+      if (requiredChangeCents <= 0)
+      {
+        // Zero or negative change required - clear any change and allow
+        if (actualChangeCents > 0)
+        {
+          // Auto-clear change when no change is needed
+          _changeDenominations.Clear();
+          RefreshChangeTable();
+          actualChangeCents = 0;
+        }
+        isChangeValid = true;
+      }
+      else
+      {
+        // Positive change required - must match and be available from cashbox
+        isChangeValid = ValidateChangeCanBeGiven() && 
+                        Math.Abs(actualChangeCents - requiredChangeCents) <= 2; // Allow 2c rounding tolerance
+      }
+      
+      // Enable confirm button only if chips selected AND change is valid
       if (ConfirmCashOutBtn != null)
-        ConfirmCashOutBtn.IsEnabled = TotalCents > 0;
+        ConfirmCashOutBtn.IsEnabled = TotalCents > 0 && isChangeValid;
         
       // Auto-update change if not manually customized and tip/food changed
       if (!_isManualChangeCustomization)
@@ -759,6 +779,22 @@ namespace pokersoc_connect.Views
         CalculateOptimalChange((int)(totalCashoutValue * 100));
         RefreshChangeTable();
       }
+    }
+
+    private bool ValidateChangeCanBeGiven()
+    {
+      // Check if all change denominations can be given from the cashbox
+      foreach (var kv in _changeDenominations)
+      {
+        if (kv.Value <= 0) continue;
+        
+        // Check cashbox has enough of this denomination
+        if (!_available.TryGetValue(kv.Key, out int availableCount) || availableCount < kv.Value)
+        {
+          return false;
+        }
+      }
+      return true;
     }
 
 
@@ -1010,7 +1046,7 @@ namespace pokersoc_connect.Views
         {
           case "backspace":
             // Convert to cents, remove last digit, convert back
-            var cents = (int)(_tipInputValue * 100);
+            var cents = (int)Math.Round(_tipInputValue * 100);
             cents = cents / 10; // Remove last digit
             _tipInputValue = cents / 100.0;
             break;
@@ -1022,8 +1058,8 @@ namespace pokersoc_connect.Views
           default:
             if (double.TryParse(tag, out double digit))
             {
-              // Convert to cents, add digit, convert back
-              var totalCents = (int)(_tipInputValue * 100);
+              // Convert to cents, add digit, convert back (use Math.Round to avoid floating point issues)
+              var totalCents = (int)Math.Round(_tipInputValue * 100);
               totalCents = totalCents * 10 + (int)digit;
               _tipInputValue = totalCents / 100.0;
             }
@@ -1067,8 +1103,8 @@ namespace pokersoc_connect.Views
             break;
           
           case "backspace":
-            // Convert to cents, remove last digit, convert back
-            var cents = (int)(_extraCashInputValue * 100);
+            // Convert to cents, remove last digit, convert back (use Math.Round to avoid floating point issues)
+            var cents = (int)Math.Round(_extraCashInputValue * 100);
             cents = cents / 10; // Remove last digit
             _extraCashInputValue = cents / 100.0;
             break;

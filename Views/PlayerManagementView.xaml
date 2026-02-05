@@ -4,37 +4,70 @@
   <Grid Margin="12">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <!-- Header -->
-    <Grid Grid.Row="0" Margin="0,0,0,20">
+    <Grid Grid.Row="0" Margin="0,0,0,15">
       <TextBlock Text="Player Database" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
       <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center" 
               Width="30" Height="30" Click="Close_Click" FontSize="16"/>
     </Grid>
 
+    <!-- Age Verification Section -->
+    <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="2" Background="#F5F5F5" Padding="10" Margin="0,0,0,15">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        
+        <TextBlock Grid.Column="0" Text="🔍 Verify Age:" FontSize="14" FontWeight="Bold" 
+                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+        
+        <TextBox x:Name="AgeVerifyIdBox" Grid.Column="1" FontSize="14" Padding="5" 
+                 VerticalContentAlignment="Center" KeyDown="AgeVerifyIdBox_KeyDown"/>
+        
+        <Button x:Name="SetAdultBtn" Grid.Column="2" Content="✓ Set 18+" 
+                Click="SetAdult_Click" 
+                Padding="15,8" Margin="10,0,5,0"
+                FontSize="13" FontWeight="Bold"
+                Background="LightGreen" IsEnabled="False"/>
+        
+        <Button x:Name="SetUnderageBtn" Grid.Column="3" Content="👶 Set Underage" 
+                Click="SetUnderage_Click" 
+                Padding="15,8" Margin="5,0,0,0"
+                FontSize="13" FontWeight="Bold"
+                Background="#FFFFCC" IsEnabled="False"/>
+      </Grid>
+    </Border>
+
     <!-- Player List -->
     <DataGrid x:Name="PlayersGrid"
-              Grid.Row="1"
+              Grid.Row="2"
               AutoGenerateColumns="False"
               IsReadOnly="True"
-              Margin="0,0,0,20">
+              Margin="0,0,0,20"
+              SelectionChanged="PlayersGrid_SelectionChanged">
       <DataGrid.Columns>
         <DataGridTextColumn Header="Player ID" Binding="{Binding player_id}" Width="120"/>
         <DataGridTextColumn Header="Name" Binding="{Binding display_name}" Width="150"/>
-        <DataGridTextColumn Header="Email" Binding="{Binding email}" Width="150"/>
-        <DataGridTextColumn Header="Student Number" Binding="{Binding student_number}" Width="120"/>
-        <DataGridTextColumn Header="Degree" Binding="{Binding degree}" Width="120"/>
-        <DataGridTextColumn Header="Study Year" Binding="{Binding study_year}" Width="100"/>
-        <DataGridTextColumn Header="Arc Member" Binding="{Binding arc_member}" Width="100"/>
-        <DataGridTextColumn Header="Created" Binding="{Binding created_at}" Width="150"/>
+        <DataGridTextColumn Header="Age Status" Binding="{Binding age_status}" Width="90"/>
+        <DataGridTextColumn Header="Email" Binding="{Binding email}" Width="130"/>
+        <DataGridTextColumn Header="Student Number" Binding="{Binding student_number}" Width="110"/>
+        <DataGridTextColumn Header="Degree" Binding="{Binding degree}" Width="100"/>
+        <DataGridTextColumn Header="Study Year" Binding="{Binding study_year}" Width="80"/>
+        <DataGridTextColumn Header="Arc Member" Binding="{Binding arc_member}" Width="80"/>
+        <DataGridTextColumn Header="Created" Binding="{Binding created_at}" Width="130"/>
       </DataGrid.Columns>
     </DataGrid>
 
     <!-- Action Buttons -->
-    <Grid Grid.Row="2">
+    <Grid Grid.Row="3">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="*"/>
@@ -61,6 +94,95 @@
               Margin="5,0,0,0"
               FontSize="14" 
               FontWeight="Bold"/>
+    </Grid>
+    
+    <!-- Password Confirmation Overlay -->
+    <Grid x:Name="PasswordOverlay" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+      <Border Background="White" CornerRadius="10" Padding="30" 
+              HorizontalAlignment="Center" VerticalAlignment="Center"
+              MinWidth="320">
+        <StackPanel>
+          <TextBlock Text="🔐" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+          <TextBlock Text="Admin Password Required" FontSize="20" FontWeight="Bold" 
+                     HorizontalAlignment="Center" Margin="0,0,0,5"/>
+          <TextBlock x:Name="PasswordActionText" Text="to change age status" FontSize="12" 
+                     HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="Gray"/>
+          
+          <!-- Password Display -->
+          <Border Background="#F0F0F0" BorderBrush="Gray" BorderThickness="1" 
+                  CornerRadius="5" Padding="15,10" Margin="0,0,0,10" MinWidth="200">
+            <TextBlock x:Name="PasswordDisplay" Text="" FontSize="28" FontWeight="Bold" 
+                       HorizontalAlignment="Center" FontFamily="Consolas" MinHeight="34"/>
+          </Border>
+          
+          <TextBlock x:Name="PasswordErrorText" Text="Incorrect password" Foreground="Red" 
+                     FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,10" Visibility="Collapsed"/>
+          
+          <!-- Numeric Keypad -->
+          <Grid Width="240" HorizontalAlignment="Center">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="60"/>
+              <RowDefinition Height="60"/>
+              <RowDefinition Height="60"/>
+              <RowDefinition Height="60"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Row="0" Grid.Column="0" Content="1" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="1"/>
+            <Button Grid.Row="0" Grid.Column="1" Content="2" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="2"/>
+            <Button Grid.Row="0" Grid.Column="2" Content="3" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="3"/>
+            
+            <Button Grid.Row="1" Grid.Column="0" Content="4" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="4"/>
+            <Button Grid.Row="1" Grid.Column="1" Content="5" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="5"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="6" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="6"/>
+            
+            <Button Grid.Row="2" Grid.Column="0" Content="7" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="7"/>
+            <Button Grid.Row="2" Grid.Column="1" Content="8" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="8"/>
+            <Button Grid.Row="2" Grid.Column="2" Content="9" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="9"/>
+            
+            <Button Grid.Row="3" Grid.Column="0" Content="⌫" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordBackspace_Click" Background="LightCoral"/>
+            <Button Grid.Row="3" Grid.Column="1" Content="0" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordKeypad_Click" Tag="0"/>
+            <Button Grid.Row="3" Grid.Column="2" Content="C" FontSize="24" FontWeight="Bold" Margin="2" Click="PasswordClear_Click" Background="Orange"/>
+          </Grid>
+          
+          <!-- Action Buttons -->
+          <Grid Margin="0,15,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Column="0" Content="Cancel" Margin="0,0,5,0" Click="PasswordCancel_Click"
+                    Padding="15,12" Background="LightGray" FontSize="14"/>
+            
+            <Button Grid.Column="1" Content="Confirm" Margin="5,0,0,0" Click="PasswordConfirm_Click"
+                    Padding="15,12" Background="LightGreen" FontWeight="Bold" FontSize="14"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+    
+    <!-- Success/Error Notification Overlay -->
+    <Grid x:Name="NotificationOverlay" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+      <Border Background="White" CornerRadius="10" Padding="30" 
+              HorizontalAlignment="Center" VerticalAlignment="Center"
+              MinWidth="320">
+        <StackPanel>
+          <TextBlock x:Name="NotificationIcon" Text="✓" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="Green"/>
+          <TextBlock x:Name="NotificationTitle" Text="Success" FontSize="20" FontWeight="Bold" 
+                     HorizontalAlignment="Center" Margin="0,0,0,10"/>
+          <TextBlock x:Name="NotificationMessage" Text="" FontSize="14" 
+                     HorizontalAlignment="Center" Margin="0,0,0,20" TextWrapping="Wrap" TextAlignment="Center"/>
+          
+          <Button Content="OK" Click="NotificationOK_Click"
+                  Padding="30,12" FontSize="14" FontWeight="Bold"
+                  HorizontalAlignment="Center" Background="LightGreen"/>
+        </StackPanel>
+      </Border>
     </Grid>
   </Grid>
 </UserControl>

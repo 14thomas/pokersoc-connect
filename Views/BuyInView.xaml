@@ -483,20 +483,27 @@
           <RowDefinition Height="*"/>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Change breakdown header -->
-        <TextBlock Text="Change Breakdown" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+        <TextBlock Text="Change to Give" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
 
-        <!-- Change breakdown table -->
-        <StackPanel Grid.Row="1" Background="White">
+        <!-- Change breakdown table (matching Cash Received style) -->
+        <Grid Grid.Row="1" Background="White">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
           <!-- Header Row -->
-          <Border BorderBrush="Gray" BorderThickness="1,1,1,1" Background="LightGray">
+          <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
             <Grid Height="40">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="110"/>
-                <ColumnDefinition Width="80"/>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
@@ -507,17 +514,69 @@
             </Grid>
           </Border>
           
-          <!-- Data Rows -->
-          <StackPanel x:Name="ChangeRowsPanel">
-            <!-- Rows will be populated dynamically -->
+          <!-- Data Rows Container - ItemsControl shares available vertical space -->
+          <ItemsControl x:Name="ChangeRowsPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
+
+        <!-- Player Info Display (Read-only) -->
+        <Border Grid.Row="2" 
+                BorderBrush="DarkGray" 
+                BorderThickness="2" 
+                Background="LightGray" 
+                Padding="10" 
+                Margin="0,10,0,0">
+          <StackPanel>
+            <TextBlock Text="Current Player" FontWeight="Bold" FontSize="12" Margin="0,0,0,5"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+              <TextBlock Text="Player ID: " FontWeight="Bold" Width="80"/>
+              <TextBlock x:Name="PlayerIdDisplay2" Text="" FontSize="14"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="Name: " FontWeight="Bold" Width="80"/>
+              <TextBlock x:Name="PlayerNameDisplay2" Text="" FontSize="14"/>
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
+        </Border>
+
+        <!-- Clear and Reset Buttons -->
+        <Grid Grid.Row="3" Margin="0,10,0,10">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          
+          <!-- Clear Button (set to $0) -->
+          <Button Grid.Column="0" Margin="0,0,5,0" Click="ClearAmount_Click"
+                  Padding="15,20" BorderThickness="1" BorderBrush="Gray" Background="Orange">
+            <StackPanel>
+              <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Clear" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Set to $0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Reset Button (set to full amount) -->
+          <Button Grid.Column="1" Margin="5,0,0,0" Click="ResetAmount_Click"
+                  Padding="15,20" BorderThickness="1" BorderBrush="Gray" Background="Yellow">
+            <StackPanel>
+              <TextBlock Text="↺" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Reset" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Full amount" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+        </Grid>
 
         <!-- Change Display -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="4"
                 Margin="0,0,0,0"
                 Padding="15,20"
-                BorderThickness="1,0,1,1"
+                BorderThickness="1"
                 BorderBrush="Gray"
                 Background="LightGreen">
           <StackPanel>
@@ -529,7 +588,7 @@
         </Border>
 
         <!-- Action Buttons -->
-        <Grid Grid.Row="3" Margin="0,10,0,0">
+        <Grid Grid.Row="5" Margin="0,10,0,0">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -537,7 +596,7 @@
           
           <!-- Back Button -->
           <Button Grid.Column="0" Margin="0,0,5,0" Click="BackToCash_Click"
-                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightCoral">
+                  Padding="15,20" BorderThickness="1" BorderBrush="Gray" Background="LightCoral">
             <StackPanel>
               <TextBlock Text="⬅️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
               <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -547,7 +606,7 @@
 
           <!-- Confirm Button -->
           <Button Grid.Column="1" Margin="5,0,0,0" Click="ConfirmBuyIn_Click"
-                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightGreen">
+                  Padding="15,20" BorderThickness="1" BorderBrush="Gray" Background="LightGreen">
             <StackPanel>
               <TextBlock Text="✅" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
               <TextBlock Text="Confirm" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -586,7 +645,6 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
           </Grid.RowDefinitions>
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -613,10 +671,6 @@
           <Button Grid.Row="3" Grid.Column="0" Content="." FontSize="24" FontWeight="Bold" Margin="2" Click="Number_Click" Tag="."/>
           <Button Grid.Row="3" Grid.Column="1" Content="0" FontSize="24" FontWeight="Bold" Margin="2" Click="Number_Click" Tag="0"/>
           <Button Grid.Row="3" Grid.Column="2" Content="⌫" FontSize="24" FontWeight="Bold" Margin="2" Click="Backspace_Click"/>
-
-          <!-- Clear Button - Separate row to avoid overlap -->
-          <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Content="Clear" FontSize="18" FontWeight="Bold" 
-                  Margin="2" Click="ClearAmount_Click" Background="LightCoral" Height="40"/>
         </Grid>
       </Grid>
     </Grid>

@@ -372,6 +372,10 @@ namespace pokersoc_connect.Views
       CashInputView.Visibility = Visibility.Collapsed;
       AmountInputView.Visibility = Visibility.Visible;
       
+      // Copy player info to Step 2 panel
+      PlayerIdDisplay2.Text = PlayerIdDisplay.Text;
+      PlayerNameDisplay2.Text = PlayerNameDisplay.Text;
+      
       // Pre-fill buy-in amount with total cash
       _buyInAmount = TotalDollars;
       _buyInAmountString = _buyInAmount.ToString("F2");
@@ -511,64 +515,137 @@ namespace pokersoc_connect.Views
     private void RefreshChangeBreakdown(Dictionary<int, int> changeBreakdown)
     {
       // Clear existing rows
-      ChangeRowsPanel.Children.Clear();
+      ChangeRowsPanel.Items.Clear();
 
       var culture = CultureInfo.GetCultureInfo("en-AU");
 
-      // Create rows for each denomination that has change
-      foreach (int denom in CashDenoms)
+      // Get added denominations (those with count > 0)
+      var addedDenoms = changeBreakdown.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Key).ToList();
+
+      if (addedDenoms.Count == 0)
       {
-        if (changeBreakdown.TryGetValue(denom, out int count) && count > 0)
+        // Show placeholder when no change
+        var placeholder = new TextBlock
         {
-          var row = new Border
+          Text = "No change to give",
+          FontSize = 14,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(0, 20, 0, 20)
+        };
+        ChangeRowsPanel.Items.Add(placeholder);
+        return;
+      }
+
+      // Determine font sizes based on count (same logic as cash input)
+      int denomFontSize, countFontSize;
+      if (addedDenoms.Count <= 4)
+      {
+        denomFontSize = 22;
+        countFontSize = 28;
+      }
+      else if (addedDenoms.Count <= 6)
+      {
+        denomFontSize = 18;
+        countFontSize = 24;
+      }
+      else if (addedDenoms.Count <= 8)
+      {
+        denomFontSize = 14;
+        countFontSize = 18;
+      }
+      else
+      {
+        denomFontSize = 12;
+        countFontSize = 14;
+      }
+
+      // Create rows for each denomination that has change
+      foreach (var kv in addedDenoms)
+      {
+        int denom = kv.Key;
+        int count = kv.Value;
+
+        var row = new Border
+        {
+          BorderBrush = new SolidColorBrush(Colors.Gray),
+          BorderThickness = new Thickness(2),
+          CornerRadius = new CornerRadius(5),
+          Background = new SolidColorBrush(Color.FromRgb(220, 255, 220)),
+          Margin = new Thickness(0, 0, 0, 1)
+        };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var denominationText = new TextBlock
+        {
+          Text = FormatDenom(denom),
+          FontSize = denomFontSize,
+          FontWeight = FontWeights.SemiBold,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(5)
+        };
+        Grid.SetColumn(denominationText, 0);
+
+        var countText = new TextBlock
+        {
+          Text = "×" + count.ToString(),
+          FontSize = countFontSize,
+          FontWeight = FontWeights.Bold,
+          Foreground = new SolidColorBrush(Colors.Green),
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(5)
+        };
+        Grid.SetColumn(countText, 1);
+
+        var valueText = new TextBlock
+        {
+          Text = (count * denom / 100.0).ToString("C", culture),
+          FontSize = denomFontSize,
+          FontWeight = FontWeights.SemiBold,
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(5)
+        };
+        Grid.SetColumn(valueText, 2);
+
+        grid.Children.Add(denominationText);
+        grid.Children.Add(countText);
+        grid.Children.Add(valueText);
+        row.Child = grid;
+        ChangeRowsPanel.Items.Add(row);
+      }
+
+      // Add spacers if less than 4 items
+      if (addedDenoms.Count < 4)
+      {
+        int spacersNeeded = 4 - addedDenoms.Count;
+        for (int i = 0; i < spacersNeeded; i++)
+        {
+          var spacer = new Border
           {
-            BorderBrush = new SolidColorBrush(Colors.Gray),
-            BorderThickness = new Thickness(1, 0, 1, 1),
-            Height = 36
+            Background = Brushes.Transparent,
+            Margin = new Thickness(0, 0, 0, 1)
           };
-
-          var grid = new Grid();
-          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
-          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-
-          var denominationText = new TextBlock
-          {
-            Text = FormatDenom(denom),
-            FontSize = 13,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(5)
-          };
-          Grid.SetColumn(denominationText, 0);
-
-          var countText = new TextBlock
-          {
-            Text = count.ToString(),
-            FontSize = 13,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(5)
-          };
-          Grid.SetColumn(countText, 1);
-
-          var valueText = new TextBlock
-          {
-            Text = (count * denom / 100.0).ToString("C", culture),
-            FontSize = 13,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(5)
-          };
-          Grid.SetColumn(valueText, 2);
-
-          grid.Children.Add(denominationText);
-          grid.Children.Add(countText);
-          grid.Children.Add(valueText);
-          row.Child = grid;
-          ChangeRowsPanel.Children.Add(row);
+          ChangeRowsPanel.Items.Add(spacer);
         }
       }
+    }
+
+    private void ResetAmount_Click(object sender, RoutedEventArgs e)
+    {
+      // Reset buy-in amount to total cash received (zero change)
+      _buyInAmount = TotalDollars;
+      _buyInAmountString = _buyInAmount.ToString("F2");
+      UpdateAmountDisplay();
+      CalculateChange();
     }
 
     private const double BuyInLimitDollars = 500.00;

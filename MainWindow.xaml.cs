@@ -23,6 +23,7 @@ namespace pokersoc_connect
     // Current player ID (persists across tabs)
     private string _currentPlayerId = string.Empty;
     private bool _playerVerified = false;
+    private bool _playerIsUnderage = false;
     private string _pendingPlayerId = string.Empty;
 
     private bool _allowClose = false;
@@ -35,6 +36,30 @@ namespace pokersoc_connect
       TxGrid.MouseDoubleClick += TxGrid_MouseDoubleClick;
       UpdatePlayerButtons(); // Ensure buttons are disabled initially
       this.Closing += MainWindow_Closing;
+      this.Activated += MainWindow_Activated;
+      this.Loaded += MainWindow_Loaded;
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+      // Focus the player ID box on startup
+      FocusPlayerIdBoxIfEmpty();
+    }
+
+    private void MainWindow_Activated(object sender, EventArgs e)
+    {
+      // Re-focus player ID box when window is activated (clicked on, alt-tabbed to)
+      FocusPlayerIdBoxIfEmpty();
+    }
+
+    private void FocusPlayerIdBoxIfEmpty()
+    {
+      // Only focus if the main content is visible and player is not verified
+      if (MainContent.Visibility == Visibility.Visible && !_playerVerified)
+      {
+        CurrentPlayerIdBox.Focus();
+        System.Windows.Input.Keyboard.Focus(CurrentPlayerIdBox);
+      }
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -66,6 +91,11 @@ namespace pokersoc_connect
         
         if (!string.IsNullOrWhiteSpace(playerId))
         {
+          // Reset any pending state first (handles double-scanning)
+          NewPlayerPanel.Visibility = Visibility.Collapsed;
+          UnderagePlayerPanel.Visibility = Visibility.Collapsed;
+          _pendingPlayerId = string.Empty;
+          
           // Check if this is a new player
           try
           {
@@ -78,15 +108,34 @@ namespace pokersoc_connect
               NewPlayerIdText.Text = $"Player ID: {playerId}\n\nPlease verify this player is over 18 years old before continuing.\nThis player will be added as 'New Player'.";
               NewPlayerPanel.Visibility = Visibility.Visible;
               _playerVerified = false;
+              _playerIsUnderage = false;
+              
+              // Lock the field to prevent accidental edits during verification
+              CurrentPlayerIdBox.IsReadOnly = true;
+              CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 200));
             }
             else
             {
-              // Existing player - set as current and enable buttons
+              // Existing player - set as current
               _currentPlayerId = playerId;
               _playerVerified = true;
-              NewPlayerPanel.Visibility = Visibility.Collapsed;
               
-              // Log attendance
+              // Check if player is underage
+              _playerIsUnderage = Database.IsPlayerUnderage(playerId);
+              
+              // Lock the player ID field with appropriate color
+              CurrentPlayerIdBox.IsReadOnly = true;
+              if (_playerIsUnderage)
+              {
+                CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 200, 200));
+                UnderagePlayerPanel.Visibility = Visibility.Visible;
+              }
+              else
+              {
+                CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 255, 220));
+              }
+              
+              // Log attendance (even for underage players)
               Database.LogPlayerAttendance(playerId);
             }
           }
@@ -117,8 +166,12 @@ namespace pokersoc_connect
       _currentPlayerId = string.Empty;
       _pendingPlayerId = string.Empty;
       _playerVerified = false;
+      _playerIsUnderage = false;
+      CurrentPlayerIdBox.IsReadOnly = false;
+      CurrentPlayerIdBox.Background = System.Windows.Media.Brushes.White;
       CurrentPlayerIdBox.Text = string.Empty;
       NewPlayerPanel.Visibility = Visibility.Collapsed;
+      UnderagePlayerPanel.Visibility = Visibility.Collapsed;
       CurrentPlayerIdBox.Focus();
       UpdatePlayerButtons();
     }
@@ -139,6 +192,11 @@ namespace pokersoc_connect
         _playerVerified = true;
         CurrentPlayerIdBox.Text = _currentPlayerId;
         NewPlayerPanel.Visibility = Visibility.Collapsed;
+        
+        // Lock the player ID field
+        CurrentPlayerIdBox.IsReadOnly = true;
+        CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 255, 220));
+        
         UpdatePlayerButtons();
         
         // Log attendance
@@ -155,22 +213,61 @@ namespace pokersoc_connect
       }
     }
 
+    private void VerifyNewPlayerUnderage_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        // Add the new player to the database as underage
+        Database.Exec(
+          "INSERT INTO players(player_id, display_name, is_underage) " +
+          "VALUES ($id, 'New Player', 1)",
+          ("$id", _pendingPlayerId)
+        );
+        
+        // Set as current player but mark as underage
+        _currentPlayerId = _pendingPlayerId;
+        _playerVerified = true;
+        _playerIsUnderage = true;
+        CurrentPlayerIdBox.Text = _currentPlayerId;
+        NewPlayerPanel.Visibility = Visibility.Collapsed;
+        
+        // Lock the player ID field with underage color
+        CurrentPlayerIdBox.IsReadOnly = true;
+        CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 200, 200));
+        UnderagePlayerPanel.Visibility = Visibility.Visible;
+        
+        UpdatePlayerButtons();
+        
+        // Log attendance (even for underage players)
+        Database.LogPlayerAttendance(_currentPlayerId);
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error adding player: {ex.Message}", "Error", 
+          MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
     private void CancelNewPlayer_Click(object sender, RoutedEventArgs e)
     {
       // Cancel - clear everything
       _currentPlayerId = string.Empty;
       _pendingPlayerId = string.Empty;
       _playerVerified = false;
+      _playerIsUnderage = false;
+      CurrentPlayerIdBox.IsReadOnly = false;
+      CurrentPlayerIdBox.Background = System.Windows.Media.Brushes.White;
       CurrentPlayerIdBox.Text = string.Empty;
       NewPlayerPanel.Visibility = Visibility.Collapsed;
+      UnderagePlayerPanel.Visibility = Visibility.Collapsed;
       UpdatePlayerButtons();
       CurrentPlayerIdBox.Focus();
     }
 
     private void UpdatePlayerButtons()
     {
-      // Only enable buttons if player is verified (Enter pressed AND new player verified OR existing player)
-      bool hasVerifiedPlayer = !string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified;
+      // Only enable buttons if player is verified AND not underage
+      bool hasVerifiedPlayer = !string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified && !_playerIsUnderage;
       BuyInButton.IsEnabled = hasVerifiedPlayer;
       CashOutButton.IsEnabled = hasVerifiedPlayer;
     }
@@ -219,6 +316,9 @@ namespace pokersoc_connect
       FoodHost.Visibility = Visibility.Collapsed;
       ScreenHost.Content = null;
       MainContent.Visibility = Visibility.Visible;
+      
+      // Refocus player ID box if empty
+      FocusPlayerIdBoxIfEmpty();
     }
 
     private void ShowScreen(UserControl view)

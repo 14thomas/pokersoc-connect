@@ -79,6 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_moves_denom_time ON cashbox_movements(denom_cents
       try { Exec("ALTER TABLE players ADD COLUMN degree TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN study_year TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN arc_member TEXT DEFAULT 'None'"); } catch { }
+      try { Exec("ALTER TABLE players ADD COLUMN is_underage INTEGER DEFAULT 0"); } catch { }
 
       // Grouping id for multi-denomination float add
       try { Exec("ALTER TABLE cashbox_movements ADD COLUMN batch_id TEXT"); } catch { }
@@ -460,11 +461,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
     public static void ExportPlayers(string filePath)
     {
-      var players = Query("SELECT player_id, display_name, email, student_number, degree, study_year, arc_member, created_at FROM players ORDER BY player_id");
+      var players = Query("SELECT player_id, display_name, email, student_number, degree, study_year, arc_member, COALESCE(is_underage, 0) as is_underage, created_at FROM players ORDER BY player_id");
       
       using var writer = new StreamWriter(filePath);
       // Write CSV header
-      writer.WriteLine("player_id,display_name,email,student_number,degree,study_year,arc_member,created_at");
+      writer.WriteLine("player_id,display_name,email,student_number,degree,study_year,arc_member,is_underage,created_at");
       
       foreach (DataRow row in players.Rows)
       {
@@ -475,9 +476,10 @@ CREATE TABLE IF NOT EXISTS app_settings (
         var degree = CsvEscape(row["degree"]?.ToString() ?? "None");
         var studyYear = CsvEscape(row["study_year"]?.ToString() ?? "None");
         var arcMember = CsvEscape(row["arc_member"]?.ToString() ?? "None");
+        var isUnderage = row["is_underage"]?.ToString() ?? "0";
         var createdAt = CsvEscape(row["created_at"]?.ToString() ?? "");
         
-        writer.WriteLine($"{playerId},{displayName},{email},{studentNumber},{degree},{studyYear},{arcMember},{createdAt}");
+        writer.WriteLine($"{playerId},{displayName},{email},{studentNumber},{degree},{studyYear},{arcMember},{isUnderage},{createdAt}");
       }
     }
 
@@ -501,6 +503,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
         var degree = parts.Length > 4 ? parts[4].Trim() : "None";
         var studyYear = parts.Length > 5 ? parts[5].Trim() : "None";
         var arcMember = parts.Length > 6 ? parts[6].Trim() : "None";
+        var isUnderageStr = parts.Length > 7 ? parts[7].Trim() : "0";
+        int isUnderage = (isUnderageStr == "1" || isUnderageStr.Equals("true", StringComparison.OrdinalIgnoreCase)) ? 1 : 0;
 
         if (string.IsNullOrWhiteSpace(playerId)) continue;
         if (string.IsNullOrWhiteSpace(displayName)) displayName = "New Player";
@@ -515,28 +519,30 @@ CREATE TABLE IF NOT EXISTS app_settings (
           if (merge)
           {
             // Insert or replace (update if exists)
-            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member) 
-                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc)",
+            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member, is_underage) 
+                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc, $underage)",
                  ("$id", playerId),
                  ("$dn", displayName),
                  ("$em", email),
                  ("$sn", studentNumber),
                  ("$deg", degree),
                  ("$sy", studyYear),
-                 ("$arc", arcMember));
+                 ("$arc", arcMember),
+                 ("$underage", isUnderage));
           }
           else
           {
             // Only insert if doesn't exist
-            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member) 
-                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc)",
+            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member, is_underage) 
+                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc, $underage)",
                  ("$id", playerId),
                  ("$dn", displayName),
                  ("$em", email),
                  ("$sn", studentNumber),
                  ("$deg", degree),
                  ("$sy", studyYear),
-                 ("$arc", arcMember));
+                 ("$arc", arcMember),
+                 ("$underage", isUnderage));
           }
         }
         catch
@@ -550,6 +556,18 @@ CREATE TABLE IF NOT EXISTS app_settings (
     {
       var count = ScalarLong("SELECT COUNT(*) FROM players WHERE player_id = $id", ("$id", playerId));
       return count == 0;
+    }
+
+    public static bool IsPlayerUnderage(string playerId)
+    {
+      var result = ScalarLong("SELECT COALESCE(is_underage, 0) FROM players WHERE player_id = $id", ("$id", playerId));
+      return result == 1;
+    }
+
+    public static void SetPlayerUnderage(string playerId, bool isUnderage)
+    {
+      Exec("UPDATE players SET is_underage = $underage WHERE player_id = $id", 
+           ("$underage", isUnderage ? 1 : 0), ("$id", playerId));
     }
 
     // Get total buy-ins for a player in the current session (in cents)

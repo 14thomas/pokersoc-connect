@@ -559,19 +559,52 @@ namespace pokersoc_connect.Views
     {
       try
       {
-        // Calculate total money made from all food sales (including cashout food sales)
+        // Calculate total money made from all food sales
+        // Method 1: Direct food sales (activity_kind = 'FOOD')
+        // Method 2: Food sales during cashout - parse from notes field
+        // Notes format is either "Food ($X.XX): items" or "Food: $X.XX"
         var totalCents = Database.ScalarLong(@"
-SELECT COALESCE(SUM(
-  CASE 
-    WHEN activity_kind = 'FOOD' THEN amount_cents
-    WHEN activity_kind = 'TX' AND activity_type = 'CASHOUT' AND notes LIKE '%Food:%' 
-    THEN CAST(SUBSTR(notes, INSTR(notes, 'Food: $') + 7, INSTR(notes || ' |', ' |') - INSTR(notes, 'Food: $') - 7) AS REAL) * 100
-    ELSE 0
-  END
-), 0)
-FROM activity_log 
-WHERE activity_kind = 'FOOD' 
-   OR (activity_kind = 'TX' AND activity_type = 'CASHOUT' AND notes LIKE '%Food:%')");
+SELECT COALESCE(SUM(food_amount), 0) FROM (
+  -- Direct food sales
+  SELECT amount_cents as food_amount
+  FROM activity_log 
+  WHERE activity_kind = 'FOOD'
+  
+  UNION ALL
+  
+  -- Food during cashout with format 'Food ($X.XX): items'
+  SELECT CAST(
+    REPLACE(
+      SUBSTR(notes, INSTR(notes, 'Food ($') + 7, 
+        INSTR(SUBSTR(notes, INSTR(notes, 'Food ($') + 7), ')') - 1
+      ), ',', ''
+    ) AS REAL
+  ) * 100 as food_amount
+  FROM activity_log 
+  WHERE activity_kind = 'TX' 
+    AND (activity_type = 'CASHOUT' OR activity_type = 'CASHOUT_SALE')
+    AND notes LIKE '%Food ($%'
+    
+  UNION ALL
+  
+  -- Food during cashout with format 'Food: $X.XX' (legacy/fallback)
+  SELECT CAST(
+    REPLACE(
+      SUBSTR(notes, INSTR(notes, 'Food: $') + 7, 
+        CASE 
+          WHEN INSTR(SUBSTR(notes, INSTR(notes, 'Food: $') + 7), ' |') > 0 
+          THEN INSTR(SUBSTR(notes, INSTR(notes, 'Food: $') + 7), ' |') - 1
+          ELSE LENGTH(SUBSTR(notes, INSTR(notes, 'Food: $') + 7))
+        END
+      ), ',', ''
+    ) AS REAL
+  ) * 100 as food_amount
+  FROM activity_log 
+  WHERE activity_kind = 'TX' 
+    AND (activity_type = 'CASHOUT' OR activity_type = 'CASHOUT_SALE')
+    AND notes LIKE '%Food: $%'
+    AND notes NOT LIKE '%Food ($%'
+)");
 
         var totalAmount = totalCents / 100.0;
         var AU = CultureInfo.GetCultureInfo("en-AU");
