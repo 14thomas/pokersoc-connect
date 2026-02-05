@@ -179,21 +179,28 @@
           <!-- 5c Button -->
           <Button x:Name="Cash5c" Grid.Row="0" Grid.Column="0"
                   Margin="0,0,5,5"
-                  Padding="5"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="5"
                   BorderThickness="2"
                   BorderBrush="Gray"
-                  Background="#C0C0C0">
+                  Background="#C0C0C0"
+                  HorizontalContentAlignment="Stretch">
             <Grid>
-              <Image x:Name="Cash5cImage" Stretch="Uniform"/>
-              <Rectangle Fill="#40000000"/>
-              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="1" VerticalAlignment="Center"
                        Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
-                       Padding="12,8" Margin="4">
+                       Padding="12,8">
                 <TextBlock x:Name="Cash5cCount" Text="×0" FontSize="32" FontWeight="Bold" 
                            Foreground="#202020" HorizontalAlignment="Center"/>
               </Border>
+              <Image Grid.Column="3" x:Name="Cash5cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
               <TextBlock x:Name="Cash5cText" Text="5c" Visibility="Collapsed"/>
             </Grid>
           </Button>
@@ -201,18 +208,25 @@
           <!-- 10c Button -->
           <Button x:Name="Cash10c" Grid.Row="0" Grid.Column="1"
                   Margin="5,0,0,5"
-                  Padding="5"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="10"
                   BorderThickness="2"
                   BorderBrush="Gray"
-                  Background="#C0C0C0">
+                  Background="#C0C0C0"
+                  HorizontalContentAlignment="Stretch">
             <Grid>
-              <Image x:Name="Cash10cImage" Stretch="Uniform"/>
-              <Rectangle Fill="#40000000"/>
-              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Image Grid.Column="1" x:Name="Cash10cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <Border Grid.Column="3" VerticalAlignment="Center"
                        Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
-                       Padding="12,8" Margin="4">
+                       Padding="12,8">
                 <TextBlock x:Name="Cash10cCount" Text="×0" FontSize="32" FontWeight="Bold" 
                            Foreground="#202020" HorizontalAlignment="Center"/>
               </Border>
@@ -224,21 +238,28 @@
           <!-- 20c Button -->
           <Button x:Name="Cash20c" Grid.Row="1" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="5"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="20"
                   BorderThickness="2"
                   BorderBrush="Gray"
-                  Background="#C0C0C0">
+                  Background="#C0C0C0"
+                  HorizontalContentAlignment="Stretch">
             <Grid>
-              <Image x:Name="Cash20cImage" Stretch="Uniform"/>
-              <Rectangle Fill="#40000000"/>
-              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="1" VerticalAlignment="Center"
                        Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
-                       Padding="12,8" Margin="4">
+                       Padding="12,8">
                 <TextBlock x:Name="Cash20cCount" Text="×0" FontSize="32" FontWeight="Bold" 
                            Foreground="#202020" HorizontalAlignment="Center"/>
               </Border>
+              <Image Grid.Column="3" x:Name="Cash20cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
               <TextBlock x:Name="Cash20cText" Text="20c" Visibility="Collapsed"/>
             </Grid>
           </Button>
@@ -246,18 +267,25 @@
           <!-- 50c Button -->
           <Button x:Name="Cash50c" Grid.Row="1" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="5"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="50"
                   BorderThickness="2"
                   BorderBrush="Gray"
-                  Background="#C0C0C0">
+                  Background="#C0C0C0"
+                  HorizontalContentAlignment="Stretch">
             <Grid>
-              <Image x:Name="Cash50cImage" Stretch="Uniform"/>
-              <Rectangle Fill="#40000000"/>
-              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Image Grid.Column="1" x:Name="Cash50cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <Border Grid.Column="3" VerticalAlignment="Center"
                        Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
-                       Padding="12,8" Margin="4">
+                       Padding="12,8">
                 <TextBlock x:Name="Cash50cCount" Text="×0" FontSize="32" FontWeight="Bold" 
                            Foreground="#202020" HorizontalAlignment="Center"/>
               </Border>
@@ -269,21 +297,28 @@
           <!-- $1 Button -->
           <Button x:Name="Cash1" Grid.Row="2" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="5"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="100"
                   BorderThickness="2"
                   BorderBrush="Gray"
-                  Background="#B8860B">
+                  Background="#B8860B"
+                  HorizontalContentAlignment="Stretch">
             <Grid>
-              <Image x:Name="Cash1Image" Stretch="Uniform"/>
-              <Rectangle Fill="#40000000"/>
-              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="1" VerticalAlignment="Center"
                        Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
-                       Padding="12,8" Margin="4">
+                       Padding="12,8">
                 <TextBlock x:Name="Cash1Count" Text="×0" FontSize="32" FontWeight="Bold" 
                            Foreground="#202020" HorizontalAlignment="Center"/>
               </Border>
+              <Image Grid.Column="3" x:Name="Cash1Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
               <TextBlock x:Name="Cash1Text" Text="$1" Visibility="Collapsed"/>
             </Grid>
           </Button>
@@ -291,18 +326,25 @@
           <!-- $2 Button -->
           <Button x:Name="Cash2" Grid.Row="2" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="5"
+                  Padding="0"
                   Click="CashDenom_Click"
                   Tag="200"
                   BorderThickness="2"
                   BorderBrush="Gray"
-                  Background="#B8860B">
+                  Background="#B8860B"
+                  HorizontalContentAlignment="Stretch">
             <Grid>
-              <Image x:Name="Cash2Image" Stretch="Uniform"/>
-              <Rectangle Fill="#40000000"/>
-              <Border VerticalAlignment="Center" HorizontalAlignment="Center"
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Image Grid.Column="1" x:Name="Cash2Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <Border Grid.Column="3" VerticalAlignment="Center"
                        Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
-                       Padding="12,8" Margin="4">
+                       Padding="12,8">
                 <TextBlock x:Name="Cash2Count" Text="×0" FontSize="32" FontWeight="Bold" 
                            Foreground="#202020" HorizontalAlignment="Center"/>
               </Border>
