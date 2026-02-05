@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace pokersoc_connect.Views
 {
@@ -26,6 +28,52 @@ namespace pokersoc_connect.Views
       RefreshCashbox();
       InitializeFloatInput();
       UpdateTotalSalesDisplay();
+      LoadCurrencyImages();
+    }
+
+    private void LoadCurrencyImages()
+    {
+      string currencyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Currency");
+      
+      // Load coin images
+      LoadCurrencyImage(Float5cImage, Float5cText, Path.Combine(currencyPath, "coin_5c.png"));
+      LoadCurrencyImage(Float10cImage, Float10cText, Path.Combine(currencyPath, "coin_10c.png"));
+      LoadCurrencyImage(Float20cImage, Float20cText, Path.Combine(currencyPath, "coin_20c.png"));
+      LoadCurrencyImage(Float50cImage, Float50cText, Path.Combine(currencyPath, "coin_50c.png"));
+      LoadCurrencyImage(Float1Image, Float1Text, Path.Combine(currencyPath, "coin_1.png"));
+      LoadCurrencyImage(Float2Image, Float2Text, Path.Combine(currencyPath, "coin_2.png"));
+      
+      // Load note images
+      LoadCurrencyImage(Float5Image, Float5Text, Path.Combine(currencyPath, "note_5.png"));
+      LoadCurrencyImage(Float10Image, Float10Text, Path.Combine(currencyPath, "note_10.png"));
+      LoadCurrencyImage(Float20Image, Float20Text, Path.Combine(currencyPath, "note_20.png"));
+      LoadCurrencyImage(Float50Image, Float50Text, Path.Combine(currencyPath, "note_50.png"));
+      LoadCurrencyImage(Float100Image, Float100Text, Path.Combine(currencyPath, "note_100.png"));
+    }
+
+    private void LoadCurrencyImage(Image imageControl, TextBlock fallbackText, string imagePath)
+    {
+      try
+      {
+        if (File.Exists(imagePath))
+        {
+          var bitmap = new BitmapImage();
+          bitmap.BeginInit();
+          bitmap.UriSource = new Uri(imagePath, UriKind.Absolute);
+          bitmap.CacheOption = BitmapCacheOption.OnLoad;
+          bitmap.EndInit();
+          imageControl.Source = bitmap;
+          fallbackText.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+          fallbackText.Visibility = Visibility.Visible;
+        }
+      }
+      catch
+      {
+        fallbackText.Visibility = Visibility.Visible;
+      }
     }
 
     public void RefreshCashbox()
@@ -412,17 +460,17 @@ namespace pokersoc_connect.Views
 
     private void UpdateFloatButtonCounts()
     {
-      Float5cCount.Text = _floatCounts[5].ToString();
-      Float10cCount.Text = _floatCounts[10].ToString();
-      Float20cCount.Text = _floatCounts[20].ToString();
-      Float50cCount.Text = _floatCounts[50].ToString();
-      Float1Count.Text = _floatCounts[100].ToString();
-      Float2Count.Text = _floatCounts[200].ToString();
-      Float5Count.Text = _floatCounts[500].ToString();
-      Float10Count.Text = _floatCounts[1000].ToString();
-      Float20Count.Text = _floatCounts[2000].ToString();
-      Float50Count.Text = _floatCounts[5000].ToString();
-      Float100Count.Text = _floatCounts[10000].ToString();
+      Float5cCount.Text = "×" + _floatCounts[5].ToString();
+      Float10cCount.Text = "×" + _floatCounts[10].ToString();
+      Float20cCount.Text = "×" + _floatCounts[20].ToString();
+      Float50cCount.Text = "×" + _floatCounts[50].ToString();
+      Float1Count.Text = "×" + _floatCounts[100].ToString();
+      Float2Count.Text = "×" + _floatCounts[200].ToString();
+      Float5Count.Text = "×" + _floatCounts[500].ToString();
+      Float10Count.Text = "×" + _floatCounts[1000].ToString();
+      Float20Count.Text = "×" + _floatCounts[2000].ToString();
+      Float50Count.Text = "×" + _floatCounts[5000].ToString();
+      Float100Count.Text = "×" + _floatCounts[10000].ToString();
     }
 
     private void FloatDenom_Click(object sender, RoutedEventArgs e)

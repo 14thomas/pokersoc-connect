@@ -111,6 +111,11 @@ namespace pokersoc_connect.Views
       _enteredPassword = string.Empty;
       PasswordDisplay.Text = string.Empty;
       PasswordErrorText.Visibility = Visibility.Collapsed;
+      
+      // Show the 18+ cutoff date (same day/month, 18 years ago)
+      var cutoffDate = DateTime.Today.AddYears(-18);
+      Age18CutoffText.Text = $"🎂 18+ if born on or before: {cutoffDate:dd MMM yyyy}";
+      
       PasswordOverlay.Visibility = Visibility.Visible;
     }
 

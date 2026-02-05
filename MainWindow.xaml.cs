@@ -106,6 +106,11 @@ namespace pokersoc_connect
               // Show inline verification panel
               _pendingPlayerId = playerId;
               NewPlayerIdText.Text = $"Player ID: {playerId}\n\nPlease verify this player is over 18 years old before continuing.\nThis player will be added as 'New Player'.";
+              
+              // Show the 18+ cutoff date (same day/month, 18 years ago)
+              var cutoffDate = DateTime.Today.AddYears(-18);
+              Age18CutoffText.Text = $"🎂 18+ if born on or before: {cutoffDate:dd MMM yyyy}";
+              
               NewPlayerPanel.Visibility = Visibility.Visible;
               _playerVerified = false;
               _playerIsUnderage = false;
