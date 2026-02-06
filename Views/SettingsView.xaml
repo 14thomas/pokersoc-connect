@@ -125,12 +125,11 @@
         <!-- About Section -->
         <GroupBox Header="About" Margin="0,0,0,20">
           <StackPanel Margin="10">
-            <TextBlock Text="pokersoc-connect v1.3" FontWeight="Bold" Margin="0,0,0,5"/>
+            <TextBlock Text="pokersoc-connect v1.31" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="A poker society management application for tracking buy-ins, cash-outs, and food sales." Margin="0,0,0,10"/>
             <TextBlock Text="Features:" FontWeight="Bold" Margin="0,0,0,5"/>
-            <TextBlock Text="• Can now delete actions from the activity feed." Margin="20,0,0,2"/>
-            <TextBlock Text="• Alert for when player has attempted to buyin for >500." Margin="20,0,0,2"/>
-            
+            <TextBlock Text="• There are a lot of new features and improvements to the app." Margin="20,0,0,2"/>
+            <TextBlock Text="• I think tom is really cool btw." Margin="20,0,0,2"/>            
 
           </StackPanel>
         </GroupBox>
