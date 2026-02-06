@@ -140,6 +140,9 @@ namespace pokersoc_connect
                 CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 255, 220));
               }
               
+              // Show player info if they have non-default values
+              ShowPlayerInfo(playerId);
+              
               // Log attendance (even for underage players)
               Database.LogPlayerAttendance(playerId);
             }
@@ -177,8 +180,63 @@ namespace pokersoc_connect
       CurrentPlayerIdBox.Text = string.Empty;
       NewPlayerPanel.Visibility = Visibility.Collapsed;
       UnderagePlayerPanel.Visibility = Visibility.Collapsed;
+      PlayerInfoPanel.Visibility = Visibility.Collapsed;
       CurrentPlayerIdBox.Focus();
       UpdatePlayerButtons();
+    }
+    
+    private void ShowPlayerInfo(string playerId)
+    {
+      PlayerInfoStack.Children.Clear();
+      PlayerInfoPanel.Visibility = Visibility.Collapsed;
+      
+      var details = Database.GetPlayerDetails(playerId);
+      if (details == null) return;
+      
+      // Define which fields to show and their display labels
+      var fieldsToShow = new List<(string key, string label)>
+      {
+        ("display_name", "Name"),
+        ("degree", "Degree"),
+        ("study_year", "Year"),
+        ("student_number", "Student #"),
+        ("email", "Email"),
+        ("arc_member", "ARC Member")
+      };
+      
+      bool hasAnyInfo = false;
+      
+      foreach (var (key, label) in fieldsToShow)
+      {
+        if (details.TryGetValue(key, out var value))
+        {
+          // Skip default values
+          if (string.IsNullOrWhiteSpace(value) || 
+              value == "None" || 
+              value == "New Player" ||
+              value == "N/A")
+            continue;
+          
+          hasAnyInfo = true;
+          
+          var tb = new System.Windows.Controls.TextBlock
+          {
+            FontSize = 12,
+            Margin = new Thickness(0, 1, 0, 1)
+          };
+          
+          // Bold label, normal value
+          tb.Inlines.Add(new System.Windows.Documents.Run($"{label}: ") { FontWeight = FontWeights.Bold });
+          tb.Inlines.Add(new System.Windows.Documents.Run(value));
+          
+          PlayerInfoStack.Children.Add(tb);
+        }
+      }
+      
+      if (hasAnyInfo)
+      {
+        PlayerInfoPanel.Visibility = Visibility.Visible;
+      }
     }
 
     private void VerifyNewPlayer_Click(object sender, RoutedEventArgs e)

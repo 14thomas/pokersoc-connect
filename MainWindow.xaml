@@ -159,6 +159,20 @@
                           HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
+            
+            <!-- Player Info Panel (Hidden by default, shown when existing player scanned) -->
+            <Border x:Name="PlayerInfoPanel"
+                    Grid.Row="2"
+                    Visibility="Collapsed"
+                    BorderBrush="#4A90D9"
+                    BorderThickness="2"
+                    Background="#E8F4FD"
+                    Padding="8"
+                    Margin="0,10,0,0">
+              <StackPanel x:Name="PlayerInfoStack">
+                <!-- Dynamic content added via code-behind -->
+              </StackPanel>
+            </Border>
           </Grid>
         </Border>
 

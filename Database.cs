@@ -570,6 +570,28 @@ CREATE TABLE IF NOT EXISTS app_settings (
            ("$underage", isUnderage ? 1 : 0), ("$id", playerId));
     }
 
+    // Get player details - returns dictionary with field values (null if player not found)
+    public static Dictionary<string, string>? GetPlayerDetails(string playerId)
+    {
+      var result = Query(
+        "SELECT display_name, email, student_number, degree, study_year, arc_member FROM players WHERE player_id = $id",
+        ("$id", playerId)
+      );
+      
+      if (result.Rows.Count == 0) return null;
+      
+      var row = result.Rows[0];
+      return new Dictionary<string, string>
+      {
+        ["display_name"] = row["display_name"]?.ToString() ?? "New Player",
+        ["email"] = row["email"]?.ToString() ?? "None",
+        ["student_number"] = row["student_number"]?.ToString() ?? "None",
+        ["degree"] = row["degree"]?.ToString() ?? "None",
+        ["study_year"] = row["study_year"]?.ToString() ?? "None",
+        ["arc_member"] = row["arc_member"]?.ToString() ?? "None"
+      };
+    }
+
     // Get total buy-ins for a player in the current session (in cents)
     public static long GetPlayerSessionBuyInsCents(string playerId)
     {
