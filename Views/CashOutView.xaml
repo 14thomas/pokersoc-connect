@@ -182,93 +182,171 @@
           <!-- 5c Chip Button -->
           <Button x:Name="C5" Grid.Row="0" Grid.Column="0"
                   Margin="0,0,5,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="Chip_Click"
                   Tag="5"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="5c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="5c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="C5Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  HorizontalContentAlignment="Stretch">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="1" VerticalAlignment="Center"
+                      Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                      Padding="12,8">
+                <TextBlock x:Name="C5Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <Image Grid.Column="3" x:Name="C5Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <TextBlock x:Name="C5Text" Text="5c" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- 25c Chip Button -->
           <Button x:Name="C25" Grid.Row="0" Grid.Column="1"
                   Margin="5,0,0,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="Chip_Click"
                   Tag="25"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="25c" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="25c" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="C25Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  HorizontalContentAlignment="Stretch">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Image Grid.Column="1" x:Name="C25Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <Border Grid.Column="3" VerticalAlignment="Center"
+                      Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                      Padding="12,8">
+                <TextBlock x:Name="C25Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="C25Text" Text="25c" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 2 -->
           <!-- $1 Chip Button -->
           <Button x:Name="C100" Grid.Row="1" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="Chip_Click"
                   Tag="100"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$1" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$1" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="C100Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  HorizontalContentAlignment="Stretch">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="1" VerticalAlignment="Center"
+                      Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                      Padding="12,8">
+                <TextBlock x:Name="C100Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <Image Grid.Column="3" x:Name="C100Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <TextBlock x:Name="C100Text" Text="$1" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- $5 Chip Button -->
           <Button x:Name="C500" Grid.Row="1" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="Chip_Click"
                   Tag="500"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$5" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="C500Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  HorizontalContentAlignment="Stretch">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Image Grid.Column="1" x:Name="C500Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <Border Grid.Column="3" VerticalAlignment="Center"
+                      Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                      Padding="12,8">
+                <TextBlock x:Name="C500Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="C500Text" Text="$5" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 3 -->
           <!-- $25 Plaque Button -->
           <Button x:Name="P2500" Grid.Row="2" Grid.Column="0"
                   Margin="0,5,5,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="Chip_Click"
                   Tag="2500"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$25" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$25" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="P2500Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  HorizontalContentAlignment="Stretch">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="1" VerticalAlignment="Center"
+                      Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                      Padding="12,8">
+                <TextBlock x:Name="P2500Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <Image Grid.Column="3" x:Name="P2500Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <TextBlock x:Name="P2500Text" Text="$25" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- $100 Plaque Button -->
           <Button x:Name="P10000" Grid.Row="2" Grid.Column="1"
                   Margin="5,5,0,5"
-                  Padding="15,20"
+                  Padding="0"
                   Click="Chip_Click"
                   Tag="10000"
                   BorderThickness="2"
-                  BorderBrush="Gray">
-            <StackPanel>
-              <TextBlock Text="$100" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="$100" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="P10000Count" Text="0" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
-            </StackPanel>
+                  BorderBrush="Gray"
+                  HorizontalContentAlignment="Stretch">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Image Grid.Column="1" x:Name="P10000Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+              <Border Grid.Column="3" VerticalAlignment="Center"
+                      Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8"
+                      Padding="12,8">
+                <TextBlock x:Name="P10000Count" Text="×0" FontSize="32" FontWeight="Bold" 
+                           Foreground="#202020" HorizontalAlignment="Center"/>
+              </Border>
+              <TextBlock x:Name="P10000Text" Text="$100" Visibility="Collapsed"/>
+            </Grid>
           </Button>
 
           <!-- Row 4 -->

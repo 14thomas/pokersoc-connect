@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace pokersoc_connect.Views
 {
@@ -48,6 +50,7 @@ namespace pokersoc_connect.Views
         UpdateAllBadges(); 
         RecomputePlan(); 
         UpdateMultiplierDisplay();
+        LoadChipImages();
       };
     }
 
@@ -81,6 +84,50 @@ namespace pokersoc_connect.Views
       catch
       {
         PlayerNameDisplay.Text = "Error loading name";
+      }
+    }
+
+    private void LoadChipImages()
+    {
+      string chipsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Chips");
+      
+      // Load chip images
+      LoadChipImage(C5Image, C5Text, Path.Combine(chipsPath, "chip_5c.png"));
+      LoadChipImage(C25Image, C25Text, Path.Combine(chipsPath, "chip_25c.png"));
+      LoadChipImage(C100Image, C100Text, Path.Combine(chipsPath, "chip_1.png"));
+      LoadChipImage(C500Image, C500Text, Path.Combine(chipsPath, "chip_5.png"));
+      
+      // Load plaque images
+      LoadChipImage(P2500Image, P2500Text, Path.Combine(chipsPath, "plaque_25.png"));
+      LoadChipImage(P10000Image, P10000Text, Path.Combine(chipsPath, "plaque_100.png"));
+    }
+
+    private void LoadChipImage(Image imageControl, TextBlock fallbackText, string imagePath)
+    {
+      try
+      {
+        if (File.Exists(imagePath))
+        {
+          var bitmap = new BitmapImage();
+          bitmap.BeginInit();
+          bitmap.UriSource = new Uri(imagePath, UriKind.Absolute);
+          bitmap.CacheOption = BitmapCacheOption.OnLoad;
+          bitmap.EndInit();
+          imageControl.Source = bitmap;
+          fallbackText.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+          // Show fallback text if image not found
+          imageControl.Visibility = Visibility.Collapsed;
+          fallbackText.Visibility = Visibility.Visible;
+        }
+      }
+      catch
+      {
+        // Show fallback text on error
+        imageControl.Visibility = Visibility.Collapsed;
+        fallbackText.Visibility = Visibility.Visible;
       }
     }
 
@@ -129,12 +176,12 @@ namespace pokersoc_connect.Views
     {
       switch (cents)
       {
-        case 5: C5Count.Text = count.ToString(); break;
-        case 25: C25Count.Text = count.ToString(); break;
-        case 100: C100Count.Text = count.ToString(); break;
-        case 500: C500Count.Text = count.ToString(); break;
-        case 2500: P2500Count.Text = count.ToString(); break;
-        case 10000: P10000Count.Text = count.ToString(); break;
+        case 5: C5Count.Text = $"×{count}"; break;
+        case 25: C25Count.Text = $"×{count}"; break;
+        case 100: C100Count.Text = $"×{count}"; break;
+        case 500: C500Count.Text = $"×{count}"; break;
+        case 2500: P2500Count.Text = $"×{count}"; break;
+        case 10000: P10000Count.Text = $"×{count}"; break;
       }
     }
 

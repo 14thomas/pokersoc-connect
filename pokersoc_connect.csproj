@@ -28,6 +28,7 @@
   <!-- Copy currency assets to output directory -->
   <ItemGroup>
     <None Include="Assets\Currency\**\*.*" CopyToOutputDirectory="PreserveNewest" LinkBase="Assets\Currency" />
+    <None Include="Assets\Chips\**\*.*" CopyToOutputDirectory="PreserveNewest" LinkBase="Assets\Chips" />
   </ItemGroup>
 
 </Project>
