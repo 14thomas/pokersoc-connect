@@ -779,8 +779,16 @@ namespace pokersoc_connect.Views
       // Total amount player should receive = chip value - food - tip + extra cash
       // Extra cash INCREASES the change needed (player pays extra cash, gets more change)
       var totalCashoutValue = chipValue - foodValue - tipValue + extraCashValue;
-      var changeValue = _changeDenominations.Sum(kv => kv.Key * kv.Value) / 100.0;
       var requiredChangeCents = (int)Math.Round(totalCashoutValue * 100);
+
+      // FIRST: Auto-update change if not manually customized (before validation!)
+      if (!_isManualChangeCustomization)
+      {
+        CalculateOptimalChange(requiredChangeCents);
+        RefreshChangeTable();
+      }
+
+      // NOW calculate actual change after potential recalculation
       var actualChangeCents = _changeDenominations.Sum(kv => kv.Key * kv.Value);
 
       if (ChipValueText != null)
@@ -819,13 +827,6 @@ namespace pokersoc_connect.Views
       // Enable confirm button only if chips selected AND change is valid
       if (ConfirmCashOutBtn != null)
         ConfirmCashOutBtn.IsEnabled = TotalCents > 0 && isChangeValid;
-        
-      // Auto-update change if not manually customized and tip/food changed
-      if (!_isManualChangeCustomization)
-      {
-        CalculateOptimalChange((int)(totalCashoutValue * 100));
-        RefreshChangeTable();
-      }
     }
 
     private bool ValidateChangeCanBeGiven()

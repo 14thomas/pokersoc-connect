@@ -18,3 +18,4 @@ Image recommendations:
 
 If images are missing, placeholder images will be generated automatically.
 
+
