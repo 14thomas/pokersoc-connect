@@ -31,11 +31,32 @@ namespace pokersoc_connect.Views
           FROM players 
           ORDER BY created_at DESC");
         PlayersGrid.ItemsSource = players.DefaultView;
+        UpdatePlayersTodayCount();
       }
       catch (Exception ex)
       {
         MessageBox.Show($"Error loading players: {ex.Message}", "Error", 
           MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void UpdatePlayersTodayCount()
+    {
+      try
+      {
+        if (Database.Conn == null)
+        {
+          if (PlayersTodayText != null) PlayersTodayText.Text = "— unique players today";
+          return;
+        }
+        var count = Database.ScalarLong("SELECT COUNT(DISTINCT player_id) FROM player_attendance");
+        if (PlayersTodayText != null)
+          PlayersTodayText.Text = count == 1 ? "1 unique player today" : $"{count} unique players today";
+      }
+      catch
+      {
+        if (PlayersTodayText != null)
+          PlayersTodayText.Text = "— unique players today";
       }
     }
 

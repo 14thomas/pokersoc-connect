@@ -11,7 +11,10 @@
 
     <!-- Header -->
     <Grid Grid.Row="0" Margin="0,0,0,15">
-      <TextBlock Text="Player Database" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock Text="Player Database" FontSize="24" FontWeight="Bold"/>
+        <TextBlock x:Name="PlayersTodayText" Text="0 unique players today" FontSize="12" Foreground="Gray" Margin="0,2,0,0"/>
+      </StackPanel>
       <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center" 
               Width="30" Height="30" Click="Close_Click" FontSize="16"/>
     </Grid>

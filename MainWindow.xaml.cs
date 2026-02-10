@@ -505,6 +505,8 @@ namespace pokersoc_connect
         var playerId = args.MemberNumber;
         var buyInAmt = args.BuyInAmountCents / 100.0;
 
+        Database.LogPlayerAttendance(playerId);
+
         Database.InTransaction(tx =>
         {
           EnsurePlayer(playerId, tx);
@@ -563,6 +565,8 @@ namespace pokersoc_connect
       {
         var playerId = args.MemberNumber;
         var cashAmt  = args.TotalCents / 100.0;
+
+        Database.LogPlayerAttendance(playerId);
 
         // Build transaction notes including food sales, tips, and extra cash
         var notes = new List<string>();
