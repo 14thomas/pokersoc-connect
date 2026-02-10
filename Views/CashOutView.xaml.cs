@@ -34,6 +34,7 @@ namespace pokersoc_connect.Views
     private double _tipAmount = 0.0;
     private double _foodTotal = 0.0;
     private double _extraCashAmount = 0.0;
+    private readonly Dictionary<int,int> _extraCashDenominations = new();
     private readonly int[] _cashDenominations = { 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
 
     private string _playerId = string.Empty;
@@ -491,7 +492,8 @@ namespace pokersoc_connect.Views
         _foodTotal,
         new Dictionary<string,int>(_selectedFoodItems),  // food items purchased
         _tipAmount,
-        _extraCashAmount));
+        _extraCashAmount,
+        new Dictionary<int,int>(_extraCashDenominations)));
     }
 
     private void BackToChipSelection_Click(object sender, RoutedEventArgs e)
@@ -516,6 +518,7 @@ namespace pokersoc_connect.Views
       _tipAmount = 0.0;
       _foodTotal = 0.0;
       _extraCashAmount = 0.0;
+      _extraCashDenominations.Clear();
       
       // Initialize change customization with optimal change
       CalculateOptimalChange(TotalCents);
@@ -889,10 +892,14 @@ namespace pokersoc_connect.Views
       ChangeDenominationsDialog.Visibility = Visibility.Visible;
     }
 
+    private Dictionary<int,int> _workingExtraCashDenoms = new();
+    private readonly List<int> _workingExtraCashAddOrder = new();
+
     private void AddExtraCash_Click(object sender, RoutedEventArgs e)
     {
       // Show inline extra cash input dialog with denomination buttons
-      _extraCashInputValue = _extraCashAmount;
+      _workingExtraCashDenoms = new Dictionary<int,int>(_extraCashDenominations);
+      _workingExtraCashAddOrder.Clear();
       UpdateExtraCashDisplay();
       ExtraCashInputDialog.Visibility = Visibility.Visible;
     }
@@ -1147,20 +1154,27 @@ namespace pokersoc_connect.Views
         switch (tag)
         {
           case "clear":
-            _extraCashInputValue = 0.0;
+            _workingExtraCashDenoms.Clear();
+            _workingExtraCashAddOrder.Clear();
             break;
           
           case "backspace":
-            // Convert to cents, remove last digit, convert back (use Math.Round to avoid floating point issues)
-            var cents = (int)Math.Round(_extraCashInputValue * 100);
-            cents = cents / 10; // Remove last digit
-            _extraCashInputValue = cents / 100.0;
+            if (_workingExtraCashAddOrder.Count > 0)
+            {
+              var lastDenom = _workingExtraCashAddOrder[_workingExtraCashAddOrder.Count - 1];
+              _workingExtraCashAddOrder.RemoveAt(_workingExtraCashAddOrder.Count - 1);
+              if (_workingExtraCashDenoms.TryGetValue(lastDenom, out var c) && c > 1)
+                _workingExtraCashDenoms[lastDenom] = c - 1;
+              else
+                _workingExtraCashDenoms.Remove(lastDenom);
+            }
             break;
           
           default:
             if (int.TryParse(tag, out int denominationCents))
             {
-              _extraCashInputValue += denominationCents / 100.0;
+              _workingExtraCashDenoms[denominationCents] = _workingExtraCashDenoms.TryGetValue(denominationCents, out var cur) ? cur + 1 : 1;
+              _workingExtraCashAddOrder.Add(denominationCents);
             }
             break;
         }
@@ -1173,7 +1187,8 @@ namespace pokersoc_connect.Views
     {
       if (ExtraCashAmountDisplay != null)
       {
-        ExtraCashAmountDisplay.Text = _extraCashInputValue.ToString("C");
+        var totalCents = _workingExtraCashDenoms.Sum(kv => kv.Key * kv.Value);
+        ExtraCashAmountDisplay.Text = (totalCents / 100.0).ToString("C");
       }
     }
 
@@ -1184,10 +1199,12 @@ namespace pokersoc_connect.Views
 
     private void ConfirmExtraCashInput_Click(object sender, RoutedEventArgs e)
     {
-      _extraCashAmount = _extraCashInputValue;
+      _extraCashDenominations.Clear();
+      foreach (var kv in _workingExtraCashDenoms)
+        _extraCashDenominations[kv.Key] = kv.Value;
+      _extraCashAmount = _extraCashDenominations.Sum(kv => kv.Key * kv.Value) / 100.0;
       UpdateCashoutSummary();
       ExtraCashInputDialog.Visibility = Visibility.Collapsed;
-      _extraCashInputValue = 0.0;
     }
 
     private void PopulateChangeDenominationsList()
@@ -1373,7 +1390,6 @@ namespace pokersoc_connect.Views
 
     // Fields to store tip input
     private double _tipInputValue = 0.0;
-    private double _extraCashInputValue = 0.0;
     private bool _isManualChangeCustomization = false;
   }
 
@@ -1387,7 +1403,8 @@ namespace pokersoc_connect.Views
     public Dictionary<string,int> FoodItems { get; }  // individual food items
     public double TipAmount { get; }
     public double ExtraCashAmount { get; }
-    
+    public Dictionary<int,int> ExtraCashDenominations { get; }  // actual denominations added (for cashbox)
+
     public CashOutConfirmedEventArgs(string member,
                                      Dictionary<int,int> plan,
                                      Dictionary<int,int> chipsIn,
@@ -1395,8 +1412,9 @@ namespace pokersoc_connect.Views
                                      double foodTotal,
                                      Dictionary<string,int> foodItems,
                                      double tipAmount,
-                                     double extraCashAmount)
-      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents, FoodTotal, FoodItems, TipAmount, ExtraCashAmount) = 
-         (member, plan, chipsIn, totalCents, foodTotal, foodItems, tipAmount, extraCashAmount);
+                                     double extraCashAmount,
+                                     Dictionary<int,int> extraCashDenominations)
+      => (MemberNumber, PayoutPlan, ChipsIn, TotalCents, FoodTotal, FoodItems, TipAmount, ExtraCashAmount, ExtraCashDenominations) =
+         (member, plan, chipsIn, totalCents, foodTotal, foodItems, tipAmount, extraCashAmount, extraCashDenominations);
   }
 }

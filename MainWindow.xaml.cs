@@ -628,26 +628,39 @@ namespace pokersoc_connect
             ("@amount", (int)Math.Round(cashAmt * 100)),
             ("@notes", activityNotes));
             
-          // Add extra cash to cashbox if any
+          // Add extra cash to cashbox if any (use user-specified denominations for correct cashbox)
           if (args.ExtraCashAmount > 0)
           {
-            // Break down extra cash into denominations and add to cashbox
-            var extraCashCents = (int)(args.ExtraCashAmount * 100);
-            var cashDenoms = new int[] { 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
-            
-            foreach (var denom in cashDenoms)
+            if (args.ExtraCashDenominations != null && args.ExtraCashDenominations.Count > 0)
             {
-              if (extraCashCents >= denom)
+              foreach (var kv in args.ExtraCashDenominations.Where(kv => kv.Value > 0))
               {
-                var count = extraCashCents / denom;
-                extraCashCents -= count * denom;
-                if (count > 0)
+                Database.Exec(
+                  "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+                  "VALUES ($d, $q, 'EXTRA_CASH', $p, $tx)",
+                  tx, ("$d", kv.Key), ("$q", kv.Value), ("$p", playerId), ("$tx", txId)
+                );
+              }
+            }
+            else
+            {
+              // Fallback: break down by algorithm if no denominations (legacy)
+              var extraCashCents = (int)(args.ExtraCashAmount * 100);
+              var cashDenoms = new int[] { 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
+              foreach (var denom in cashDenoms)
+              {
+                if (extraCashCents >= denom)
                 {
-                  Database.Exec(
-                    "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
-                    "VALUES ($d, $q, 'EXTRA_CASH', $p, $tx)",
-                    tx, ("$d", denom), ("$q", count), ("$p", playerId), ("$tx", txId)
-                  );
+                  var count = extraCashCents / denom;
+                  extraCashCents -= count * denom;
+                  if (count > 0)
+                  {
+                    Database.Exec(
+                      "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, player_id, tx_id) " +
+                      "VALUES ($d, $q, 'EXTRA_CASH', $p, $tx)",
+                      tx, ("$d", denom), ("$q", count), ("$p", playerId), ("$tx", txId)
+                    );
+                  }
                 }
               }
             }

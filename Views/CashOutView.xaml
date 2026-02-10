@@ -826,8 +826,9 @@
             </Border>
             
             <!-- Cash Denomination Buttons -->
-            <Grid Width="400" Height="300">
+            <Grid Width="400" Height="360">
               <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
@@ -854,8 +855,11 @@
               <!-- Row 3: Large Bills -->
               <Button Grid.Row="2" Grid.Column="0" Content="$20" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="2000"/>
               <Button Grid.Row="2" Grid.Column="1" Content="$50" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="5000"/>
-              <Button Grid.Row="2" Grid.Column="2" Content="Clear" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="clear"/>
-              <Button Grid.Row="2" Grid.Column="3" Content="⌫" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="backspace"/>
+              <Button Grid.Row="2" Grid.Column="2" Content="$100" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="10000"/>
+              <Button Grid.Row="2" Grid.Column="3" Content="Clear" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="clear"/>
+              
+              <!-- Row 4: Undo -->
+              <Button Grid.Row="3" Grid.Column="3" Content="⌫" FontSize="16" Margin="2" Click="ExtraCashButton_Click" Tag="backspace"/>
             </Grid>
             
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
