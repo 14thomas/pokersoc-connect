@@ -125,12 +125,12 @@
         <!-- About Section -->
         <GroupBox Header="About" Margin="0,0,0,20">
           <StackPanel Margin="10">
-            <TextBlock Text="pokersoc-connect v1.31" FontWeight="Bold" Margin="0,0,0,5"/>
+            <TextBlock Text="pokersoc-connect v1.4" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="A poker society management application for tracking buy-ins, cash-outs, and food sales." Margin="0,0,0,10"/>
             <TextBlock Text="Features:" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="• There are a lot of new features and improvements to the app." Margin="20,0,0,2"/>
             <TextBlock Text="• I think tom is really cool btw." Margin="20,0,0,2"/>            
-
+            <TextBlock Text="• I THINK I FIXED THE TIPPING NOW." Margin="20,0,0,2"/>      
           </StackPanel>
         </GroupBox>
 
