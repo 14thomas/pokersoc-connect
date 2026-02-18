@@ -882,14 +882,13 @@
                 VerticalAlignment="Center" 
                 Padding="30" 
                 CornerRadius="10"
-                MinWidth="500">
+                MinWidth="520"
+                MinHeight="750">
           <StackPanel>
             <TextBlock Text="Customize Change Denominations" FontSize="20" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
             <TextBlock Text="(Manual customization disables automatic optimal)" FontSize="12" Foreground="Gray" Margin="0,0,0,20" HorizontalAlignment="Center"/>
             
-            <StackPanel x:Name="ChangeDenominationsList" Height="500" Width="450" Margin="0,0,0,20">
-              <!-- Change denominations will be populated dynamically -->
-            </StackPanel>
+            <StackPanel x:Name="ChangeDenominationsList" Width="460" Margin="0,0,0,20"/>
             
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
               <Button Content="Close" Margin="0,0,10,0" Padding="20,10" Click="CloseChangeDenominations_Click"/>

@@ -638,14 +638,17 @@ namespace pokersoc_connect.Views
         countFontSize = 14;
       }
 
-      // Add the actual denomination rows
+      // Add the actual denomination rows (orange when not optimal, light green when optimal)
+      var rowBg = _isUsingConstrainedOptimal
+        ? new SolidColorBrush(Color.FromRgb(255, 230, 200))  // pastel orange = not optimal
+        : new SolidColorBrush(Color.FromRgb(245, 255, 245)); // light green = optimal
       foreach (var kv in addedDenoms)
       {
         var row = new Border
         {
           BorderBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
           BorderThickness = new Thickness(2),
-          Background = new SolidColorBrush(Color.FromRgb(245, 255, 245)),
+          Background = rowBg,
           CornerRadius = new CornerRadius(5),
           Margin = new Thickness(0, 1, 0, 1)
         };
@@ -728,28 +731,59 @@ namespace pokersoc_connect.Views
       }
     }
 
+    private bool _isUsingConstrainedOptimal = false;
+
     private void CalculateOptimalChange(int totalCents)
     {
       _changeDenominations.Clear();
-      
+      _isUsingConstrainedOptimal = false;
+
       // Round to nearest 5c (Australian standard)
       var roundedCents = ((totalCents + 2) / 5) * 5;
-      var remaining = roundedCents;
+      if (roundedCents <= 0) return;
 
+      // First try ideal optimal (greedy, unbounded)
+      var idealPlan = new Dictionary<int, int>();
+      var remaining = roundedCents;
       foreach (var denom in _cashDenominations.OrderByDescending(d => d))
       {
         var count = remaining / denom;
         if (count > 0)
         {
-          _changeDenominations[denom] = count;
+          idealPlan[denom] = count;
           remaining -= count * denom;
         }
       }
-      
-      // If there's still remaining (shouldn't happen with proper rounding), log it
-      if (remaining > 0)
+      remaining = roundedCents;
+
+      // Check if ideal plan can be given from cashbox
+      bool idealAvailable = true;
+      foreach (var kv in idealPlan)
       {
-        System.Diagnostics.Debug.WriteLine($"Warning: {remaining} cents remaining after rounding {totalCents} to {roundedCents} cents");
+        if (!_available.TryGetValue(kv.Key, out int have) || have < kv.Value)
+        {
+          idealAvailable = false;
+          break;
+        }
+      }
+
+      if (idealAvailable)
+      {
+        foreach (var kv in idealPlan) _changeDenominations[kv.Key] = kv.Value;
+        return;
+      }
+
+      // Use constrained optimal (best we can do with available cashbox stock)
+      if (TryMakeChange(roundedCents, _available, out var constrainedPlan))
+      {
+        foreach (var kv in constrainedPlan) _changeDenominations[kv.Key] = kv.Value;
+        _isUsingConstrainedOptimal = true;
+      }
+      else
+      {
+        // Can't make exact change - use ideal anyway; validation will fail
+        foreach (var kv in idealPlan) _changeDenominations[kv.Key] = kv.Value;
+        System.Diagnostics.Debug.WriteLine($"Cannot make {roundedCents}c change from available cashbox");
       }
     }
 
@@ -1226,8 +1260,8 @@ namespace pokersoc_connect.Views
       };
       ChangeDenominationsList.Children.Add(headerText);
       
-      // Add all possible denominations, not just the ones with values
-      var allDenominations = new[] { 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
+      // Add all possible denominations, not just the ones with values (include $100)
+      var allDenominations = new[] { 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
       
       foreach (var denomCents in allDenominations)
       {
