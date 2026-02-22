@@ -109,17 +109,17 @@
         </Border>
 
         <!-- Row 2 -->
-        <!-- Exchange Button -->
+        <!-- Add Tip Button -->
         <Button Grid.Row="1" Grid.Column="0"
                 Margin="0,5,5,5"
                 Padding="15,20"
-                Click="Exchange_Click"
+                Click="AddTip_Click"
                 BorderThickness="2"
                 BorderBrush="Gray">
           <StackPanel>
-            <TextBlock Text="🔄" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <TextBlock Text="Exchange" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-            <TextBlock Text="Swap denominations" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Add Tip" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Record cash tip received" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
         </Button>
 
@@ -139,17 +139,17 @@
         </Border>
 
         <!-- Row 3 -->
-        <!-- Empty Button 5 -->
+        <!-- Exchange Button -->
         <Button Grid.Row="2" Grid.Column="0"
                 Margin="0,5,5,5"
                 Padding="15,20"
+                Click="Exchange_Click"
                 BorderThickness="2"
-                BorderBrush="LightGray"
-                IsEnabled="False">
+                BorderBrush="Gray">
           <StackPanel>
-            <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
-            <TextBlock Text="Button 5" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
-            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="🔄" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Exchange" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Swap denominations" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
         </Button>
 
@@ -671,6 +671,281 @@
             <StackPanel>
               <TextBlock Text="×20" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
             </StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+    </Grid>
+
+    <!-- ADD TIP VIEW -->
+    <Grid x:Name="AddTipView" Grid.Row="0" Visibility="Collapsed">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="3*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- LEFT SIDE: TIP INPUT TABLE (same as cash received during buyin) -->
+      <Grid Grid.Column="0" Margin="12,12,6,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tip input header -->
+        <TextBlock Text="Tip Received" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,10"/>
+
+        <!-- Custom Tip input table -->
+        <Grid Grid.Row="1" Background="White" Margin="0,0,0,5">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          
+          <!-- Header Row -->
+          <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1,1,1,1" Background="#E0E0E0">
+            <Grid Height="40">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Denomination" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="1" Text="Count" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+              <TextBlock Grid.Column="2" Text="Value" FontWeight="Bold" FontSize="14"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5"/>
+            </Grid>
+          </Border>
+          
+          <ItemsControl x:Name="AddTipRowsPanel" Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </Grid>
+
+        <!-- Undo and Clear Buttons -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          
+          <Button Grid.Column="0" Margin="0,0,5,0" Click="AddTipClear_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Orange">
+            <StackPanel>
+              <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Clear" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="All cash" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Column="1" Margin="5,0,0,0" Click="AddTipUndo_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Yellow">
+            <StackPanel>
+              <TextBlock Text="↶" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Undo" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Last action" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <!-- Total Tip Panel -->
+        <Border Grid.Row="3"
+                Margin="0,0,0,0"
+                Padding="15,20"
+                BorderThickness="1,0,1,1"
+                BorderBrush="Gray"
+                Background="LightGreen">
+          <StackPanel>
+            <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="Total Tip" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="AddTipTotalText" Text="$0.00" FontSize="14" FontWeight="Bold" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          
+          <Button Grid.Column="0" Margin="0,0,5,0" Click="BackToMain_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightCoral">
+            <StackPanel>
+              <TextBlock Text="🏠" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Back" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Return to main" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Column="1" Margin="5,0,0,0" Click="AddTipConfirm_Click"
+                  Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightBlue">
+            <StackPanel>
+              <TextBlock Text="✅" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock Text="Confirm Tip" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Record tip to cashbox" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+
+      <!-- RIGHT SIDE: DENOMINATION BUTTONS (same as cash received during buyin) -->
+      <Grid Grid.Column="1" Margin="6,12,12,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Button x:Name="AddTip5c" Grid.Row="0" Grid.Column="0" Margin="0,0,5,5" Padding="0" Click="AddTipDenom_Click" Tag="5"
+                BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0" HorizontalContentAlignment="Stretch">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="1" VerticalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8">
+              <TextBlock x:Name="AddTip5cCount" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+            <Image Grid.Column="3" x:Name="AddTip5cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip10c" Grid.Row="0" Grid.Column="1" Margin="5,0,0,5" Padding="0" Click="AddTipDenom_Click" Tag="10"
+                BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0" HorizontalContentAlignment="Stretch">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="1" x:Name="AddTip10cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
+            <Border Grid.Column="3" VerticalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8">
+              <TextBlock x:Name="AddTip10cCount" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip20c" Grid.Row="1" Grid.Column="0" Margin="0,5,5,5" Padding="0" Click="AddTipDenom_Click" Tag="20"
+                BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0" HorizontalContentAlignment="Stretch">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="1" VerticalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8">
+              <TextBlock x:Name="AddTip20cCount" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+            <Image Grid.Column="3" x:Name="AddTip20cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip50c" Grid.Row="1" Grid.Column="1" Margin="5,5,0,5" Padding="0" Click="AddTipDenom_Click" Tag="50"
+                BorderThickness="2" BorderBrush="Gray" Background="#C0C0C0" HorizontalContentAlignment="Stretch">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="1" x:Name="AddTip50cImage" Stretch="Uniform" VerticalAlignment="Stretch"/>
+            <Border Grid.Column="3" VerticalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8">
+              <TextBlock x:Name="AddTip50cCount" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip1" Grid.Row="2" Grid.Column="0" Margin="0,5,5,5" Padding="0" Click="AddTipDenom_Click" Tag="100"
+                BorderThickness="2" BorderBrush="Gray" Background="#B8860B" HorizontalContentAlignment="Stretch">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="1" VerticalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8">
+              <TextBlock x:Name="AddTip1Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+            <Image Grid.Column="3" x:Name="AddTip1Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip2" Grid.Row="2" Grid.Column="1" Margin="5,5,0,5" Padding="0" Click="AddTipDenom_Click" Tag="200"
+                BorderThickness="2" BorderBrush="Gray" Background="#B8860B" HorizontalContentAlignment="Stretch">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="1" x:Name="AddTip2Image" Stretch="Uniform" VerticalAlignment="Stretch"/>
+            <Border Grid.Column="3" VerticalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8">
+              <TextBlock x:Name="AddTip2Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip5" Grid.Row="3" Grid.Column="0" Margin="0,5,5,5" Padding="0" Click="AddTipDenom_Click" Tag="500"
+                BorderThickness="2" BorderBrush="Gray">
+          <Grid>
+            <Image x:Name="AddTip5Image" Stretch="Fill"/>
+            <Rectangle Fill="#40000000"/>
+            <Border VerticalAlignment="Center" HorizontalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8" Margin="4">
+              <TextBlock x:Name="AddTip5Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip10" Grid.Row="3" Grid.Column="1" Margin="5,5,0,5" Padding="0" Click="AddTipDenom_Click" Tag="1000"
+                BorderThickness="2" BorderBrush="Gray">
+          <Grid>
+            <Image x:Name="AddTip10Image" Stretch="Fill"/>
+            <Rectangle Fill="#40000000"/>
+            <Border VerticalAlignment="Center" HorizontalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8" Margin="4">
+              <TextBlock x:Name="AddTip10Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip20" Grid.Row="4" Grid.Column="0" Margin="0,5,5,5" Padding="0" Click="AddTipDenom_Click" Tag="2000"
+                BorderThickness="2" BorderBrush="Gray">
+          <Grid>
+            <Image x:Name="AddTip20Image" Stretch="Fill"/>
+            <Rectangle Fill="#40000000"/>
+            <Border VerticalAlignment="Center" HorizontalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8" Margin="4">
+              <TextBlock x:Name="AddTip20Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip50" Grid.Row="4" Grid.Column="1" Margin="5,5,0,5" Padding="0" Click="AddTipDenom_Click" Tag="5000"
+                BorderThickness="2" BorderBrush="Gray">
+          <Grid>
+            <Image x:Name="AddTip50Image" Stretch="Fill"/>
+            <Rectangle Fill="#40000000"/>
+            <Border VerticalAlignment="Center" HorizontalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8" Margin="4">
+              <TextBlock x:Name="AddTip50Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Button x:Name="AddTip100" Grid.Row="5" Grid.Column="0" Margin="0,5,5,0" Padding="0" Click="AddTipDenom_Click" Tag="10000"
+                BorderThickness="2" BorderBrush="Gray">
+          <Grid>
+            <Image x:Name="AddTip100Image" Stretch="Fill"/>
+            <Rectangle Fill="#40000000"/>
+            <Border VerticalAlignment="Center" HorizontalAlignment="Center" Background="#E0FFFFFF" BorderBrush="#404040" BorderThickness="3" CornerRadius="8" Padding="12,8" Margin="4">
+              <TextBlock x:Name="AddTip100Count" Text="×0" FontSize="32" FontWeight="Bold" Foreground="#202020" HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Button>
+        <Grid Grid.Row="5" Grid.Column="1" Margin="5,5,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <Button x:Name="AddTip1xButton" Grid.Column="0" Margin="0,0,2,0" Padding="5,10" BorderThickness="2" BorderBrush="Gray" Background="LightGreen" Click="AddTipMultiplier1x_Click">
+            <StackPanel><TextBlock Text="×1" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/></StackPanel>
+          </Button>
+          <Button x:Name="AddTip5xButton" Grid.Column="1" Margin="2,0,2,0" Padding="5,10" BorderThickness="2" BorderBrush="Gray" Background="LightBlue" Click="AddTipMultiplier5x_Click">
+            <StackPanel><TextBlock Text="×5" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/></StackPanel>
+          </Button>
+          <Button x:Name="AddTip20xButton" Grid.Column="2" Margin="2,0,0,0" Padding="5,10" BorderThickness="2" BorderBrush="Gray" Background="LightBlue" Click="AddTipMultiplier20x_Click">
+            <StackPanel><TextBlock Text="×20" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/></StackPanel>
           </Button>
         </Grid>
       </Grid>

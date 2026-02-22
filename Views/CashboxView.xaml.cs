@@ -20,6 +20,10 @@ namespace pokersoc_connect.Views
     private Stack<int> _floatHistory = new();
     private int _currentMultiplier = 1;
 
+    private Dictionary<int, int> _addTipCounts = new();
+    private Stack<int> _addTipHistory = new();
+    private int _addTipMultiplier = 1;
+
     public event EventHandler? CloseRequested;
 
     public CashboxView()
@@ -49,9 +53,22 @@ namespace pokersoc_connect.Views
       LoadCurrencyImage(Float20Image, Float20Text, Path.Combine(currencyPath, "note_20.png"));
       LoadCurrencyImage(Float50Image, Float50Text, Path.Combine(currencyPath, "note_50.png"));
       LoadCurrencyImage(Float100Image, Float100Text, Path.Combine(currencyPath, "note_100.png"));
+
+      // Add Tip view currency images (reuse same paths)
+      LoadCurrencyImage(AddTip5cImage, null, Path.Combine(currencyPath, "coin_5c.png"));
+      LoadCurrencyImage(AddTip10cImage, null, Path.Combine(currencyPath, "coin_10c.png"));
+      LoadCurrencyImage(AddTip20cImage, null, Path.Combine(currencyPath, "coin_20c.png"));
+      LoadCurrencyImage(AddTip50cImage, null, Path.Combine(currencyPath, "coin_50c.png"));
+      LoadCurrencyImage(AddTip1Image, null, Path.Combine(currencyPath, "coin_1.png"));
+      LoadCurrencyImage(AddTip2Image, null, Path.Combine(currencyPath, "coin_2.png"));
+      LoadCurrencyImage(AddTip5Image, null, Path.Combine(currencyPath, "note_5.png"));
+      LoadCurrencyImage(AddTip10Image, null, Path.Combine(currencyPath, "note_10.png"));
+      LoadCurrencyImage(AddTip20Image, null, Path.Combine(currencyPath, "note_20.png"));
+      LoadCurrencyImage(AddTip50Image, null, Path.Combine(currencyPath, "note_50.png"));
+      LoadCurrencyImage(AddTip100Image, null, Path.Combine(currencyPath, "note_100.png"));
     }
 
-    private void LoadCurrencyImage(Image imageControl, TextBlock fallbackText, string imagePath)
+    private void LoadCurrencyImage(Image imageControl, TextBlock? fallbackText, string imagePath)
     {
       try
       {
@@ -63,16 +80,16 @@ namespace pokersoc_connect.Views
           bitmap.CacheOption = BitmapCacheOption.OnLoad;
           bitmap.EndInit();
           imageControl.Source = bitmap;
-          fallbackText.Visibility = Visibility.Collapsed;
+          if (fallbackText != null) fallbackText.Visibility = Visibility.Collapsed;
         }
-        else
+        else if (fallbackText != null)
         {
           fallbackText.Visibility = Visibility.Visible;
         }
       }
       catch
       {
-        fallbackText.Visibility = Visibility.Visible;
+        if (fallbackText != null) fallbackText.Visibility = Visibility.Visible;
       }
     }
 
@@ -278,9 +295,242 @@ namespace pokersoc_connect.Views
       ShowFloatInputView();
     }
 
+    private void AddTip_Click(object sender, RoutedEventArgs e)
+    {
+      ShowAddTipView();
+    }
+
+    private void ShowAddTipView()
+    {
+      MainCashboxView.Visibility = Visibility.Collapsed;
+      FloatInputView.Visibility = Visibility.Collapsed;
+      ExchangeView.Visibility = Visibility.Collapsed;
+      AddTipView.Visibility = Visibility.Visible;
+      _addTipCounts = CashDenoms.ToDictionary(d => d, d => 0);
+      _addTipHistory.Clear();
+      _addTipMultiplier = 1;
+      UpdateAddTipMultiplierDisplay();
+      RefreshAddTipInput();
+    }
+
+    private void AddTipDenom_Click(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int denom))
+      {
+        _addTipCounts[denom] += _addTipMultiplier;
+        for (int i = 0; i < _addTipMultiplier; i++) _addTipHistory.Push(denom);
+        RefreshAddTipInput();
+      }
+    }
+
+    private void AddTipMultiplier1x_Click(object sender, RoutedEventArgs e)
+    {
+      _addTipMultiplier = 1;
+      UpdateAddTipMultiplierDisplay();
+    }
+
+    private void AddTipMultiplier5x_Click(object sender, RoutedEventArgs e)
+    {
+      _addTipMultiplier = 5;
+      UpdateAddTipMultiplierDisplay();
+    }
+
+    private void AddTipMultiplier20x_Click(object sender, RoutedEventArgs e)
+    {
+      _addTipMultiplier = 20;
+      UpdateAddTipMultiplierDisplay();
+    }
+
+    private void UpdateAddTipMultiplierDisplay()
+    {
+      AddTip1xButton.Background = Brushes.LightBlue;
+      AddTip5xButton.Background = Brushes.LightBlue;
+      AddTip20xButton.Background = Brushes.LightBlue;
+      switch (_addTipMultiplier)
+      {
+        case 1: AddTip1xButton.Background = Brushes.LightGreen; break;
+        case 5: AddTip5xButton.Background = Brushes.LightGreen; break;
+        case 20: AddTip20xButton.Background = Brushes.LightGreen; break;
+      }
+    }
+
+    private void AddTipClear_Click(object sender, RoutedEventArgs e)
+    {
+      _addTipCounts = CashDenoms.ToDictionary(d => d, d => 0);
+      _addTipHistory.Clear();
+      RefreshAddTipInput();
+    }
+
+    private void AddTipUndo_Click(object sender, RoutedEventArgs e)
+    {
+      if (_addTipHistory.Count > 0)
+      {
+        var lastDenom = _addTipHistory.Pop();
+        if (_addTipCounts.ContainsKey(lastDenom) && _addTipCounts[lastDenom] > 0)
+        {
+          _addTipCounts[lastDenom]--;
+          RefreshAddTipInput();
+        }
+      }
+    }
+
+    private void RefreshAddTipInput()
+    {
+      AddTipRowsPanel.Items.Clear();
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      var addedDenoms = CashDenoms.Where(d => _addTipCounts.ContainsKey(d) && _addTipCounts[d] > 0).ToList();
+
+      if (addedDenoms.Count == 0)
+      {
+        var placeholder = new Border
+        {
+          BorderBrush = new SolidColorBrush(Colors.Gray),
+          BorderThickness = new Thickness(1, 0, 1, 1),
+          Background = new SolidColorBrush(Color.FromRgb(250, 250, 250))
+        };
+        var text = new TextBlock
+        {
+          Text = "Click currency buttons to add tip",
+          FontSize = 16,
+          FontStyle = FontStyles.Italic,
+          Foreground = new SolidColorBrush(Colors.Gray),
+          VerticalAlignment = VerticalAlignment.Center,
+          HorizontalAlignment = HorizontalAlignment.Center,
+          Margin = new Thickness(0, 20, 0, 20)
+        };
+        placeholder.Child = text;
+        AddTipRowsPanel.Items.Add(placeholder);
+      }
+      else
+      {
+        int fontSize = addedDenoms.Count <= 4 ? 22 : addedDenoms.Count <= 6 ? 18 : addedDenoms.Count <= 8 ? 14 : 12;
+        int countFontSize = addedDenoms.Count <= 4 ? 28 : addedDenoms.Count <= 6 ? 24 : addedDenoms.Count <= 8 ? 18 : 14;
+        foreach (int denom in addedDenoms.OrderByDescending(d => d))
+        {
+          var row = new Border
+          {
+            BorderBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
+            BorderThickness = new Thickness(2),
+            Background = new SolidColorBrush(Color.FromRgb(245, 255, 245)),
+            CornerRadius = new CornerRadius(5),
+            Margin = new Thickness(0, 1, 0, 1)
+          };
+          var grid = new Grid();
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+          var denominationText = new TextBlock
+          {
+            Text = FormatDenom(denom),
+            FontSize = fontSize,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(4)
+          };
+          Grid.SetColumn(denominationText, 0);
+          var countText = new TextBlock
+          {
+            Text = "×" + _addTipCounts[denom].ToString(),
+            FontSize = countFontSize,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(0, 100, 0)),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(4)
+          };
+          Grid.SetColumn(countText, 1);
+          var valueText = new TextBlock
+          {
+            Text = (_addTipCounts[denom] * denom / 100.0).ToString("C", culture),
+            FontSize = fontSize,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(4)
+          };
+          Grid.SetColumn(valueText, 2);
+          grid.Children.Add(denominationText);
+          grid.Children.Add(countText);
+          grid.Children.Add(valueText);
+          row.Child = grid;
+          AddTipRowsPanel.Items.Add(row);
+        }
+        if (addedDenoms.Count < 4)
+        {
+          for (int i = 0; i < 4 - addedDenoms.Count; i++)
+          {
+            AddTipRowsPanel.Items.Add(new Border { Background = Brushes.Transparent, Margin = new Thickness(0, 1, 0, 1) });
+          }
+        }
+      }
+
+      UpdateAddTipButtonCounts();
+      double total = _addTipCounts.Sum(kv => kv.Key * kv.Value) / 100.0;
+      AddTipTotalText.Text = total.ToString("C", culture);
+    }
+
+    private void UpdateAddTipButtonCounts()
+    {
+      AddTip5cCount.Text = "×" + _addTipCounts.GetValueOrDefault(5, 0);
+      AddTip10cCount.Text = "×" + _addTipCounts.GetValueOrDefault(10, 0);
+      AddTip20cCount.Text = "×" + _addTipCounts.GetValueOrDefault(20, 0);
+      AddTip50cCount.Text = "×" + _addTipCounts.GetValueOrDefault(50, 0);
+      AddTip1Count.Text = "×" + _addTipCounts.GetValueOrDefault(100, 0);
+      AddTip2Count.Text = "×" + _addTipCounts.GetValueOrDefault(200, 0);
+      AddTip5Count.Text = "×" + _addTipCounts.GetValueOrDefault(500, 0);
+      AddTip10Count.Text = "×" + _addTipCounts.GetValueOrDefault(1000, 0);
+      AddTip20Count.Text = "×" + _addTipCounts.GetValueOrDefault(2000, 0);
+      AddTip50Count.Text = "×" + _addTipCounts.GetValueOrDefault(5000, 0);
+      AddTip100Count.Text = "×" + _addTipCounts.GetValueOrDefault(10000, 0);
+    }
+
+    private void AddTipConfirm_Click(object sender, RoutedEventArgs e)
+    {
+      var totalCents = _addTipCounts.Sum(kv => kv.Key * kv.Value);
+      if (totalCents == 0)
+      {
+        MessageBox.Show("Please add at least one denomination for the tip.", "No Tip Amount");
+        return;
+      }
+
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      var batchId = Guid.NewGuid().ToString("N");
+
+      Database.InTransaction(tx =>
+      {
+        foreach (var kv in _addTipCounts.Where(kv => kv.Value > 0))
+        {
+          Database.Exec(
+            "INSERT INTO tips(denom_cents, qty, notes, batch_id) VALUES ($d, $q, $n, $b)",
+            tx, ("$d", kv.Key), ("$q", kv.Value), ("$n", "Cash tip received"), ("$b", batchId)
+          );
+          Database.Exec(
+            "INSERT INTO cashbox_movements(denom_cents, delta_qty, reason, notes, batch_id) VALUES ($d, $q, 'TIP', $n, $b)",
+            tx, ("$d", kv.Key), ("$q", kv.Value), ("$n", "Cash tip received"), ("$b", batchId)
+          );
+        }
+        var tipDesc = string.Join(", ", _addTipCounts.Where(kv => kv.Value > 0).Select(kv => $"{kv.Value}×{FormatDenom(kv.Key)}"));
+        Database.Exec(
+          "INSERT INTO activity_log(activity_key, activity_type, activity_kind, method, staff, amount_cents, notes, batch_id) " +
+          "VALUES ($key, 'TIP', 'TIP', 'MANUAL', 'STAFF', $amount, $notes, $batch)",
+          tx,
+          ("$key", Guid.NewGuid().ToString("N")),
+          ("$amount", totalCents),
+          ("$notes", $"Cash tip: {tipDesc}"),
+          ("$batch", batchId)
+        );
+      });
+
+      _addTipCounts = CashDenoms.ToDictionary(d => d, d => 0);
+      _addTipHistory.Clear();
+      ShowMainCashboxView();
+      RefreshCashbox();
+    }
+
     private void BackToMain_Click(object sender, RoutedEventArgs e)
     {
-      if (FloatInputView.Visibility == Visibility.Visible || ExchangeView.Visibility == Visibility.Visible)
+      if (FloatInputView.Visibility == Visibility.Visible || ExchangeView.Visibility == Visibility.Visible || AddTipView.Visibility == Visibility.Visible)
       {
         ShowMainCashboxView();
       }
@@ -295,6 +545,7 @@ namespace pokersoc_connect.Views
       MainCashboxView.Visibility = Visibility.Visible;
       FloatInputView.Visibility = Visibility.Collapsed;
       ExchangeView.Visibility = Visibility.Collapsed;
+      AddTipView.Visibility = Visibility.Collapsed;
     }
 
     private void ShowFloatInputView()

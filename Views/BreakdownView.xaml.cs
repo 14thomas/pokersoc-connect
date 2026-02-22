@@ -66,6 +66,14 @@ namespace pokersoc_connect.Views
       DeleteButton.Visibility = Visibility.Visible;
     }
 
+    // Enable deletion for cash tips
+    public void EnableDeletionForTip(string batchId)
+    {
+      _batchId = batchId;
+      _txType = "TIP";
+      DeleteButton.Visibility = Visibility.Visible;
+    }
+
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
       _enteredPassword = "";
@@ -142,6 +150,10 @@ namespace pokersoc_connect.Views
         else if (_txType == "LOST_CHIP" && !string.IsNullOrEmpty(_batchId))
         {
           Database.DeleteLostChips(_batchId);
+        }
+        else if (_txType == "TIP" && !string.IsNullOrEmpty(_batchId))
+        {
+          Database.DeleteTip(_batchId);
         }
         else if (_txId.HasValue && !string.IsNullOrEmpty(_txType))
         {
@@ -257,8 +269,9 @@ namespace pokersoc_connect.Views
     {
       5 => "5c", 10 => "10c", 20 => "20c", 50 => "50c",
       100 => "$1", 200 => "$2", 500 => "$5",
+      1000 => "$10", 2000 => "$20", 5000 => "$50",
       2500 => "$25", 10000 => "$100",
-      _ => $"{cents}c"
+      _ => cents >= 100 ? $"${cents / 100}" : $"{cents}c"
     };
 
     private static string ChipColor(int cents) => cents switch

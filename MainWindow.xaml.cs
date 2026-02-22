@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.IO;
 
 namespace pokersoc_connect
@@ -27,6 +28,9 @@ namespace pokersoc_connect
     private string _pendingPlayerId = string.Empty;
 
     private bool _allowClose = false;
+
+    // Auto-expire player ID after 3 minutes of inactivity
+    private DispatcherTimer? _playerIdExpiryTimer;
 
     public MainWindow()
     {
@@ -118,6 +122,7 @@ namespace pokersoc_connect
               // Lock the field to prevent accidental edits during verification
               CurrentPlayerIdBox.IsReadOnly = true;
               CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 200));
+              StartPlayerIdExpiryTimer();
             }
             else
             {
@@ -145,6 +150,7 @@ namespace pokersoc_connect
               
               // Log attendance (even for underage players)
               Database.LogPlayerAttendance(playerId);
+              StartPlayerIdExpiryTimer();
             }
           }
           catch (Exception ex)
@@ -171,6 +177,12 @@ namespace pokersoc_connect
 
     private void ClearPlayer_Click(object sender, RoutedEventArgs e)
     {
+      ClearPlayer();
+    }
+
+    private void ClearPlayer()
+    {
+      StopPlayerIdExpiryTimer();
       _currentPlayerId = string.Empty;
       _pendingPlayerId = string.Empty;
       _playerVerified = false;
@@ -183,6 +195,27 @@ namespace pokersoc_connect
       PlayerInfoPanel.Visibility = Visibility.Collapsed;
       CurrentPlayerIdBox.Focus();
       UpdatePlayerButtons();
+    }
+
+    private void StartPlayerIdExpiryTimer()
+    {
+      StopPlayerIdExpiryTimer();
+      _playerIdExpiryTimer = new DispatcherTimer
+      {
+        Interval = TimeSpan.FromMinutes(3)
+      };
+      _playerIdExpiryTimer.Tick += (s, e) =>
+      {
+        StopPlayerIdExpiryTimer();
+        ClearPlayer();
+      };
+      _playerIdExpiryTimer.Start();
+    }
+
+    private void StopPlayerIdExpiryTimer()
+    {
+      _playerIdExpiryTimer?.Stop();
+      _playerIdExpiryTimer = null;
     }
     
     private void ShowPlayerInfo(string playerId)
@@ -264,10 +297,7 @@ namespace pokersoc_connect
         
         // Log attendance
         Database.LogPlayerAttendance(_currentPlayerId);
-        
-        // Show success message briefly (optional - you can remove this if you want)
-        // MessageBox.Show($"Player {_currentPlayerId} added successfully!", "Success", 
-        //   MessageBoxButton.OK, MessageBoxImage.Information);
+        StartPlayerIdExpiryTimer();
       }
       catch (Exception ex)
       {
@@ -303,6 +333,7 @@ namespace pokersoc_connect
         
         // Log attendance (even for underage players)
         Database.LogPlayerAttendance(_currentPlayerId);
+        StartPlayerIdExpiryTimer();
       }
       catch (Exception ex)
       {
@@ -313,6 +344,7 @@ namespace pokersoc_connect
 
     private void CancelNewPlayer_Click(object sender, RoutedEventArgs e)
     {
+      StopPlayerIdExpiryTimer();
       // Cancel - clear everything
       _currentPlayerId = string.Empty;
       _pendingPlayerId = string.Empty;
@@ -962,6 +994,11 @@ ORDER BY full_time DESC
           var batchId = row["batch_id"]?.ToString();
           ShowLostChipsBreakdown(batchId);
         }
+        else if (kind == "TIP")
+        {
+          var batchId = row["batch_id"]?.ToString();
+          ShowTipBreakdown(batchId);
+        }
       }
     }
 
@@ -1262,6 +1299,59 @@ ORDER BY denom_cents DESC", ("$b", batchId));
       if (!string.IsNullOrEmpty(batchId))
       {
         view.EnableDeletionForLostChips(batchId);
+      }
+      view.Back += (_, __) => ShowTransactions();
+      view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };
+      ShowScreen(view);
+    }
+
+    private void ShowTipBreakdown(string? batchId)
+    {
+      if (string.IsNullOrWhiteSpace(batchId))
+      {
+        MessageBox.Show(this, "Missing tip batch id.", "Details");
+        return;
+      }
+
+      // Get date/time and notes
+      var infoQuery = Database.Query(@"
+SELECT datetime(time, 'localtime') AS formatted_time, notes
+FROM activity_log
+WHERE batch_id = $b
+LIMIT 1", ("$b", batchId));
+
+      string? dateTime = null;
+      string? notes = null;
+
+      if (infoQuery.Rows.Count > 0)
+      {
+        dateTime = infoQuery.Rows[0]["formatted_time"]?.ToString();
+        var notesObj = infoQuery.Rows[0]["notes"];
+        if (notesObj != null && notesObj != DBNull.Value)
+        {
+          notes = notesObj.ToString();
+        }
+      }
+
+      // Get tip breakdown from cashbox_movements
+      var dt = Database.Query(@"
+SELECT denom_cents, delta_qty AS qty
+FROM cashbox_movements
+WHERE reason = 'TIP' AND batch_id = $b
+ORDER BY denom_cents DESC", ("$b", batchId));
+
+      var lines = dt.Rows.Cast<DataRow>()
+        .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
+        .ToList();
+
+      var view = new BreakdownView("Cash Tip", notes,
+                                   Enumerable.Empty<(int,int)>(),   // No chips
+                                   lines,   // Cash received
+                                   isCashOut: false,
+                                   dateTime: dateTime);
+      if (!string.IsNullOrEmpty(batchId))
+      {
+        view.EnableDeletionForTip(batchId);
       }
       view.Back += (_, __) => ShowTransactions();
       view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };

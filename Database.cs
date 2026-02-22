@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS player_attendance (
       // Migrate tips table to add player_id and tx_id if they don't exist
       try { Exec("ALTER TABLE tips ADD COLUMN player_id TEXT"); } catch { }
       try { Exec("ALTER TABLE tips ADD COLUMN tx_id INTEGER"); } catch { }
+      try { Exec("ALTER TABLE tips ADD COLUMN batch_id TEXT"); } catch { }
 
       // ----- NEW: Activity Log -----
       Exec(@"
@@ -694,11 +695,26 @@ CREATE TABLE IF NOT EXISTS app_settings (
     {
       InTransaction(tx =>
       {
-        // Delete the tips entries linked to this batch
-        Exec("DELETE FROM tips WHERE tx_id IN (SELECT move_id FROM cashbox_movements WHERE batch_id = $batch)", tx, ("$batch", batchId));
-        
+        // Delete the tips entries linked to this batch (by batch_id or legacy tx_id link)
+        Exec("DELETE FROM tips WHERE batch_id = $batch OR tx_id IN (SELECT move_id FROM cashbox_movements WHERE batch_id = $batch)", tx, ("$batch", batchId));
+
         // Delete the cashbox movements
         Exec("DELETE FROM cashbox_movements WHERE batch_id = $batch AND reason = 'LOST_CHIP'", tx, ("$batch", batchId));
+
+        // Delete activity log entry
+        Exec("DELETE FROM activity_log WHERE batch_id = $batch", tx, ("$batch", batchId));
+      });
+    }
+
+    public static void DeleteTip(string batchId)
+    {
+      InTransaction(tx =>
+      {
+        // Delete tips linked to this batch
+        Exec("DELETE FROM tips WHERE batch_id = $batch", tx, ("$batch", batchId));
+
+        // Delete cashbox movements (removing +delta rows reduces cashbox total by the tip amount)
+        Exec("DELETE FROM cashbox_movements WHERE batch_id = $batch AND reason = 'TIP'", tx, ("$batch", batchId));
 
         // Delete activity log entry
         Exec("DELETE FROM activity_log WHERE batch_id = $batch", tx, ("$batch", batchId));

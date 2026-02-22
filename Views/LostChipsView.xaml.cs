@@ -245,8 +245,8 @@ namespace pokersoc_connect.Views
           foreach (var (denom, qty) in tipsToRecord)
           {
             Database.Exec(
-              "INSERT INTO tips(denom_cents, qty, notes) VALUES ($d, $q, $n)",
-              tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip")
+              "INSERT INTO tips(denom_cents, qty, notes, batch_id) VALUES ($d, $q, $n, $b)",
+              tx, ("$d", denom), ("$q", qty), ("$n", "Lost chip recorded as tip"), ("$b", batchId)
             );
 
             Database.Exec(
