@@ -922,7 +922,7 @@ namespace pokersoc_connect
       var dt = Database.Query(@"
 SELECT 
   tx_id,
-  strftime('%H:%M:%S', datetime(time, 'localtime')) AS time,
+  time,
   type,
   player_id,
   cash_amt,
@@ -935,7 +935,7 @@ WHERE tx_id NOT IN (SELECT tx_id FROM activity_log WHERE tx_id IS NOT NULL)
 UNION ALL
 SELECT 
   tx_id,
-  strftime('%H:%M:%S', datetime(time, 'localtime')) AS time,
+  time,
   activity_type AS type,
   player_id,
   amount_cents / 100.0 AS cash_amt,
@@ -946,6 +946,13 @@ SELECT
 FROM activity_log
 ORDER BY full_time DESC
 ");
+      // Convert UTC to local time (SQLite's localtime is unreliable on Windows)
+      foreach (DataRow row in dt.Rows)
+      {
+        var raw = row["time"]?.ToString();
+        if (!string.IsNullOrEmpty(raw))
+          row["time"] = Database.UtcToLocalTimeString(raw, "HH:mm:ss");
+      }
       TxGrid.ItemsSource = dt.DefaultView;
     }
 
@@ -1008,9 +1015,7 @@ ORDER BY full_time DESC
 
       // Get transaction date/time and notes from activity_log (has detailed notes)
       var txInfo = Database.Query(@"
-SELECT 
-  datetime(time, 'localtime') AS formatted_time,
-  notes
+SELECT time, notes
 FROM activity_log 
 WHERE tx_id = $tx
 LIMIT 1", ("$tx", txId));
@@ -1020,7 +1025,7 @@ LIMIT 1", ("$tx", txId));
       
       if (txInfo.Rows.Count > 0)
       {
-        dateTime = txInfo.Rows[0]["formatted_time"]?.ToString();
+        dateTime = Database.UtcToLocalTimeString(txInfo.Rows[0]["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
         var notesObj = txInfo.Rows[0]["notes"];
         if (notesObj != null && notesObj != DBNull.Value)
         {
@@ -1030,6 +1035,13 @@ LIMIT 1", ("$tx", txId));
             additionalInfo = null;
           }
         }
+      }
+      else
+      {
+        // Fallback: get time from transactions table (for tx not in activity_log)
+        var txTime = Database.Query("SELECT time FROM transactions WHERE tx_id = $tx LIMIT 1", ("$tx", txId));
+        if (txTime.Rows.Count > 0)
+          dateTime = Database.UtcToLocalTimeString(txTime.Rows[0]["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
       }
 
       // Chips turned in (tx_chips)
@@ -1197,13 +1209,13 @@ ORDER BY denom_cents DESC", ("$id", moveId));
         
         // Get date/time for legacy float
         var timeInfo = Database.Query(@"
-SELECT datetime(time, 'localtime') AS formatted_time
+SELECT time
 FROM cashbox_movements
 WHERE move_id = $id
 LIMIT 1", ("$id", moveId));
         if (timeInfo.Rows.Count > 0)
         {
-          dateTime = timeInfo.Rows[0]["formatted_time"]?.ToString();
+          dateTime = Database.UtcToLocalTimeString(timeInfo.Rows[0]["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
         }
       }
       else
@@ -1217,13 +1229,13 @@ ORDER BY denom_cents DESC", ("$b", batchId));
         
         // Get date/time for batch float
         var timeInfo = Database.Query(@"
-SELECT datetime(time, 'localtime') AS formatted_time
+SELECT time
 FROM cashbox_movements
 WHERE batch_id = $b
 LIMIT 1", ("$b", batchId));
         if (timeInfo.Rows.Count > 0)
         {
-          dateTime = timeInfo.Rows[0]["formatted_time"]?.ToString();
+          dateTime = Database.UtcToLocalTimeString(timeInfo.Rows[0]["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
         }
       }
 
@@ -1262,7 +1274,7 @@ LIMIT 1", ("$b", batchId));
 
       // Get date/time and notes
       var infoQuery = Database.Query(@"
-SELECT datetime(time, 'localtime') AS formatted_time, notes
+SELECT time, notes
 FROM activity_log
 WHERE batch_id = $b
 LIMIT 1", ("$b", batchId));
@@ -1272,7 +1284,7 @@ LIMIT 1", ("$b", batchId));
       
       if (infoQuery.Rows.Count > 0)
       {
-        dateTime = infoQuery.Rows[0]["formatted_time"]?.ToString();
+        dateTime = Database.UtcToLocalTimeString(infoQuery.Rows[0]["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
         var notesObj = infoQuery.Rows[0]["notes"];
         if (notesObj != null && notesObj != DBNull.Value)
         {
@@ -1315,7 +1327,7 @@ ORDER BY denom_cents DESC", ("$b", batchId));
 
       // Get date/time and notes
       var infoQuery = Database.Query(@"
-SELECT datetime(time, 'localtime') AS formatted_time, notes
+SELECT time, notes
 FROM activity_log
 WHERE batch_id = $b
 LIMIT 1", ("$b", batchId));
@@ -1325,7 +1337,7 @@ LIMIT 1", ("$b", batchId));
 
       if (infoQuery.Rows.Count > 0)
       {
-        dateTime = infoQuery.Rows[0]["formatted_time"]?.ToString();
+        dateTime = Database.UtcToLocalTimeString(infoQuery.Rows[0]["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
         var notesObj = infoQuery.Rows[0]["notes"];
         if (notesObj != null && notesObj != DBNull.Value)
         {

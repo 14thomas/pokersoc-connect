@@ -9,6 +9,19 @@ namespace pokersoc_connect
 {
   public static class Database
   {
+    /// <summary>Convert UTC timestamp from SQLite to local time string. SQLite's 'localtime' can be wrong on Windows.</summary>
+    public static string UtcToLocalTimeString(string? utcString, string format = "HH:mm:ss")
+    {
+      if (string.IsNullOrEmpty(utcString)) return "";
+      try
+      {
+        var utc = DateTime.SpecifyKind(DateTime.Parse(utcString), DateTimeKind.Utc);
+        var local = TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local);
+        return local.ToString(format);
+      }
+      catch { return utcString ?? ""; }
+    }
+
     public static SqliteConnection? Conn { get; private set; }
 
     public static void Open(string dbPath)

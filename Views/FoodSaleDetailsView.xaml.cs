@@ -40,8 +40,8 @@ WHERE s.sale_id = $sale", ("$sale", saleId));
         var sale = saleDt.Rows[0];
         var au = CultureInfo.GetCultureInfo("en-AU");
 
-        // Build sale time
-        var saleTime = Convert.ToDateTime(sale["time"]).ToString("yyyy-MM-dd HH:mm:ss");
+        // Build sale time (SQLite stores UTC; convert to local)
+        var saleTime = Database.UtcToLocalTimeString(sale["time"]?.ToString(), "yyyy-MM-dd HH:mm:ss");
 
         // Build product info
         var productInfo = $"{sale["product_name"]} x{sale["qty"]} @ {Convert.ToDouble(sale["unit_price"]):C} = {Convert.ToDouble(sale["total_amount"]):C}";
