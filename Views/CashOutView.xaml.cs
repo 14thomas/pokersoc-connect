@@ -409,7 +409,7 @@ namespace pokersoc_connect.Views
     private void Chip_Click(object sender, RoutedEventArgs e)
     {
       if (sender is not Button b || !int.TryParse(b.Tag?.ToString(), out var cents)) return;
-      var add = Math.Max(1, _multiplier);
+      var add = Math.Max(1, ChipCounting.GetAddAmount(cents, _multiplier));
       _chipCounts[cents] = _chipCounts.TryGetValue(cents, out var c) ? c + add : add;
       _history.Push((cents, add));
       UpdateBadgeFor(b, _chipCounts[cents]);

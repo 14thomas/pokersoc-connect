@@ -275,7 +275,7 @@
             </StackPanel>
           </Button>
 
-          <!-- 5x Button -->
+          <!-- 4x/5x stack button (4 for 25c/$25 chips, 5 for others) -->
           <Button x:Name="Toggle5x" Grid.Column="1"
                   Margin="5,0,5,0"
                   Padding="10,15"
@@ -284,7 +284,7 @@
                   Background="LightBlue"
                   Click="Toggle5x_Click">
             <StackPanel>
-              <TextBlock Text="×5" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="×4/×5" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
             </StackPanel>
           </Button>
 

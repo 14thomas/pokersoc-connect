@@ -756,7 +756,7 @@
               </StackPanel>
             </Button>
 
-            <!-- 5x Button -->
+            <!-- 4x/5x stack button (4 for 25c/$25 chips, 5 for others) -->
             <Button x:Name="Chip5xButton" Grid.Column="1"
                     Margin="2,0,2,0"
                     Padding="5,10"
@@ -765,7 +765,7 @@
                     Background="LightBlue"
                     Click="ChipMultiplier5x_Click">
               <StackPanel>
-                <TextBlock Text="×5" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="×4/×5" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
               </StackPanel>
             </Button>
 

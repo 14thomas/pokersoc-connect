@@ -522,16 +522,17 @@ namespace pokersoc_connect.Views
           
           if (countText != null)
           {
+            var add = ChipCounting.GetAddAmount(denomination, _chipMultiplier);
             var currentCount = int.Parse(countText.Text);
-            countText.Text = (currentCount + _chipMultiplier).ToString();
+            countText.Text = (currentCount + add).ToString();
             
             if (_chipDenominations.ContainsKey(denomination))
             {
-              _chipDenominations[denomination] += _chipMultiplier;
+              _chipDenominations[denomination] += add;
             }
             else
             {
-              _chipDenominations[denomination] = _chipMultiplier;
+              _chipDenominations[denomination] = add;
             }
             
             UpdatePaymentSummary();

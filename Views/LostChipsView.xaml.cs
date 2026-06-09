@@ -47,7 +47,7 @@ namespace pokersoc_connect.Views
     {
       _undoStack.Add((denom, _chipValues[denom]));
       
-      _chipValues[denom] += count * _currentMultiplier;
+      _chipValues[denom] += count * ChipCounting.GetAddAmount(denom, _currentMultiplier);
       _chipCounts[denom].Text = $"×{_chipValues[denom]}";
       UpdateTotal();
       RefreshSummaryTable();
