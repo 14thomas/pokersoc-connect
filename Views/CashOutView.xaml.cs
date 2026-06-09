@@ -26,7 +26,7 @@ namespace pokersoc_connect.Views
 
     private readonly Dictionary<int,int> _available = new();
     private readonly Dictionary<int,int> _payout = new();
-    private static readonly int[] DenomsDesc = { 10000,5000,2500,2000,1000,500,100,50,25,20,10,5 };
+    private static readonly int[] DenomsDesc = { 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5 };
 
     // New fields for second screen functionality
     private readonly Dictionary<int,int> _changeDenominations = new();
