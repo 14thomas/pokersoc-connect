@@ -21,7 +21,7 @@ namespace pokersoc_connect.Views
     private static readonly int[] CashDenoms = { 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
 
     private Dictionary<int, int> _cashCounts = new();
-    private Stack<int> _cashHistory = new();
+    private Stack<(int denom, int count)> _cashHistory = new();
     private int _currentMultiplier = 1;
     private double _buyInAmount = 0.0;
     private string _buyInAmountString = "0.00";
@@ -306,11 +306,7 @@ namespace pokersoc_connect.Views
       if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int denom))
       {
         _cashCounts[denom] += _currentMultiplier;
-        // Add to history for undo functionality
-        for (int i = 0; i < _currentMultiplier; i++)
-        {
-          _cashHistory.Push(denom);
-        }
+        _cashHistory.Push((denom, _currentMultiplier));
         RefreshCashInput();
       }
     }
@@ -394,10 +390,10 @@ namespace pokersoc_connect.Views
     {
       if (_cashHistory.Count > 0)
       {
-        var lastDenom = _cashHistory.Pop();
-        if (_cashCounts.ContainsKey(lastDenom) && _cashCounts[lastDenom] > 0)
+        var (denom, count) = _cashHistory.Pop();
+        if (_cashCounts.ContainsKey(denom))
         {
-          _cashCounts[lastDenom]--;
+          _cashCounts[denom] = Math.Max(0, _cashCounts[denom] - count);
           RefreshCashInput();
         }
       }

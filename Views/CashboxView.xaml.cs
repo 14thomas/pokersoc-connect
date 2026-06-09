@@ -17,11 +17,11 @@ namespace pokersoc_connect.Views
     private static readonly int[] CashDenoms = { 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
 
     private Dictionary<int, int> _floatCounts = new();
-    private Stack<int> _floatHistory = new();
+    private Stack<(int denom, int count)> _floatHistory = new();
     private int _currentMultiplier = 1;
 
     private Dictionary<int, int> _addTipCounts = new();
-    private Stack<int> _addTipHistory = new();
+    private Stack<(int denom, int count)> _addTipHistory = new();
     private int _addTipMultiplier = 1;
 
     public event EventHandler? CloseRequested;
@@ -318,7 +318,7 @@ namespace pokersoc_connect.Views
       if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int denom))
       {
         _addTipCounts[denom] += _addTipMultiplier;
-        for (int i = 0; i < _addTipMultiplier; i++) _addTipHistory.Push(denom);
+        _addTipHistory.Push((denom, _addTipMultiplier));
         RefreshAddTipInput();
       }
     }
@@ -365,10 +365,10 @@ namespace pokersoc_connect.Views
     {
       if (_addTipHistory.Count > 0)
       {
-        var lastDenom = _addTipHistory.Pop();
-        if (_addTipCounts.ContainsKey(lastDenom) && _addTipCounts[lastDenom] > 0)
+        var (denom, count) = _addTipHistory.Pop();
+        if (_addTipCounts.ContainsKey(denom))
         {
-          _addTipCounts[lastDenom]--;
+          _addTipCounts[denom] = Math.Max(0, _addTipCounts[denom] - count);
           RefreshAddTipInput();
         }
       }
@@ -729,11 +729,7 @@ namespace pokersoc_connect.Views
       if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int denom))
       {
         _floatCounts[denom] += _currentMultiplier;
-        // Add to history for undo functionality
-        for (int i = 0; i < _currentMultiplier; i++)
-        {
-          _floatHistory.Push(denom);
-        }
+        _floatHistory.Push((denom, _currentMultiplier));
         RefreshFloatInput();
       }
     }
@@ -827,10 +823,10 @@ namespace pokersoc_connect.Views
     {
       if (_floatHistory.Count > 0)
       {
-        var lastDenom = _floatHistory.Pop();
-        if (_floatCounts.ContainsKey(lastDenom) && _floatCounts[lastDenom] > 0)
+        var (denom, count) = _floatHistory.Pop();
+        if (_floatCounts.ContainsKey(denom))
         {
-          _floatCounts[lastDenom]--;
+          _floatCounts[denom] = Math.Max(0, _floatCounts[denom] - count);
           RefreshFloatInput();
         }
       }

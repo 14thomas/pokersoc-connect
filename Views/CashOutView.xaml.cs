@@ -21,7 +21,7 @@ namespace pokersoc_connect.Views
     private readonly Dictionary<int,int> _chipCounts = new()
       { {5,0},{10,0},{20,0},{25,0},{50,0},{100,0},{500,0},{1000,0},{2000,0},{2500,0},{5000,0},{10000,0} };
 
-    private readonly Stack<int> _history = new();
+    private readonly Stack<(int denom, int count)> _history = new();
     private int _multiplier = 1;
 
     private readonly Dictionary<int,int> _available = new();
@@ -411,7 +411,7 @@ namespace pokersoc_connect.Views
       if (sender is not Button b || !int.TryParse(b.Tag?.ToString(), out var cents)) return;
       var add = Math.Max(1, _multiplier);
       _chipCounts[cents] = _chipCounts.TryGetValue(cents, out var c) ? c + add : add;
-      for (int i=0;i<add;i++) _history.Push(cents);
+      _history.Push((cents, add));
       UpdateBadgeFor(b, _chipCounts[cents]);
       UpdateChipCountDisplay(cents, _chipCounts[cents]);
       RecomputePlan();
@@ -420,8 +420,8 @@ namespace pokersoc_connect.Views
     private void Undo_Click(object sender, RoutedEventArgs e)
     {
       if (_history.Count == 0) return;
-      var cents = _history.Pop();
-      if (_chipCounts[cents] > 0) _chipCounts[cents]--;
+      var (cents, count) = _history.Pop();
+      _chipCounts[cents] = Math.Max(0, _chipCounts[cents] - count);
       var btn = AllChipButtons().FirstOrDefault(x => x.Tag?.ToString()==cents.ToString());
       if (btn != null) 
       {

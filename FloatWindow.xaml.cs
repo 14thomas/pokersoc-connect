@@ -18,7 +18,7 @@ namespace pokersoc_connect
     };
 
     private int _multiplier = 1;
-    private readonly Stack<int> _history = new();
+    private readonly Stack<(int denom, int count)> _history = new();
 
     public FloatWindow(Dictionary<int,int>? preset = null)
     {
@@ -199,11 +199,7 @@ namespace pokersoc_connect
       if (sender is not Button b || b.Tag is null || !int.TryParse(b.Tag.ToString(), out var cents)) return;
       var add = _multiplier <= 0 ? 1 : _multiplier;
       Counts[cents] = Counts.TryGetValue(cents, out var c) ? c + add : add;
-      // Add to history for undo functionality
-      for (int i = 0; i < add; i++)
-      {
-        _history.Push(cents);
-      }
+      _history.Push((cents, add));
       UpdateAllButtonCounts();
       UpdateTotal();
       RefreshCashInput();
@@ -238,10 +234,10 @@ namespace pokersoc_connect
     {
       if (_history.Count > 0)
       {
-        var lastDenom = _history.Pop();
-        if (Counts.ContainsKey(lastDenom) && Counts[lastDenom] > 0)
+        var (denom, count) = _history.Pop();
+        if (Counts.ContainsKey(denom))
         {
-          Counts[lastDenom]--;
+          Counts[denom] = Math.Max(0, Counts[denom] - count);
           UpdateAllButtonCounts();
           UpdateTotal();
           RefreshCashInput();
