@@ -35,6 +35,7 @@ namespace pokersoc_connect
     public MainWindow()
     {
       InitializeComponent();
+      ApplySessionModeUI();
       ShowTransactions();
       RefreshActivity();
       TxGrid.MouseDoubleClick += TxGrid_MouseDoubleClick;
@@ -42,6 +43,31 @@ namespace pokersoc_connect
       this.Closing += MainWindow_Closing;
       this.Activated += MainWindow_Activated;
       this.Loaded += MainWindow_Loaded;
+    }
+
+    private void ApplySessionModeUI()
+    {
+      var mode = Database.GetSessionMode();
+      if (mode == SessionMode.Tournament)
+      {
+        Title = "pokersoc-connect — Tournament";
+        LostChipsIcon.Text = "🏆";
+        LostChipsTitle.Text = "Tournament Settings";
+        LostChipsSubtitle.Text = "Buy-in amounts and rebuys";
+        CashOutIcon.Text = "🚧";
+        CashOutTitle.Text = "Coming Soon";
+        CashOutSubtitle.Text = "Tournament cash-out";
+      }
+      else
+      {
+        Title = "pokersoc-connect — Cash Game";
+        LostChipsIcon.Text = "💸";
+        LostChipsTitle.Text = "Lost Chips";
+        LostChipsSubtitle.Text = "Record lost chips as tips";
+        CashOutIcon.Text = "💸";
+        CashOutTitle.Text = "Cash-out";
+        CashOutSubtitle.Text = "Record player cash-out";
+      }
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -436,6 +462,7 @@ namespace pokersoc_connect
         settingsView.SettingsChanged += (s, e) => 
         {
           RefreshActivity();
+          ApplySessionModeUI();
         };
       settingsView.CloseRequested += (s, e) => ShowTransactions();
       ScreenHost.Content = settingsView;
@@ -524,6 +551,17 @@ namespace pokersoc_connect
       if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
 
       var view = new BuyInView();
+
+      if (Database.GetSessionMode() == SessionMode.Tournament)
+      {
+        if (string.IsNullOrEmpty(_currentPlayerId))
+        {
+          MessageBox.Show(this, "Please scan a player before recording a tournament buy-in.");
+          return;
+        }
+
+        view.SetTournamentMode(Database.GetTournamentSettings());
+      }
       
       // Pre-fill player ID if one is set
       if (!string.IsNullOrEmpty(_currentPlayerId))
@@ -544,9 +582,9 @@ namespace pokersoc_connect
           EnsurePlayer(playerId, tx);
 
           Database.Exec(
-            "INSERT INTO transactions(player_id, type, cash_amt, method, staff) " +
-            "VALUES ($p, 'BUYIN', $cash, 'Cash', 'Dealer')",
-            tx, ("$p", playerId), ("$cash", buyInAmt)
+            "INSERT INTO transactions(player_id, type, cash_amt, method, staff, notes) " +
+            "VALUES ($p, 'BUYIN', $cash, 'Cash', 'Dealer', $notes)",
+            tx, ("$p", playerId), ("$cash", buyInAmt), ("$notes", (object?)args.Notes ?? DBNull.Value)
           );
 
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
@@ -583,6 +621,12 @@ namespace pokersoc_connect
     private void CashOut_Click(object sender, RoutedEventArgs e)
     {
       if (Database.Conn is null) { MessageBox.Show(this, "Open a session (DB file) first."); return; }
+
+      if (Database.GetSessionMode() == SessionMode.Tournament)
+      {
+        ShowComingSoon("Coming Soon", "Tournament cash-out is not available yet.");
+        return;
+      }
 
       var view = new CashOutView();
       
@@ -906,8 +950,41 @@ namespace pokersoc_connect
         ShowSettings();
     }
 
+    private void ShowComingSoon(string title, string message)
+    {
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+
+      var view = new ComingSoonView(title, message);
+      view.CloseRequested += (_, __) => ShowTransactions();
+      ScreenHost.Content = view;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowTournamentSettings()
+    {
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+
+      var view = new TournamentSettingsView();
+      view.CloseRequested += (_, __) => ShowTransactions();
+      view.SettingsSaved += (_, __) => RefreshActivity();
+      ScreenHost.Content = view;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
     private void LostChips_Click(object sender, RoutedEventArgs e)
     {
+      if (Database.GetSessionMode() == SessionMode.Tournament)
+      {
+        ShowTournamentSettings();
+        return;
+      }
+
         ShowLostChips();
     }
 

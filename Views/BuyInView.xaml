@@ -6,6 +6,81 @@
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
+    <!-- STEP 0: TOURNAMENT TYPE SELECTION -->
+    <Grid x:Name="TournamentTypeView" Grid.Row="0" Visibility="Collapsed">
+      <Grid Margin="24">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Tournament Buy-in" FontSize="24" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,8"/>
+        <TextBlock x:Name="TournamentTypeSubtitle"
+                   Grid.Row="1"
+                   Text="Select buy-in type"
+                   FontSize="14"
+                   Foreground="Gray"
+                   Margin="0,0,0,20"/>
+
+        <Grid Grid.Row="2" VerticalAlignment="Center">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+
+          <Button x:Name="ArcMemberTypeButton"
+                  Grid.Column="0"
+                  Margin="0,0,8,0"
+                  Padding="20,30"
+                  Click="ArcMemberType_Click"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  Background="#E8F4FD">
+            <StackPanel>
+              <TextBlock Text="ARC MEMBER" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock x:Name="ArcMemberPriceText" Text="" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#2E6DA4"/>
+              <TextBlock x:Name="ArcMemberTypeLabel" Text="" FontSize="12" HorizontalAlignment="Center" Opacity="0.7" Margin="0,6,0,0"/>
+            </StackPanel>
+          </Button>
+
+          <Button x:Name="NonArcMemberTypeButton"
+                  Grid.Column="1"
+                  Margin="8,0,0,0"
+                  Padding="20,30"
+                  Click="NonArcMemberType_Click"
+                  BorderThickness="2"
+                  BorderBrush="Gray"
+                  Background="#FFF8E8">
+            <StackPanel>
+              <TextBlock Text="NON-ARC MEMBER" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock x:Name="NonArcMemberPriceText" Text="" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#B8860B"/>
+              <TextBlock x:Name="NonArcMemberTypeLabel" Text="" FontSize="12" HorizontalAlignment="Center" Opacity="0.7" Margin="0,6,0,0"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <TextBlock x:Name="RebuyCapWarningText"
+                   Grid.Row="2"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Center"
+                   FontSize="14"
+                   FontWeight="Bold"
+                   Foreground="Red"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center"
+                   Visibility="Collapsed"
+                   Margin="0,0,0,20"/>
+
+        <Button Grid.Row="3"
+                Content="Back to Main"
+                HorizontalAlignment="Left"
+                Padding="16,10"
+                Click="Back_Click"/>
+      </Grid>
+    </Grid>
+
     <!-- STEP 1: CASH INPUT VIEW -->
     <Grid x:Name="CashInputView" Grid.Row="0">
       <Grid.ColumnDefinitions>
@@ -78,6 +153,22 @@
               <TextBlock Text="Name: " FontWeight="Bold" Width="80"/>
               <TextBlock x:Name="PlayerNameDisplay" Text="" FontSize="14"/>
             </StackPanel>
+            <Border x:Name="TournamentInfoPanel"
+                    BorderBrush="#4A90D9"
+                    BorderThickness="1"
+                    Background="#E8F4FD"
+                    Padding="8"
+                    Margin="0,8,0,0"
+                    Visibility="Collapsed">
+              <StackPanel>
+                <TextBlock Text="Tournament Buy-in" FontWeight="Bold" FontSize="12" Margin="0,0,0,5"/>
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="Amount: " FontWeight="Bold" Width="100"/>
+                  <TextBlock x:Name="TournamentBuyInDisplay" Text="" FontSize="14" FontWeight="Bold"/>
+                </StackPanel>
+                <TextBlock x:Name="TournamentBuyInTypeDisplay" Text="" FontSize="12" Margin="0,4,0,0" Opacity="0.8"/>
+              </StackPanel>
+            </Border>
           </StackPanel>
         </Border>
 
@@ -89,7 +180,7 @@
           </Grid.ColumnDefinitions>
           
           <!-- Clear Button -->
-          <Button Grid.Column="0" Margin="0,0,5,0" Click="Clear_Click"
+          <Button x:Name="ClearCashButton" Grid.Column="0" Margin="0,0,5,0" Click="Clear_Click"
                   Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Orange">
             <StackPanel>
               <TextBlock Text="🗑️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
@@ -99,7 +190,7 @@
           </Button>
 
               <!-- Undo Button -->
-              <Button Grid.Column="1" Margin="5,0,0,0" Click="Undo_Click"
+              <Button x:Name="UndoCashButton" Grid.Column="1" Margin="5,0,0,0" Click="Undo_Click"
                       Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="Yellow">
             <StackPanel>
               <TextBlock Text="↶" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
@@ -142,12 +233,12 @@
           </Button>
 
           <!-- Next Button -->
-          <Button Grid.Column="1" Margin="5,0,0,0" Click="NextToAmount_Click"
+          <Button x:Name="NextButton" Grid.Column="1" Margin="5,0,0,0" Click="NextToAmount_Click"
                   Padding="15,20" BorderThickness="1,0,1,1" BorderBrush="Gray" Background="LightBlue">
             <StackPanel>
-              <TextBlock Text="➡️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-              <TextBlock Text="Next" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock Text="Set buy-in amount" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+              <TextBlock x:Name="NextButtonIcon" Text="➡️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+              <TextBlock x:Name="NextButtonTitle" Text="Next" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="NextButtonSubtitle" Text="Set buy-in amount" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
             </StackPanel>
           </Button>
         </Grid>
@@ -587,7 +678,7 @@
         </Border>
 
         <!-- Clear and Reset Buttons -->
-        <Grid Grid.Row="3" Margin="0,10,0,10">
+        <Grid x:Name="AmountEditButtons" Grid.Row="3" Margin="0,10,0,10">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -681,7 +772,7 @@
         </Border>
 
         <!-- Numberpad -->
-        <Grid Grid.Row="2">
+        <Grid x:Name="NumpadPanel" Grid.Row="2">
           <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>

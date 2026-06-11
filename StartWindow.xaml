@@ -17,7 +17,7 @@
 
     <StackPanel>
       <TextBlock Text="pokersoc-connect" FontSize="28" FontWeight="Bold"/>
-      <TextBlock Text="Start a new cash game session or open an existing one."
+      <TextBlock Text="Start a new session or open an existing one."
                  Margin="0,8,0,0"/>
     </StackPanel>
 

@@ -56,6 +56,8 @@ namespace pokersoc_connect
       try
       {
         Database.Open(dbPath); // creates and applies schema if new
+        if (start.IsNewSession)
+          Database.SetSessionMode(start.SelectedMode);
       }
       catch (Exception ex)
       {

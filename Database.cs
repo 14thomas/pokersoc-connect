@@ -616,6 +616,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
       return result;
     }
 
+    public static int GetPlayerSessionBuyInCount(string playerId)
+    {
+      return (int)ScalarLong(
+        "SELECT COUNT(*) FROM transactions WHERE player_id = $id AND type = 'BUYIN'",
+        ("$id", playerId)
+      );
+    }
+
     // ----------------- Admin Password -----------------
 
     public static string GetAdminPassword()
@@ -636,6 +644,61 @@ CREATE TABLE IF NOT EXISTS app_settings (
     {
       Exec("INSERT OR REPLACE INTO app_settings(key, value) VALUES ('admin_password', $pwd)", ("$pwd", password));
     }
+
+    // ----------------- Session Mode & Tournament Settings -----------------
+
+    private const string SessionModeKey = "session_mode";
+    private const string TournamentSettingsKey = "tournament_settings";
+
+    public static SessionMode GetSessionMode()
+    {
+      try
+      {
+        var result = Query("SELECT value FROM app_settings WHERE key = $key", ("$key", SessionModeKey));
+        if (result.Rows.Count > 0)
+        {
+          var value = result.Rows[0]["value"]?.ToString();
+          if (string.Equals(value, "tournament", StringComparison.OrdinalIgnoreCase))
+            return SessionMode.Tournament;
+        }
+      }
+      catch { }
+      return SessionMode.CashGame;
+    }
+
+    public static void SetSessionMode(SessionMode mode)
+    {
+      var value = mode == SessionMode.Tournament ? "tournament" : "cash_game";
+      Exec("INSERT OR REPLACE INTO app_settings(key, value) VALUES ($key, $value)",
+        ("$key", SessionModeKey), ("$value", value));
+
+      if (mode == SessionMode.Tournament && string.IsNullOrWhiteSpace(GetSetting(TournamentSettingsKey)))
+        SetTournamentSettings(TournamentSettings.Default());
+    }
+
+    public static string? GetSetting(string key)
+    {
+      try
+      {
+        var result = Query("SELECT value FROM app_settings WHERE key = $key", ("$key", key));
+        if (result.Rows.Count > 0)
+          return result.Rows[0]["value"]?.ToString();
+      }
+      catch { }
+      return null;
+    }
+
+    public static void SetSetting(string key, string value)
+    {
+      Exec("INSERT OR REPLACE INTO app_settings(key, value) VALUES ($key, $value)",
+        ("$key", key), ("$value", value));
+    }
+
+    public static TournamentSettings GetTournamentSettings()
+      => TournamentSettings.FromJson(GetSetting(TournamentSettingsKey));
+
+    public static void SetTournamentSettings(TournamentSettings settings)
+      => SetSetting(TournamentSettingsKey, settings.ToJson());
 
     // ----------------- Transaction Deletion (Undo) -----------------
 

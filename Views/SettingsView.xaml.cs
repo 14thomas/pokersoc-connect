@@ -168,10 +168,16 @@ namespace pokersoc_connect.Views
 
     private void NewSession_Click(object sender, RoutedEventArgs e)
     {
-      var dlg = new SaveFileDialog 
-      { 
-        Filter = "SQLite Database (*.db)|*.db|All files|*.*",
-        FileName = $"pokersoc-session-{DateTime.Now:yyyy-MM-dd-HHmm}.db",
+      var modeDialog = new SessionModeDialog();
+      if (modeDialog.ShowDialog() != true) return;
+
+      var dlg = new SaveFileDialog
+      {
+        Filter = "Session (*.sqlite)|*.sqlite|All files|*.*",
+        FileName = $"Session-{modeDialog.SelectedMode switch {
+          SessionMode.Tournament => "Tournament",
+          _ => "CashGame"
+        }}-{DateTime.Now:yyyy-MM-dd-HHmm}.sqlite",
         Title = "New Session"
       };
       if (dlg.ShowDialog() == true)
@@ -179,13 +185,14 @@ namespace pokersoc_connect.Views
         var result = MessageBox.Show(
           "This will close the current session and create a new one. Continue?",
           "New Session", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        
+
         if (result == MessageBoxResult.Yes)
         {
           try
           {
             Database.Close();
             Database.Open(dlg.FileName);
+            Database.SetSessionMode(modeDialog.SelectedMode);
             MessageBox.Show("New session created successfully.", "New Session Success", MessageBoxButton.OK, MessageBoxImage.Information);
             SettingsChanged?.Invoke(this, EventArgs.Empty);
           }

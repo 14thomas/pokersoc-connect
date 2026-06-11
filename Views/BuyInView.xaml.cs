@@ -27,6 +27,12 @@ namespace pokersoc_connect.Views
     private string _buyInAmountString = "0.00";
 
     private string _playerId = string.Empty;
+    private bool _isTournamentMode;
+    private int _fixedBuyInCents;
+    private bool _isRebuy;
+    private string _buyInNotes = string.Empty;
+    private TournamentSettings? _tournamentSettings;
+
     public string MemberNumber => _playerId;
     public int TotalCents => _cashCounts.Sum(kv => kv.Key * kv.Value);
     public double TotalDollars => TotalCents / 100.0;
@@ -41,6 +47,21 @@ namespace pokersoc_connect.Views
       };
     }
 
+    public void SetTournamentMode(TournamentSettings settings)
+    {
+      _isTournamentMode = true;
+      _tournamentSettings = settings;
+
+      CashInputView.Visibility = Visibility.Collapsed;
+      AmountInputView.Visibility = Visibility.Collapsed;
+      TournamentTypeView.Visibility = Visibility.Visible;
+
+      if (NextButtonSubtitle != null)
+        NextButtonSubtitle.Text = "Review and confirm";
+
+      RefreshTournamentTypeSelection();
+    }
+
     // Method to pre-fill player ID from main window
     public void SetPlayerID(string playerId)
     {
@@ -50,6 +71,85 @@ namespace pokersoc_connect.Views
         PlayerIdDisplay.Text = playerId;
         LoadPlayerName(playerId);
       }
+
+      if (_isTournamentMode)
+        RefreshTournamentTypeSelection();
+    }
+
+    private void RefreshTournamentTypeSelection()
+    {
+      if (_tournamentSettings == null || string.IsNullOrWhiteSpace(_playerId)) return;
+
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      var existingCount = Database.GetPlayerSessionBuyInCount(_playerId);
+      _isRebuy = existingCount > 0;
+      var canBuyIn = _tournamentSettings.CanBuyIn(existingCount);
+
+      TournamentTypeSubtitle.Text = _isRebuy
+        ? $"Rebuy #{existingCount} — select member type"
+        : "First buy-in — select member type";
+
+      var arcPrice = _tournamentSettings.GetPriceCents(isArc: true, _isRebuy);
+      var nonArcPrice = _tournamentSettings.GetPriceCents(isArc: false, _isRebuy);
+      var arcLabel = _isRebuy ? "Rebuy" : "Initial buy-in";
+      var nonArcLabel = _isRebuy ? "Rebuy" : "Initial buy-in";
+
+      ArcMemberPriceText.Text = (arcPrice / 100.0).ToString("C", culture);
+      ArcMemberTypeLabel.Text = arcLabel;
+      NonArcMemberPriceText.Text = (nonArcPrice / 100.0).ToString("C", culture);
+      NonArcMemberTypeLabel.Text = nonArcLabel;
+
+      var arcOnly = _tournamentSettings.ArcOnly;
+      ArcMemberTypeButton.Visibility = Visibility.Visible;
+      NonArcMemberTypeButton.Visibility = arcOnly ? Visibility.Collapsed : Visibility.Visible;
+
+      if (!canBuyIn)
+      {
+        ArcMemberTypeButton.IsEnabled = false;
+        NonArcMemberTypeButton.IsEnabled = false;
+        var capText = _tournamentSettings.RebuyCap <= 0
+          ? "unlimited"
+          : _tournamentSettings.RebuyCap.ToString();
+        RebuyCapWarningText.Text = $"Rebuy limit reached ({capText} rebuy cap). No further buy-ins allowed.";
+        RebuyCapWarningText.Visibility = Visibility.Visible;
+        return;
+      }
+
+      ArcMemberTypeButton.IsEnabled = true;
+      NonArcMemberTypeButton.IsEnabled = !arcOnly;
+      RebuyCapWarningText.Visibility = Visibility.Collapsed;
+
+      if (arcOnly)
+        SelectTournamentType(isArc: true);
+    }
+
+    private void BackFromCashToTypeSelection()
+    {
+      CashInputView.Visibility = Visibility.Collapsed;
+      AmountInputView.Visibility = Visibility.Collapsed;
+      TournamentTypeView.Visibility = Visibility.Visible;
+      RefreshTournamentTypeSelection();
+    }
+
+    private void ArcMemberType_Click(object sender, RoutedEventArgs e) => SelectTournamentType(isArc: true);
+
+    private void NonArcMemberType_Click(object sender, RoutedEventArgs e) => SelectTournamentType(isArc: false);
+
+    private void SelectTournamentType(bool isArc)
+    {
+      if (_tournamentSettings == null) return;
+
+      _fixedBuyInCents = _tournamentSettings.GetPriceCents(isArc, _isRebuy);
+      _buyInNotes = _tournamentSettings.GetBuyInLabel(isArc, _isRebuy);
+
+      var culture = CultureInfo.GetCultureInfo("en-AU");
+      TournamentInfoPanel.Visibility = Visibility.Visible;
+      TournamentBuyInDisplay.Text = (_fixedBuyInCents / 100.0).ToString("C", culture);
+      TournamentBuyInTypeDisplay.Text = _buyInNotes;
+
+      TournamentTypeView.Visibility = Visibility.Collapsed;
+      CashInputView.Visibility = Visibility.Visible;
+      InitializeCashInput();
     }
 
     private void LoadPlayerName(string playerId)
@@ -103,7 +203,9 @@ namespace pokersoc_connect.Views
 
         var text = new TextBlock
         {
-          Text = "Click currency buttons to add cash",
+          Text = _isTournamentMode && _fixedBuyInCents == 0
+            ? "Free buy-in — no cash required"
+            : "Click currency buttons to add cash",
           FontSize = 16,
           FontStyle = FontStyles.Italic,
           Foreground = new SolidColorBrush(Colors.Gray),
@@ -226,7 +328,46 @@ namespace pokersoc_connect.Views
       var culture = CultureInfo.GetCultureInfo("en-AU");
       double total = _cashCounts.Sum(kv => kv.Key * kv.Value) / 100.0;
       TotalCashText.Text = total.ToString("C", culture);
+      UpdateTournamentCashControls();
     }
+
+    private void UpdateTournamentCashControls()
+    {
+      if (!_isTournamentMode)
+      {
+        NextButton.IsEnabled = true;
+        SetCashInputInteractive(true);
+        return;
+      }
+
+      if (_fixedBuyInCents == 0)
+      {
+        // Freeroll: keep normal appearance, block input without greying out
+        SetCashInputInteractive(false);
+        NextButton.IsEnabled = true;
+        return;
+      }
+
+      SetCashInputInteractive(true);
+      NextButton.IsEnabled = TotalCents >= _fixedBuyInCents;
+    }
+
+    private void SetCashInputInteractive(bool interactive)
+    {
+      foreach (var button in GetCashInputButtons())
+      {
+        button.IsEnabled = true;
+        button.IsHitTestVisible = interactive;
+      }
+    }
+
+    private Button[] GetCashInputButtons() =>
+    [
+      Cash5c, Cash10c, Cash20c, Cash50c,
+      Cash1, Cash2, Cash5, Cash10, Cash20, Cash50, Cash100,
+      Cash1xButton, Cash5xButton, Cash20xButton,
+      ClearCashButton, UndoCashButton
+    ];
 
     private void UpdateCashButtonCounts()
     {
@@ -303,6 +444,7 @@ namespace pokersoc_connect.Views
 
     private void CashDenom_Click(object sender, RoutedEventArgs e)
     {
+      if (_isTournamentMode && _fixedBuyInCents == 0) return;
       if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int denom))
       {
         _cashCounts[denom] += _currentMultiplier;
@@ -313,18 +455,21 @@ namespace pokersoc_connect.Views
 
     private void CashMultiplier1x_Click(object sender, RoutedEventArgs e)
     {
+      if (_isTournamentMode && _fixedBuyInCents == 0) return;
       _currentMultiplier = 1;
       UpdateCashMultiplierDisplay();
     }
 
     private void CashMultiplier5x_Click(object sender, RoutedEventArgs e)
     {
+      if (_isTournamentMode && _fixedBuyInCents == 0) return;
       _currentMultiplier = 5;
       UpdateCashMultiplierDisplay();
     }
 
     private void CashMultiplier20x_Click(object sender, RoutedEventArgs e)
     {
+      if (_isTournamentMode && _fixedBuyInCents == 0) return;
       _currentMultiplier = 20;
       UpdateCashMultiplierDisplay();
     }
@@ -358,9 +503,15 @@ namespace pokersoc_connect.Views
         MessageBox.Show("Please scan or enter a member number first.");
         return;
       }
-      if (TotalCents <= 0)
+      if (!_isTournamentMode && TotalCents <= 0)
       {
         MessageBox.Show("Please add at least one coin/note.");
+        return;
+      }
+
+      if (_isTournamentMode && _fixedBuyInCents > 0 && TotalCents < _fixedBuyInCents)
+      {
+        MessageBox.Show($"Cash received is less than the buy-in amount ({(_fixedBuyInCents / 100.0):C}).");
         return;
       }
 
@@ -372,22 +523,40 @@ namespace pokersoc_connect.Views
       PlayerIdDisplay2.Text = PlayerIdDisplay.Text;
       PlayerNameDisplay2.Text = PlayerNameDisplay.Text;
       
-      // Pre-fill buy-in amount with total cash
-      _buyInAmount = TotalDollars;
-      _buyInAmountString = _buyInAmount.ToString("F2");
+      if (_isTournamentMode)
+      {
+        _buyInAmount = _fixedBuyInCents / 100.0;
+        _buyInAmountString = _buyInAmount.ToString("F2");
+
+        if (TotalDollars < _buyInAmount)
+        {
+          MessageBox.Show($"Cash received (${TotalDollars:F2}) is less than the tournament buy-in (${_buyInAmount:F2}).");
+          return;
+        }
+      }
+      else
+      {
+        // Pre-fill buy-in amount with total cash
+        _buyInAmount = TotalDollars;
+        _buyInAmountString = _buyInAmount.ToString("F2");
+      }
+
+      AmountEditButtons.Visibility = _isTournamentMode ? Visibility.Collapsed : Visibility.Visible;
+      NumpadPanel.Visibility = _isTournamentMode ? Visibility.Collapsed : Visibility.Visible;
+
       UpdateAmountDisplay();
       CalculateChange();
     }
 
     private void BackToCash_Click(object sender, RoutedEventArgs e)
     {
-      // Switch back to cash input view
       AmountInputView.Visibility = Visibility.Collapsed;
       CashInputView.Visibility = Visibility.Visible;
     }
 
     private void Undo_Click(object sender, RoutedEventArgs e)
     {
+      if (_isTournamentMode && _fixedBuyInCents == 0) return;
       if (_cashHistory.Count > 0)
       {
         var (denom, count) = _cashHistory.Pop();
@@ -401,6 +570,7 @@ namespace pokersoc_connect.Views
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
+      if (_isTournamentMode && _fixedBuyInCents == 0) return;
       _cashCounts.Clear();
       _cashHistory.Clear();
       foreach (var denom in CashDenoms)
@@ -648,7 +818,7 @@ namespace pokersoc_connect.Views
 
     private void ConfirmBuyIn_Click(object sender, RoutedEventArgs e)
     {
-      if (_buyInAmount <= 0)
+      if (_isTournamentMode ? _buyInAmount < 0 : _buyInAmount <= 0)
       {
         MessageBox.Show("Please enter a valid buy-in amount.");
         return;
@@ -660,23 +830,24 @@ namespace pokersoc_connect.Views
         return;
       }
 
-      // Check if this buy-in would exceed the $500 session limit
-      var existingBuyInsCents = Database.GetPlayerSessionBuyInsCents(MemberNumber);
-      var existingBuyInsDollars = existingBuyInsCents / 100.0;
-      var proposedTotalDollars = existingBuyInsDollars + _buyInAmount;
-
-      // $500 is okay, but anything over $500 requires timeout confirmation
-      if (proposedTotalDollars > BuyInLimitDollars)
+      if (!_isTournamentMode)
       {
-        // Show timeout confirmation overlay
-        TimeoutWarningText.Text = $"Current session buy-ins: ${existingBuyInsDollars:F2}\n" +
-                                   $"This buy-in: ${_buyInAmount:F2}\n" +
-                                   $"New total: ${proposedTotalDollars:F2}";
-        TimeoutConfirmationPanel.Visibility = Visibility.Visible;
-        return;
+        // Check if this buy-in would exceed the $500 session limit
+        var existingBuyInsCents = Database.GetPlayerSessionBuyInsCents(MemberNumber);
+        var existingBuyInsDollars = existingBuyInsCents / 100.0;
+        var proposedTotalDollars = existingBuyInsDollars + _buyInAmount;
+
+        // $500 is okay, but anything over $500 requires timeout confirmation
+        if (proposedTotalDollars > BuyInLimitDollars)
+        {
+          TimeoutWarningText.Text = $"Current session buy-ins: ${existingBuyInsDollars:F2}\n" +
+                                     $"This buy-in: ${_buyInAmount:F2}\n" +
+                                     $"New total: ${proposedTotalDollars:F2}";
+          TimeoutConfirmationPanel.Visibility = Visibility.Visible;
+          return;
+        }
       }
 
-      // Proceed with buy-in
       ProcessBuyIn();
     }
 
@@ -704,11 +875,26 @@ namespace pokersoc_connect.Views
         MemberNumber, 
         new Dictionary<int, int>(_cashCounts), 
         (int)(_buyInAmount * 100),
-        changeBreakdown
+        changeBreakdown,
+        string.IsNullOrWhiteSpace(_buyInNotes) ? null : _buyInNotes
       ));
     }
 
-    private void Back_Click(object sender, RoutedEventArgs e) => Cancelled?.Invoke(this, EventArgs.Empty);
+    private void Back_Click(object sender, RoutedEventArgs e)
+    {
+      if (_isTournamentMode && CashInputView.Visibility == Visibility.Visible)
+      {
+        // ARC-only skips type selection, so go straight back to main
+        if (_tournamentSettings?.ArcOnly == true)
+        {
+          Cancelled?.Invoke(this, EventArgs.Empty);
+          return;
+        }
+        BackFromCashToTypeSelection();
+        return;
+      }
+      Cancelled?.Invoke(this, EventArgs.Empty);
+    }
 
     // Player ID methods removed - now locked and passed from main window
   }
@@ -716,14 +902,17 @@ namespace pokersoc_connect.Views
   public sealed class BuyInConfirmedEventArgs : EventArgs
   {
     public string MemberNumber { get; }
-    public Dictionary<int, int> CashReceived { get; }   // cash received from player
-    public int BuyInAmountCents { get; }                // amount player is buying in for
-    public Dictionary<int, int> ChangeBreakdown { get; } // change to give back
+    public Dictionary<int, int> CashReceived { get; }
+    public int BuyInAmountCents { get; }
+    public Dictionary<int, int> ChangeBreakdown { get; }
+    public string? Notes { get; }
 
     public BuyInConfirmedEventArgs(string member,
                                  Dictionary<int, int> cashReceived,
                                  int buyInAmountCents,
-                                 Dictionary<int, int> changeBreakdown)
-      => (MemberNumber, CashReceived, BuyInAmountCents, ChangeBreakdown) = (member, cashReceived, buyInAmountCents, changeBreakdown);
+                                 Dictionary<int, int> changeBreakdown,
+                                 string? notes = null)
+      => (MemberNumber, CashReceived, BuyInAmountCents, ChangeBreakdown, Notes) =
+         (member, cashReceived, buyInAmountCents, changeBreakdown, notes);
   }
 }

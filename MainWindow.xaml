@@ -233,9 +233,9 @@
                 BorderBrush="Gray"
                 IsEnabled="False">
           <StackPanel>
-            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <TextBlock Text="Cash-out" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-            <TextBlock Text="Record player cash-out" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            <TextBlock x:Name="CashOutIcon" Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock x:Name="CashOutTitle" Text="Cash-out" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="CashOutSubtitle" Text="Record player cash-out" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
         </Button>
 
@@ -298,17 +298,18 @@
         </Button>
 
         <!-- Row 4 -->
-        <!-- Lost Chips Button -->
-        <Button Grid.Row="3" Grid.Column="0"
+        <!-- Lost Chips / Tournament Settings Button -->
+        <Button x:Name="LostChipsButton"
+                Grid.Row="3" Grid.Column="0"
                 Margin="0,5,5,0"
                 Padding="15,20"
                 Click="LostChips_Click"
                 BorderThickness="2"
                 BorderBrush="Gray">
           <StackPanel>
-            <TextBlock Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <TextBlock Text="Lost Chips" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-            <TextBlock Text="Record lost chips as tips" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
+            <TextBlock x:Name="LostChipsIcon" Text="💸" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock x:Name="LostChipsTitle" Text="Lost Chips" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="LostChipsSubtitle" Text="Record lost chips as tips" FontSize="10" HorizontalAlignment="Center" Opacity="0.7"/>
           </StackPanel>
         </Button>
 

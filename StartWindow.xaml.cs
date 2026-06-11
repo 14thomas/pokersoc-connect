@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using System.IO;
 using System.Windows;
 
 namespace pokersoc_connect
@@ -8,6 +9,8 @@ namespace pokersoc_connect
     public string? SelectedPath { get; private set; }
     public string? PlayerImportPath { get; private set; }
     public bool AutoImportPlayers => AutoImportCheck.IsChecked == true;
+    public bool IsNewSession { get; private set; }
+    public SessionMode SelectedMode { get; private set; } = SessionMode.CashGame;
 
     public StartWindow()
     {
@@ -16,12 +19,20 @@ namespace pokersoc_connect
 
     private void New_Click(object sender, RoutedEventArgs e)
     {
+      var modeDialog = new SessionModeDialog();
+      if (modeDialog.ShowDialog() != true) return;
+
       var dlg = new SaveFileDialog {
         Filter = "Session (*.sqlite)|*.sqlite|All files|*.*",
-        FileName = $"Session-{System.DateTime.Now:yyyy-MM-dd}.sqlite"
+        FileName = $"Session-{modeDialog.SelectedMode switch {
+          SessionMode.Tournament => "Tournament",
+          _ => "CashGame"
+        }}-{System.DateTime.Now:yyyy-MM-dd}.sqlite"
       };
       if (dlg.ShowDialog() == true) {
         SelectedPath = dlg.FileName;
+        IsNewSession = true;
+        SelectedMode = modeDialog.SelectedMode;
         DialogResult = true;
       }
     }
@@ -33,6 +44,7 @@ namespace pokersoc_connect
       };
       if (dlg.ShowDialog() == true) {
         SelectedPath = dlg.FileName;
+        IsNewSession = !File.Exists(dlg.FileName);
         DialogResult = true;
       }
     }
