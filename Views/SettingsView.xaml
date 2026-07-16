@@ -125,12 +125,18 @@
         <!-- About Section -->
         <GroupBox Header="About" Margin="0,0,0,20">
           <StackPanel Margin="10">
-            <TextBlock Text="pokersoc-connect v1.6" FontWeight="Bold" Margin="0,0,0,5"/>
+            <TextBlock Text="pokersoc-connect v1.6.7" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="A poker society management application for PokerSoc UNSW, developed in house." Margin="0,0,0,10"/>
             <TextBlock Text="Features:" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBlock Text="• Added a very light tournament mode." Margin="20,0,0,2"/>
+            <TextBlock Text="• Activity log filters to the scanned or entered player ID." Margin="20,0,0,2"/>
+            <TextBlock Text="• Player logs track membership tier (Bronze, Silver, Gold, etc.)." Margin="20,0,0,2"/>
+            <TextBlock Text="• New player signup prompts for membership type (tournament mode only)." Margin="20,0,0,2"/>
+            <TextBlock Text="• Tournament buy-in and rebuy prices vary by membership type." Margin="20,0,0,2"/>
+            <TextBlock Text="• Tournament info shows total buy-ins and rebuys, with per-tier breakdown." Margin="20,0,0,2"/>
             <TextBlock Text="• tom is definitely the coolest person in the world." Margin="20,0,0,2"/>     
-            <TextBlock Text="• suyee is decent too." Margin="20,0,0,2"/>                  
+            <TextBlock Text="• suyee is decent too." Margin="20,0,0,2"/>        
+          
           </StackPanel>
         </GroupBox>
 
