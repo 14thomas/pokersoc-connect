@@ -734,13 +734,18 @@ COMMIT;");
     }
 
     /// <summary>
-    /// Per membership-tier buy-in/rebuy counts for the session (from transaction notes).
-    /// Only tiers with at least one buy-in or rebuy are returned.
+    /// Per-tier buy-in/rebuy counts for the session (from transaction notes).
+    /// Includes membership tiers and ARC / Non-ARC. Only non-zero tiers are returned.
     /// </summary>
     public static List<(string Tier, int BuyIns, int Rebuys)> GetTournamentMembershipStats()
     {
+      var tierOrder = new[]
+      {
+        "Bronze", "Silver", "Gold", "Platinum", "Diamond",
+        "ARC Member", "Non-ARC Member"
+      };
       var counts = new Dictionary<string, (int BuyIns, int Rebuys)>(StringComparer.OrdinalIgnoreCase);
-      foreach (var tier in TournamentSettings.MembershipTiers)
+      foreach (var tier in tierOrder)
         counts[tier] = (0, 0);
 
       var rows = Query(@"
@@ -751,8 +756,10 @@ WHERE type IN ('BUYIN','REBUY')");
       {
         var notes = row["notes"]?.ToString() ?? "";
         var type = row["type"]?.ToString() ?? "";
+
+        // Longer names first so "Non-ARC Member" wins over a partial match
         string? matched = null;
-        foreach (var tier in TournamentSettings.MembershipTiers)
+        foreach (var tier in tierOrder.OrderByDescending(t => t.Length))
         {
           if (notes.StartsWith(tier, StringComparison.OrdinalIgnoreCase))
           {
@@ -769,7 +776,7 @@ WHERE type IN ('BUYIN','REBUY')");
       }
 
       var result = new List<(string Tier, int BuyIns, int Rebuys)>();
-      foreach (var tier in TournamentSettings.MembershipTiers)
+      foreach (var tier in tierOrder)
       {
         var (buyIns, rebuys) = counts[tier];
         if (buyIns > 0 || rebuys > 0)
