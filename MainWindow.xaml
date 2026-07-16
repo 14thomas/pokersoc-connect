@@ -51,6 +51,7 @@
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
               </Grid.ColumnDefinitions>
               
               <TextBox x:Name="CurrentPlayerIdBox"
@@ -61,8 +62,20 @@
                        KeyDown="CurrentPlayerIdBox_KeyDown"
                        TextChanged="CurrentPlayerIdBox_TextChanged"/>
               
-              <Button x:Name="ClearPlayerBtn"
+              <Button x:Name="EditPlayerBtn"
                       Grid.Column="1"
+                      Content="Edit"
+                      FontSize="14"
+                      FontWeight="Bold"
+                      MinWidth="56"
+                      Margin="5,0,0,0"
+                      Padding="10,5"
+                      Background="#FFE0B2"
+                      IsEnabled="False"
+                      Click="EditPlayer_Click"/>
+              
+              <Button x:Name="ClearPlayerBtn"
+                      Grid.Column="2"
                       Content="✕"
                       FontSize="16"
                       FontWeight="Bold"
@@ -82,58 +95,216 @@
                     Padding="10"
                     Margin="0,10,0,0">
               <Grid>
+                <!-- Step 1: Age verification -->
+                <Grid x:Name="NewPlayerAgeStep">
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  
+                  <TextBlock Grid.Row="0" 
+                            Text="⚠️ NEW PLAYER DETECTED" 
+                            FontSize="14" 
+                            FontWeight="Bold" 
+                            Foreground="DarkOrange"
+                            Margin="0,0,0,5"/>
+                  
+                  <TextBlock x:Name="NewPlayerIdText"
+                            Grid.Row="1"
+                            Text="Player ID: "
+                            FontSize="12"
+                            Margin="0,0,0,3"/>
+                  
+                  <TextBlock x:Name="Age18CutoffText"
+                            Grid.Row="1"
+                            Text=""
+                            FontSize="11"
+                            FontWeight="Bold"
+                            Foreground="DarkBlue"
+                            Margin="0,18,0,5"/>
+                  
+                  <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="✓ 18+"
+                            Click="VerifyNewPlayer_Click"
+                            Background="LightGreen"
+                            Padding="8,5"
+                            Margin="0,0,3,0"
+                            FontWeight="Bold"/>
+                    <Button Grid.Column="1" Content="👶 Underage"
+                            Click="VerifyNewPlayerUnderage_Click"
+                            Background="#FFFFCC"
+                            Padding="8,5"
+                            Margin="3,0,3,0"
+                            FontWeight="Bold"/>
+                    <Button Grid.Column="2" Content="✕ Cancel"
+                            Click="CancelNewPlayer_Click"
+                            Background="LightCoral"
+                            Padding="8,5"
+                            Margin="3,0,0,0"
+                            FontWeight="Bold"/>
+                  </Grid>
+                </Grid>
+
+                <!-- Step 2: Membership type (shown after 18+) -->
+                <Grid x:Name="NewPlayerMembershipStep" Visibility="Collapsed">
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+
+                  <TextBlock Grid.Row="0"
+                            Text="Membership Type"
+                            FontSize="14"
+                            FontWeight="Bold"
+                            Foreground="DarkOrange"
+                            Margin="0,0,0,5"/>
+
+                  <TextBlock x:Name="MembershipPlayerIdText"
+                            Grid.Row="1"
+                            Text="Player ID: "
+                            FontSize="12"
+                            Margin="0,0,0,10"/>
+
+                  <Grid Grid.Row="2" Margin="0,0,0,10">
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/>
+                      <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                            Content="Bronze" Tag="Bronze"
+                            Click="SelectMembershipType_Click"
+                            MinHeight="56" FontSize="16" Margin="0,0,4,4" FontWeight="Bold"
+                            Background="#CD7F32" Foreground="White"/>
+                    <Button Grid.Row="0" Grid.Column="3" Grid.ColumnSpan="3"
+                            Content="Silver" Tag="Silver"
+                            Click="SelectMembershipType_Click"
+                            MinHeight="56" FontSize="16" Margin="4,0,0,4" FontWeight="Bold"
+                            Background="#A8A8A8" Foreground="White"/>
+
+                    <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                            Content="Gold" Tag="Gold"
+                            Click="SelectMembershipType_Click"
+                            MinHeight="56" FontSize="16" Margin="0,4,4,0" FontWeight="Bold"
+                            Background="#D4AF37" Foreground="White"/>
+                    <Button Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                            Content="Platinum" Tag="Platinum"
+                            Click="SelectMembershipType_Click"
+                            MinHeight="56" FontSize="16" Margin="4,4,4,0" FontWeight="Bold"
+                            Background="#6E7F8A" Foreground="White"/>
+                    <Button Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="2"
+                            Content="Diamond" Tag="Diamond"
+                            Click="SelectMembershipType_Click"
+                            MinHeight="56" FontSize="16" Margin="4,4,0,0" FontWeight="Bold"
+                            Background="#4A90D9" Foreground="White"/>
+                  </Grid>
+
+                  <Button Grid.Row="3" Content="✕ Cancel"
+                          Click="CancelNewPlayer_Click"
+                          Background="LightCoral"
+                          Padding="10,10"
+                          FontSize="14"
+                          HorizontalAlignment="Stretch"
+                          FontWeight="Bold"/>
+                </Grid>
+              </Grid>
+            </Border>
+            
+            <!-- Edit Membership Panel (for correcting current player) -->
+            <Border x:Name="EditMembershipPanel"
+                    Grid.Row="2"
+                    Visibility="Collapsed"
+                    BorderBrush="#E65100"
+                    BorderThickness="2"
+                    Background="#FFF3E0"
+                    Padding="10"
+                    Margin="0,10,0,0">
+              <Grid>
                 <Grid.RowDefinitions>
                   <RowDefinition Height="Auto"/>
                   <RowDefinition Height="Auto"/>
                   <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" 
-                          Text="⚠️ NEW PLAYER DETECTED" 
-                          FontSize="14" 
-                          FontWeight="Bold" 
-                          Foreground="DarkOrange"
+
+                <TextBlock Grid.Row="0"
+                          Text="Edit Membership Type"
+                          FontSize="14"
+                          FontWeight="Bold"
+                          Foreground="#E65100"
                           Margin="0,0,0,5"/>
-                
-                <TextBlock x:Name="NewPlayerIdText"
-                          Grid.Row="1"
-                          Text="Player ID: "
-                          FontSize="12"
-                          Margin="0,0,0,3"/>
-                
-                <TextBlock x:Name="Age18CutoffText"
+
+                <TextBlock x:Name="EditMembershipPlayerText"
                           Grid.Row="1"
                           Text=""
-                          FontSize="11"
-                          FontWeight="Bold"
-                          Foreground="DarkBlue"
-                          Margin="0,18,0,5"/>
-                
-                <Grid Grid.Row="2">
+                          FontSize="12"
+                          Margin="0,0,0,10"/>
+
+                <Grid Grid.Row="2" Margin="0,0,0,10">
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
                   </Grid.ColumnDefinitions>
-                  <Button Grid.Column="0" Content="✓ 18+"
-                          Click="VerifyNewPlayer_Click"
-                          Background="LightGreen"
-                          Padding="8,5"
-                          Margin="0,0,3,0"
-                          FontWeight="Bold"/>
-                  <Button Grid.Column="1" Content="👶 Underage"
-                          Click="VerifyNewPlayerUnderage_Click"
-                          Background="#FFFFCC"
-                          Padding="8,5"
-                          Margin="3,0,3,0"
-                          FontWeight="Bold"/>
-                  <Button Grid.Column="2" Content="✕ Cancel"
-                          Click="CancelNewPlayer_Click"
-                          Background="LightCoral"
-                          Padding="8,5"
-                          Margin="3,0,0,0"
-                          FontWeight="Bold"/>
+
+                  <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                          Content="Bronze" Tag="Bronze"
+                          Click="EditMembershipType_Click"
+                          MinHeight="56" FontSize="16" Margin="0,0,4,4" FontWeight="Bold"
+                          Background="#CD7F32" Foreground="White"/>
+                  <Button Grid.Row="0" Grid.Column="3" Grid.ColumnSpan="3"
+                          Content="Silver" Tag="Silver"
+                          Click="EditMembershipType_Click"
+                          MinHeight="56" FontSize="16" Margin="4,0,0,4" FontWeight="Bold"
+                          Background="#A8A8A8" Foreground="White"/>
+
+                  <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                          Content="Gold" Tag="Gold"
+                          Click="EditMembershipType_Click"
+                          MinHeight="56" FontSize="16" Margin="0,4,4,0" FontWeight="Bold"
+                          Background="#D4AF37" Foreground="White"/>
+                  <Button Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                          Content="Platinum" Tag="Platinum"
+                          Click="EditMembershipType_Click"
+                          MinHeight="56" FontSize="16" Margin="4,4,4,0" FontWeight="Bold"
+                          Background="#6E7F8A" Foreground="White"/>
+                  <Button Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="2"
+                          Content="Diamond" Tag="Diamond"
+                          Click="EditMembershipType_Click"
+                          MinHeight="56" FontSize="16" Margin="4,4,0,0" FontWeight="Bold"
+                          Background="#4A90D9" Foreground="White"/>
                 </Grid>
+
+                <Button Grid.Row="3" Content="✕ Cancel"
+                        Click="CancelEditMembership_Click"
+                        Background="LightCoral"
+                        Padding="10,10"
+                        FontSize="14"
+                        HorizontalAlignment="Stretch"
+                        FontWeight="Bold"/>
               </Grid>
             </Border>
             

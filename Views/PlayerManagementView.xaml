@@ -65,6 +65,7 @@
         <DataGridTextColumn Header="Degree" Binding="{Binding degree}" Width="100"/>
         <DataGridTextColumn Header="Study Year" Binding="{Binding study_year}" Width="80"/>
         <DataGridTextColumn Header="Arc Member" Binding="{Binding arc_member}" Width="80"/>
+        <DataGridTextColumn Header="Membership" Binding="{Binding membership_type}" Width="90"/>
         <DataGridTextColumn Header="Created" Binding="{Binding created_at}" Width="130"/>
       </DataGrid.Columns>
     </DataGrid>

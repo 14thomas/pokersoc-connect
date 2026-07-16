@@ -123,6 +123,9 @@ namespace pokersoc_connect
         {
           // Reset any pending state first (handles double-scanning)
           NewPlayerPanel.Visibility = Visibility.Collapsed;
+          NewPlayerAgeStep.Visibility = Visibility.Visible;
+          NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
+          EditMembershipPanel.Visibility = Visibility.Collapsed;
           UnderagePlayerPanel.Visibility = Visibility.Collapsed;
           _pendingPlayerId = string.Empty;
           
@@ -133,14 +136,17 @@ namespace pokersoc_connect
             
             if (isNew)
             {
-              // Show inline verification panel
+              // Show inline verification panel (age step first)
               _pendingPlayerId = playerId;
               NewPlayerIdText.Text = $"Player ID: {playerId}\n\nPlease verify this player is over 18 years old before continuing.\nThis player will be added as 'New Player'.";
+              MembershipPlayerIdText.Text = $"Player ID: {playerId}\n\nSelect their membership type:";
               
               // Show the 18+ cutoff date (same day/month, 18 years ago)
               var cutoffDate = DateTime.Today.AddYears(-18);
               Age18CutoffText.Text = $"🎂 18+ if born on or before: {cutoffDate:dd MMM yyyy}";
               
+              NewPlayerAgeStep.Visibility = Visibility.Visible;
+              NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
               NewPlayerPanel.Visibility = Visibility.Visible;
               _playerVerified = false;
               _playerIsUnderage = false;
@@ -217,6 +223,9 @@ namespace pokersoc_connect
       CurrentPlayerIdBox.Background = System.Windows.Media.Brushes.White;
       CurrentPlayerIdBox.Text = string.Empty;
       NewPlayerPanel.Visibility = Visibility.Collapsed;
+      NewPlayerAgeStep.Visibility = Visibility.Visible;
+      NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
+      EditMembershipPanel.Visibility = Visibility.Collapsed;
       UnderagePlayerPanel.Visibility = Visibility.Collapsed;
       PlayerInfoPanel.Visibility = Visibility.Collapsed;
       CurrentPlayerIdBox.Focus();
@@ -260,7 +269,8 @@ namespace pokersoc_connect
         ("study_year", "Year"),
         ("student_number", "Student #"),
         ("email", "Email"),
-        ("arc_member", "ARC Member")
+        ("arc_member", "ARC Member"),
+        ("membership_type", "Membership")
       };
       
       bool hasAnyInfo = false;
@@ -300,28 +310,97 @@ namespace pokersoc_connect
 
     private void VerifyNewPlayer_Click(object sender, RoutedEventArgs e)
     {
+      // Membership type is only collected for tournaments
+      if (Database.GetSessionMode() == SessionMode.Tournament)
+      {
+        NewPlayerAgeStep.Visibility = Visibility.Collapsed;
+        NewPlayerMembershipStep.Visibility = Visibility.Visible;
+        StartPlayerIdExpiryTimer();
+        return;
+      }
+
+      CompleteNewPlayerSignup("None");
+    }
+
+    private void SelectMembershipType_Click(object sender, RoutedEventArgs e)
+    {
+      var membershipType = (sender as Button)?.Tag?.ToString() ?? "None";
+      CompleteNewPlayerSignup(membershipType);
+    }
+
+    private void EditPlayer_Click(object sender, RoutedEventArgs e)
+    {
+      if (string.IsNullOrWhiteSpace(_currentPlayerId) || !_playerVerified) return;
+
+      var details = Database.GetPlayerDetails(_currentPlayerId);
+      var current = details != null && details.TryGetValue("membership_type", out var mt) ? mt : "None";
+      EditMembershipPlayerText.Text = current == "None" || string.IsNullOrWhiteSpace(current)
+        ? $"Player ID: {_currentPlayerId}\n\nSelect their membership type:"
+        : $"Player ID: {_currentPlayerId}\nCurrent: {current}\n\nSelect a new membership type:";
+
+      PlayerInfoPanel.Visibility = Visibility.Collapsed;
+      UnderagePlayerPanel.Visibility = Visibility.Collapsed;
+      NewPlayerPanel.Visibility = Visibility.Collapsed;
+      EditMembershipPanel.Visibility = Visibility.Visible;
+      StartPlayerIdExpiryTimer();
+    }
+
+    private void EditMembershipType_Click(object sender, RoutedEventArgs e)
+    {
+      if (string.IsNullOrWhiteSpace(_currentPlayerId) || !_playerVerified) return;
+
       try
       {
-        // Add the new player to the database with default values
+        var membershipType = (sender as Button)?.Tag?.ToString() ?? "None";
+        Database.SetPlayerMembershipType(_currentPlayerId, membershipType);
+        EditMembershipPanel.Visibility = Visibility.Collapsed;
+        ShowPlayerInfo(_currentPlayerId);
+        StartPlayerIdExpiryTimer();
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error updating membership: {ex.Message}", "Error",
+          MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    private void CancelEditMembership_Click(object sender, RoutedEventArgs e)
+    {
+      EditMembershipPanel.Visibility = Visibility.Collapsed;
+      if (!string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified)
+      {
+        if (_playerIsUnderage)
+          UnderagePlayerPanel.Visibility = Visibility.Visible;
+        else
+          ShowPlayerInfo(_currentPlayerId);
+      }
+      StartPlayerIdExpiryTimer();
+    }
+
+    private void CompleteNewPlayerSignup(string membershipType)
+    {
+      try
+      {
         Database.Exec(
-          "INSERT INTO players(player_id, display_name) " +
-          "VALUES ($id, 'New Player')",
-          ("$id", _pendingPlayerId)
+          "INSERT INTO players(player_id, display_name, membership_type) " +
+          "VALUES ($id, 'New Player', $mt)",
+          ("$id", _pendingPlayerId),
+          ("$mt", membershipType)
         );
         
-        // Set as current player and enable buttons
         _currentPlayerId = _pendingPlayerId;
         _playerVerified = true;
         CurrentPlayerIdBox.Text = _currentPlayerId;
         NewPlayerPanel.Visibility = Visibility.Collapsed;
+        NewPlayerAgeStep.Visibility = Visibility.Visible;
+        NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
         
-        // Lock the player ID field
         CurrentPlayerIdBox.IsReadOnly = true;
         CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 255, 220));
         
+        ShowPlayerInfo(_currentPlayerId);
         UpdatePlayerButtons();
         
-        // Log attendance
         Database.LogPlayerAttendance(_currentPlayerId);
         StartPlayerIdExpiryTimer();
       }
@@ -336,7 +415,7 @@ namespace pokersoc_connect
     {
       try
       {
-        // Add the new player to the database as underage
+        // Add the new player to the database as underage (no membership selection)
         Database.Exec(
           "INSERT INTO players(player_id, display_name, is_underage) " +
           "VALUES ($id, 'New Player', 1)",
@@ -349,6 +428,8 @@ namespace pokersoc_connect
         _playerIsUnderage = true;
         CurrentPlayerIdBox.Text = _currentPlayerId;
         NewPlayerPanel.Visibility = Visibility.Collapsed;
+        NewPlayerAgeStep.Visibility = Visibility.Visible;
+        NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
         
         // Lock the player ID field with underage color
         CurrentPlayerIdBox.IsReadOnly = true;
@@ -380,6 +461,8 @@ namespace pokersoc_connect
       CurrentPlayerIdBox.Background = System.Windows.Media.Brushes.White;
       CurrentPlayerIdBox.Text = string.Empty;
       NewPlayerPanel.Visibility = Visibility.Collapsed;
+      NewPlayerAgeStep.Visibility = Visibility.Visible;
+      NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
       UnderagePlayerPanel.Visibility = Visibility.Collapsed;
       UpdatePlayerButtons();
       CurrentPlayerIdBox.Focus();
@@ -387,10 +470,13 @@ namespace pokersoc_connect
 
     private void UpdatePlayerButtons()
     {
-      // Only enable buttons if player is verified AND not underage
+      // Only enable buy-in/cash-out if player is verified AND not underage
       bool hasVerifiedPlayer = !string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified && !_playerIsUnderage;
       BuyInButton.IsEnabled = hasVerifiedPlayer;
       CashOutButton.IsEnabled = hasVerifiedPlayer;
+
+      // Edit works for any verified current player (to fix membership, etc.)
+      EditPlayerBtn.IsEnabled = !string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified;
     }
 
     // ===== Fullscreen functionality =====

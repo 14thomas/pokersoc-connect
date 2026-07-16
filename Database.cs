@@ -45,14 +45,15 @@ namespace pokersoc_connect
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS players (
-  player_id      TEXT PRIMARY KEY,          -- scanned barcode/id (or typed when no card present)
-  display_name   TEXT NOT NULL DEFAULT 'New Player',
-  email          TEXT DEFAULT 'None',
-  student_number TEXT DEFAULT 'None',
-  degree         TEXT DEFAULT 'None',
-  study_year     TEXT DEFAULT 'None',
-  arc_member     TEXT DEFAULT 'None',
-  created_at     TEXT DEFAULT CURRENT_TIMESTAMP
+  player_id        TEXT PRIMARY KEY,          -- scanned barcode/id (or typed when no card present)
+  display_name     TEXT NOT NULL DEFAULT 'New Player',
+  email            TEXT DEFAULT 'None',
+  student_number   TEXT DEFAULT 'None',
+  degree           TEXT DEFAULT 'None',
+  study_year       TEXT DEFAULT 'None',
+  arc_member       TEXT DEFAULT 'None',
+  membership_type  TEXT DEFAULT 'None',
+  created_at       TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -92,6 +93,7 @@ CREATE INDEX IF NOT EXISTS idx_moves_denom_time ON cashbox_movements(denom_cents
       try { Exec("ALTER TABLE players ADD COLUMN degree TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN study_year TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN arc_member TEXT DEFAULT 'None'"); } catch { }
+      try { Exec("ALTER TABLE players ADD COLUMN membership_type TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN is_underage INTEGER DEFAULT 0"); } catch { }
 
       // Grouping id for multi-denomination float add
@@ -473,13 +475,32 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
     // ----------------- Player Database Management -----------------
 
+    private static readonly HashSet<string> ValidMembershipTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+      "Bronze", "Silver", "Gold", "Platinum", "Diamond"
+    };
+
+    private static string NormalizeMembershipType(string? value)
+    {
+      if (string.IsNullOrWhiteSpace(value) || value.Equals("None", StringComparison.OrdinalIgnoreCase))
+        return "None";
+
+      foreach (var valid in ValidMembershipTypes)
+      {
+        if (value.Equals(valid, StringComparison.OrdinalIgnoreCase))
+          return valid;
+      }
+
+      return "None";
+    }
+
     public static void ExportPlayers(string filePath)
     {
-      var players = Query("SELECT player_id, display_name, email, student_number, degree, study_year, arc_member, COALESCE(is_underage, 0) as is_underage, created_at FROM players ORDER BY player_id");
+      var players = Query("SELECT player_id, display_name, email, student_number, degree, study_year, arc_member, COALESCE(is_underage, 0) as is_underage, COALESCE(membership_type, 'None') as membership_type, created_at FROM players ORDER BY player_id");
       
       using var writer = new StreamWriter(filePath);
       // Write CSV header
-      writer.WriteLine("player_id,display_name,email,student_number,degree,study_year,arc_member,is_underage,created_at");
+      writer.WriteLine("player_id,display_name,email,student_number,degree,study_year,arc_member,is_underage,membership_type,created_at");
       
       foreach (DataRow row in players.Rows)
       {
@@ -491,9 +512,10 @@ CREATE TABLE IF NOT EXISTS app_settings (
         var studyYear = CsvEscape(row["study_year"]?.ToString() ?? "None");
         var arcMember = CsvEscape(row["arc_member"]?.ToString() ?? "None");
         var isUnderage = row["is_underage"]?.ToString() ?? "0";
+        var membershipType = CsvEscape(NormalizeMembershipType(row["membership_type"]?.ToString()));
         var createdAt = CsvEscape(row["created_at"]?.ToString() ?? "");
         
-        writer.WriteLine($"{playerId},{displayName},{email},{studentNumber},{degree},{studyYear},{arcMember},{isUnderage},{createdAt}");
+        writer.WriteLine($"{playerId},{displayName},{email},{studentNumber},{degree},{studyYear},{arcMember},{isUnderage},{membershipType},{createdAt}");
       }
     }
 
@@ -519,6 +541,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
         var arcMember = parts.Length > 6 ? parts[6].Trim() : "None";
         var isUnderageStr = parts.Length > 7 ? parts[7].Trim() : "0";
         int isUnderage = (isUnderageStr == "1" || isUnderageStr.Equals("true", StringComparison.OrdinalIgnoreCase)) ? 1 : 0;
+        var membershipType = NormalizeMembershipType(parts.Length > 8 ? parts[8].Trim() : "None");
 
         if (string.IsNullOrWhiteSpace(playerId)) continue;
         if (string.IsNullOrWhiteSpace(displayName)) displayName = "New Player";
@@ -533,8 +556,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
           if (merge)
           {
             // Insert or replace (update if exists)
-            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member, is_underage) 
-                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc, $underage)",
+            Exec(@"INSERT OR REPLACE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member, is_underage, membership_type) 
+                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc, $underage, $mt)",
                  ("$id", playerId),
                  ("$dn", displayName),
                  ("$em", email),
@@ -542,13 +565,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
                  ("$deg", degree),
                  ("$sy", studyYear),
                  ("$arc", arcMember),
-                 ("$underage", isUnderage));
+                 ("$underage", isUnderage),
+                 ("$mt", membershipType));
           }
           else
           {
             // Only insert if doesn't exist
-            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member, is_underage) 
-                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc, $underage)",
+            Exec(@"INSERT OR IGNORE INTO players(player_id, display_name, email, student_number, degree, study_year, arc_member, is_underage, membership_type) 
+                   VALUES ($id, $dn, $em, $sn, $deg, $sy, $arc, $underage, $mt)",
                  ("$id", playerId),
                  ("$dn", displayName),
                  ("$em", email),
@@ -556,7 +580,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
                  ("$deg", degree),
                  ("$sy", studyYear),
                  ("$arc", arcMember),
-                 ("$underage", isUnderage));
+                 ("$underage", isUnderage),
+                 ("$mt", membershipType));
           }
         }
         catch
@@ -584,11 +609,17 @@ CREATE TABLE IF NOT EXISTS app_settings (
            ("$underage", isUnderage ? 1 : 0), ("$id", playerId));
     }
 
+    public static void SetPlayerMembershipType(string playerId, string membershipType)
+    {
+      Exec("UPDATE players SET membership_type = $mt WHERE player_id = $id",
+           ("$mt", NormalizeMembershipType(membershipType)), ("$id", playerId));
+    }
+
     // Get player details - returns dictionary with field values (null if player not found)
     public static Dictionary<string, string>? GetPlayerDetails(string playerId)
     {
       var result = Query(
-        "SELECT display_name, email, student_number, degree, study_year, arc_member FROM players WHERE player_id = $id",
+        "SELECT display_name, email, student_number, degree, study_year, arc_member, COALESCE(membership_type, 'None') as membership_type FROM players WHERE player_id = $id",
         ("$id", playerId)
       );
       
@@ -602,7 +633,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
         ["student_number"] = row["student_number"]?.ToString() ?? "None",
         ["degree"] = row["degree"]?.ToString() ?? "None",
         ["study_year"] = row["study_year"]?.ToString() ?? "None",
-        ["arc_member"] = row["arc_member"]?.ToString() ?? "None"
+        ["arc_member"] = row["arc_member"]?.ToString() ?? "None",
+        ["membership_type"] = NormalizeMembershipType(row["membership_type"]?.ToString())
       };
     }
 

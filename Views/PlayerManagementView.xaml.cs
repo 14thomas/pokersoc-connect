@@ -27,7 +27,8 @@ namespace pokersoc_connect.Views
         var players = Database.Query(@"
           SELECT player_id, display_name, 
                  CASE WHEN COALESCE(is_underage, 0) = 1 THEN 'Underage' ELSE '18+' END as age_status,
-                 email, student_number, degree, study_year, arc_member, created_at 
+                 email, student_number, degree, study_year, arc_member,
+                 COALESCE(membership_type, 'None') as membership_type, created_at 
           FROM players 
           ORDER BY created_at DESC");
         PlayersGrid.ItemsSource = players.DefaultView;
