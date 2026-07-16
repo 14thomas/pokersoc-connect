@@ -733,6 +733,51 @@ COMMIT;");
       return (totalBuyIns, totalRebuys);
     }
 
+    /// <summary>
+    /// Per membership-tier buy-in/rebuy counts for the session (from transaction notes).
+    /// Only tiers with at least one buy-in or rebuy are returned.
+    /// </summary>
+    public static List<(string Tier, int BuyIns, int Rebuys)> GetTournamentMembershipStats()
+    {
+      var counts = new Dictionary<string, (int BuyIns, int Rebuys)>(StringComparer.OrdinalIgnoreCase);
+      foreach (var tier in TournamentSettings.MembershipTiers)
+        counts[tier] = (0, 0);
+
+      var rows = Query(@"
+SELECT type, notes FROM transactions
+WHERE type IN ('BUYIN','REBUY')");
+
+      foreach (DataRow row in rows.Rows)
+      {
+        var notes = row["notes"]?.ToString() ?? "";
+        var type = row["type"]?.ToString() ?? "";
+        string? matched = null;
+        foreach (var tier in TournamentSettings.MembershipTiers)
+        {
+          if (notes.StartsWith(tier, StringComparison.OrdinalIgnoreCase))
+          {
+            matched = tier;
+            break;
+          }
+        }
+        if (matched == null) continue;
+
+        var (buyIns, rebuys) = counts[matched];
+        if (type == "REBUY") rebuys++;
+        else buyIns++;
+        counts[matched] = (buyIns, rebuys);
+      }
+
+      var result = new List<(string Tier, int BuyIns, int Rebuys)>();
+      foreach (var tier in TournamentSettings.MembershipTiers)
+      {
+        var (buyIns, rebuys) = counts[tier];
+        if (buyIns > 0 || rebuys > 0)
+          result.Add((tier, buyIns, rebuys));
+      }
+      return result;
+    }
+
     // ----------------- Admin Password -----------------
 
     public static string GetAdminPassword()

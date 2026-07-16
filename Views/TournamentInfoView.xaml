@@ -15,33 +15,37 @@
               Width="30" Height="30" Click="Close_Click" FontSize="16"/>
     </Grid>
 
-    <Grid Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="220"/>
-        <ColumnDefinition Width="40"/>
-        <ColumnDefinition Width="220"/>
-      </Grid.ColumnDefinitions>
+    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+      <Grid HorizontalAlignment="Center">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="240"/>
+          <ColumnDefinition Width="40"/>
+          <ColumnDefinition Width="240"/>
+        </Grid.ColumnDefinitions>
 
-      <Border Grid.Column="0" BorderBrush="#2E6DA4" BorderThickness="2" Background="#E8F4FD"
-              Padding="24" CornerRadius="4">
-        <StackPanel HorizontalAlignment="Center">
-          <TextBlock Text="Total Buy-ins" FontSize="16" FontWeight="Bold"
-                     HorizontalAlignment="Center" Opacity="0.8"/>
-          <TextBlock x:Name="TotalBuyInsText" Text="0" FontSize="48" FontWeight="Bold"
-                     HorizontalAlignment="Center" Foreground="#2E6DA4" Margin="0,8,0,0"/>
-        </StackPanel>
-      </Border>
+        <Border Grid.Column="0" BorderBrush="#2E6DA4" BorderThickness="2" Background="#E8F4FD"
+                Padding="24" CornerRadius="4" VerticalAlignment="Top">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="Total Buy-ins" FontSize="16" FontWeight="Bold"
+                       HorizontalAlignment="Center" Opacity="0.8"/>
+            <TextBlock x:Name="TotalBuyInsText" Text="0" FontSize="48" FontWeight="Bold"
+                       HorizontalAlignment="Center" Foreground="#2E6DA4" Margin="0,8,0,0"/>
+            <StackPanel x:Name="BuyInBreakdownPanel" Margin="0,12,0,0" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+        </Border>
 
-      <Border Grid.Column="2" BorderBrush="#B8860B" BorderThickness="2" Background="#FFF8E8"
-              Padding="24" CornerRadius="4">
-        <StackPanel HorizontalAlignment="Center">
-          <TextBlock Text="Total Rebuys" FontSize="16" FontWeight="Bold"
-                     HorizontalAlignment="Center" Opacity="0.8"/>
-          <TextBlock x:Name="TotalRebuysText" Text="0" FontSize="48" FontWeight="Bold"
-                     HorizontalAlignment="Center" Foreground="#B8860B" Margin="0,8,0,0"/>
-        </StackPanel>
-      </Border>
-    </Grid>
+        <Border Grid.Column="2" BorderBrush="#B8860B" BorderThickness="2" Background="#FFF8E8"
+                Padding="24" CornerRadius="4" VerticalAlignment="Top">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="Total Rebuys" FontSize="16" FontWeight="Bold"
+                       HorizontalAlignment="Center" Opacity="0.8"/>
+            <TextBlock x:Name="TotalRebuysText" Text="0" FontSize="48" FontWeight="Bold"
+                       HorizontalAlignment="Center" Foreground="#B8860B" Margin="0,8,0,0"/>
+            <StackPanel x:Name="RebuyBreakdownPanel" Margin="0,12,0,0" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </StackPanel>
 
     <Button Grid.Row="2" Content="Back to Main" Padding="20,12" FontSize="16"
             Click="Close_Click" HorizontalAlignment="Center" Margin="0,16,0,0"/>

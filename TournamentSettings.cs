@@ -27,10 +27,10 @@ namespace pokersoc_connect
     public int DiamondBuyInCents { get; set; } = 2300;
 
     public int BronzeRebuyCents { get; set; } = 2500;
-    public int SilverRebuyCents { get; set; } = 2300;
-    public int GoldRebuyCents { get; set; } = 2300;
-    public int PlatinumRebuyCents { get; set; } = 2300;
-    public int DiamondRebuyCents { get; set; } = 2300;
+    public int SilverRebuyCents { get; set; } = 2500;
+    public int GoldRebuyCents { get; set; } = 2500;
+    public int PlatinumRebuyCents { get; set; } = 2500;
+    public int DiamondRebuyCents { get; set; } = 2500;
 
     /// <summary>Max rebuys per player. 0 = unlimited.</summary>
     public int RebuyCap { get; set; }
