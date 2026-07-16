@@ -348,7 +348,7 @@
         </Border>
 
         <!-- Activity header -->
-        <TextBlock Text="Activity Log" FontSize="18" FontWeight="Bold" Grid.Row="1" Margin="0,0,0,10"/>
+        <TextBlock x:Name="ActivityLogHeader" Text="Activity Log" FontSize="18" FontWeight="Bold" Grid.Row="1" Margin="0,0,0,10"/>
 
         <!-- Activity table -->
         <DataGrid x:Name="TxGrid"

@@ -163,6 +163,7 @@ namespace pokersoc_connect
             {
               // Show inline verification panel (age step first)
               _pendingPlayerId = playerId;
+              _currentPlayerId = string.Empty;
               NewPlayerIdText.Text = $"Player ID: {playerId}\n\nPlease verify this player is over 18 years old before continuing.\nThis player will be added as 'New Player'.";
               MembershipPlayerIdText.Text = $"Player ID: {playerId}\n\nSelect their membership type:";
               
@@ -180,6 +181,7 @@ namespace pokersoc_connect
               CurrentPlayerIdBox.IsReadOnly = true;
               CurrentPlayerIdBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 200));
               StartPlayerIdExpiryTimer();
+              RefreshActivity();
             }
             else
             {
@@ -208,6 +210,7 @@ namespace pokersoc_connect
               // Log attendance (even for underage players)
               Database.LogPlayerAttendance(playerId);
               StartPlayerIdExpiryTimer();
+              RefreshActivity();
             }
           }
           catch (Exception ex)
@@ -255,6 +258,7 @@ namespace pokersoc_connect
       PlayerInfoPanel.Visibility = Visibility.Collapsed;
       CurrentPlayerIdBox.Focus();
       UpdatePlayerButtons();
+      RefreshActivity();
     }
 
     private void StartPlayerIdExpiryTimer()
@@ -429,6 +433,7 @@ namespace pokersoc_connect
         
         Database.LogPlayerAttendance(_currentPlayerId);
         StartPlayerIdExpiryTimer();
+        RefreshActivity();
       }
       catch (Exception ex)
       {
@@ -467,6 +472,7 @@ namespace pokersoc_connect
         // Log attendance (even for underage players)
         Database.LogPlayerAttendance(_currentPlayerId);
         StartPlayerIdExpiryTimer();
+        RefreshActivity();
       }
       catch (Exception ex)
       {
@@ -491,6 +497,7 @@ namespace pokersoc_connect
       NewPlayerMembershipStep.Visibility = Visibility.Collapsed;
       UnderagePlayerPanel.Visibility = Visibility.Collapsed;
       UpdatePlayerButtons();
+      RefreshActivity();
       CurrentPlayerIdBox.Focus();
     }
 
@@ -1171,7 +1178,45 @@ namespace pokersoc_connect
     // ===== Activity feed =====
     private void RefreshActivity()
     {
-      var dt = Database.Query(@"
+      bool filterByPlayer = _playerVerified && !string.IsNullOrWhiteSpace(_currentPlayerId);
+
+      DataTable dt;
+      if (filterByPlayer)
+      {
+        dt = Database.Query(@"
+SELECT 
+  tx_id,
+  time,
+  type,
+  player_id,
+  cash_amt,
+  NULL AS batch_id,
+  'TX' AS activity_kind,
+  NULL AS notes,
+  time AS full_time
+FROM transactions
+WHERE tx_id NOT IN (SELECT tx_id FROM activity_log WHERE tx_id IS NOT NULL)
+  AND player_id = $player
+UNION ALL
+SELECT 
+  tx_id,
+  time,
+  activity_type AS type,
+  player_id,
+  amount_cents / 100.0 AS cash_amt,
+  batch_id,
+  activity_kind,
+  notes,
+  time AS full_time
+FROM activity_log
+WHERE player_id = $player
+ORDER BY full_time DESC
+", ("$player", _currentPlayerId));
+        ActivityLogHeader.Text = $"Activity Log — {_currentPlayerId}";
+      }
+      else
+      {
+        dt = Database.Query(@"
 SELECT 
   tx_id,
   time,
@@ -1198,6 +1243,9 @@ SELECT
 FROM activity_log
 ORDER BY full_time DESC
 ");
+        ActivityLogHeader.Text = "Activity Log";
+      }
+
       // Convert UTC to local time (SQLite's localtime is unreliable on Windows)
       foreach (DataRow row in dt.Rows)
       {
