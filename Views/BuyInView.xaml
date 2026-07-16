@@ -24,7 +24,8 @@
                    Foreground="Gray"
                    Margin="0,0,0,20"/>
 
-        <Grid Grid.Row="2" VerticalAlignment="Center">
+        <!-- ARC vs Non-ARC selection -->
+        <Grid x:Name="ArcTypeSelectionPanel" Grid.Row="2" VerticalAlignment="Center">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -57,6 +58,79 @@
               <TextBlock Text="NON-ARC MEMBER" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
               <TextBlock x:Name="NonArcMemberPriceText" Text="" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#B8860B"/>
               <TextBlock x:Name="NonArcMemberTypeLabel" Text="" FontSize="12" HorizontalAlignment="Center" Opacity="0.7" Margin="0,6,0,0"/>
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <!-- Membership tier selection -->
+        <Grid x:Name="MembershipTypeSelectionPanel" Grid.Row="2" VerticalAlignment="Center" Visibility="Collapsed">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+
+          <Button x:Name="BronzeTypeButton" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                  Tag="Bronze" Click="MembershipType_Click"
+                  MinHeight="90" Margin="0,0,6,6" Padding="12,16"
+                  BorderThickness="2" BorderBrush="Gray" Background="#CD7F32"
+                  Foreground="White">
+            <StackPanel>
+              <TextBlock Text="BRONZE" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="BronzePriceText" Text="" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+              <TextBlock x:Name="BronzeTypeLabel" Text="" FontSize="11" HorizontalAlignment="Center" Opacity="0.85" Margin="0,4,0,0"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="SilverTypeButton" Grid.Row="0" Grid.Column="3" Grid.ColumnSpan="3"
+                  Tag="Silver" Click="MembershipType_Click"
+                  MinHeight="90" Margin="6,0,0,6" Padding="12,16"
+                  BorderThickness="2" BorderBrush="Gray" Background="#A8A8A8"
+                  Foreground="White">
+            <StackPanel>
+              <TextBlock Text="SILVER" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="SilverPriceText" Text="" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+              <TextBlock x:Name="SilverTypeLabel" Text="" FontSize="11" HorizontalAlignment="Center" Opacity="0.85" Margin="0,4,0,0"/>
+            </StackPanel>
+          </Button>
+
+          <Button x:Name="GoldTypeButton" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                  Tag="Gold" Click="MembershipType_Click"
+                  MinHeight="90" Margin="0,6,4,0" Padding="12,16"
+                  BorderThickness="2" BorderBrush="Gray" Background="#D4AF37"
+                  Foreground="White">
+            <StackPanel>
+              <TextBlock Text="GOLD" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="GoldPriceText" Text="" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+              <TextBlock x:Name="GoldTypeLabel" Text="" FontSize="11" HorizontalAlignment="Center" Opacity="0.85" Margin="0,4,0,0"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="PlatinumTypeButton" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                  Tag="Platinum" Click="MembershipType_Click"
+                  MinHeight="90" Margin="4,6,4,0" Padding="12,16"
+                  BorderThickness="2" BorderBrush="Gray" Background="#6E7F8A"
+                  Foreground="White">
+            <StackPanel>
+              <TextBlock Text="PLATINUM" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="PlatinumPriceText" Text="" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+              <TextBlock x:Name="PlatinumTypeLabel" Text="" FontSize="11" HorizontalAlignment="Center" Opacity="0.85" Margin="0,4,0,0"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="DiamondTypeButton" Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="2"
+                  Tag="Diamond" Click="MembershipType_Click"
+                  MinHeight="90" Margin="4,6,0,0" Padding="12,16"
+                  BorderThickness="2" BorderBrush="Gray" Background="#4A90D9"
+                  Foreground="White">
+            <StackPanel>
+              <TextBlock Text="DIAMOND" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="DiamondPriceText" Text="" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+              <TextBlock x:Name="DiamondTypeLabel" Text="" FontSize="11" HorizontalAlignment="Center" Opacity="0.85" Margin="0,4,0,0"/>
             </StackPanel>
           </Button>
         </Grid>

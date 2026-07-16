@@ -9,6 +9,7 @@ namespace pokersoc_connect.Views
   {
     public event EventHandler? CloseRequested;
     public event EventHandler? SettingsSaved;
+    public event EventHandler? ConfigurePricingRequested;
 
     public TournamentSettingsView()
     {
@@ -16,14 +17,16 @@ namespace pokersoc_connect.Views
       LoadSettings();
     }
 
+    public void RefreshPricingSummary()
+    {
+      var settings = Database.GetTournamentSettings();
+      PricingStructureSummary.Text = $"Current: {settings.GetPricingStructureSummary()}";
+    }
+
     private void LoadSettings()
     {
       var settings = Database.GetTournamentSettings();
-      ArcBuyInBox.Text = (settings.ArcMemberBuyInCents / 100.0).ToString("F2", CultureInfo.InvariantCulture);
-      NonArcBuyInBox.Text = (settings.NonArcMemberBuyInCents / 100.0).ToString("F2", CultureInfo.InvariantCulture);
-      ArcRebuyBox.Text = (settings.ArcMemberRebuyCents / 100.0).ToString("F2", CultureInfo.InvariantCulture);
-      NonArcRebuyBox.Text = (settings.NonArcMemberRebuyCents / 100.0).ToString("F2", CultureInfo.InvariantCulture);
-      ArcOnlyCheck.IsChecked = settings.ArcOnly;
+      PricingStructureSummary.Text = $"Current: {settings.GetPricingStructureSummary()}";
 
       var unlimited = settings.RebuyCap <= 0;
       UnlimitedRebuysCheck.IsChecked = unlimited;
@@ -37,18 +40,11 @@ namespace pokersoc_connect.Views
       RebuyCapBox.IsEnabled = UnlimitedRebuysCheck.IsChecked != true;
     }
 
+    private void ConfigurePricing_Click(object sender, RoutedEventArgs e)
+      => ConfigurePricingRequested?.Invoke(this, EventArgs.Empty);
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-      if (!TryParseDollars(ArcBuyInBox.Text, out var arcDollars) ||
-          !TryParseDollars(NonArcBuyInBox.Text, out var nonArcDollars) ||
-          !TryParseDollars(ArcRebuyBox.Text, out var arcRebuyDollars) ||
-          !TryParseDollars(NonArcRebuyBox.Text, out var nonArcRebuyDollars))
-      {
-        MessageBox.Show("Please enter valid buy-in and rebuy amounts.", "Validation Error",
-          MessageBoxButton.OK, MessageBoxImage.Warning);
-        return;
-      }
-
       var unlimited = UnlimitedRebuysCheck.IsChecked == true;
       int rebuyCap = 0;
       if (!unlimited)
@@ -62,18 +58,10 @@ namespace pokersoc_connect.Views
         }
       }
 
-      var settings = new TournamentSettings
-      {
-        ArcMemberBuyInCents = (int)Math.Round(arcDollars * 100),
-        NonArcMemberBuyInCents = (int)Math.Round(nonArcDollars * 100),
-        ArcMemberRebuyCents = (int)Math.Round(arcRebuyDollars * 100),
-        NonArcMemberRebuyCents = (int)Math.Round(nonArcRebuyDollars * 100),
-        ArcOnly = ArcOnlyCheck.IsChecked == true,
-        RebuyCap = rebuyCap
-      };
-
       try
       {
+        var settings = Database.GetTournamentSettings();
+        settings.RebuyCap = rebuyCap;
         Database.SetTournamentSettings(settings);
         SettingsSaved?.Invoke(this, EventArgs.Empty);
         CloseRequested?.Invoke(this, EventArgs.Empty);
@@ -83,15 +71,6 @@ namespace pokersoc_connect.Views
         MessageBox.Show($"Could not save settings:\n{ex.Message}", "Error",
           MessageBoxButton.OK, MessageBoxImage.Error);
       }
-    }
-
-    private static bool TryParseDollars(string text, out double dollars)
-    {
-      dollars = 0;
-      if (!double.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out dollars) &&
-          !double.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out dollars))
-        return false;
-      return dollars >= 0;
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);

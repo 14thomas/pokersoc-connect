@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE TABLE IF NOT EXISTS transactions (
   tx_id     INTEGER PRIMARY KEY AUTOINCREMENT,
   time      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  type      TEXT NOT NULL CHECK (type IN ('BUYIN','CASHOUT')),
+  type      TEXT NOT NULL CHECK (type IN ('BUYIN','REBUY','CASHOUT')),
   player_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
   cash_amt  REAL NOT NULL,
   method    TEXT,
@@ -95,6 +95,9 @@ CREATE INDEX IF NOT EXISTS idx_moves_denom_time ON cashbox_movements(denom_cents
       try { Exec("ALTER TABLE players ADD COLUMN arc_member TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN membership_type TEXT DEFAULT 'None'"); } catch { }
       try { Exec("ALTER TABLE players ADD COLUMN is_underage INTEGER DEFAULT 0"); } catch { }
+
+      // Allow REBUY transaction type (existing DBs still have BUYIN/CASHOUT-only CHECK)
+      MigrateTransactionsAllowRebuy();
 
       // Grouping id for multi-denomination float add
       try { Exec("ALTER TABLE cashbox_movements ADD COLUMN batch_id TEXT"); } catch { }
@@ -244,6 +247,54 @@ CREATE TABLE IF NOT EXISTS app_settings (
 ");
       // Set default admin password if not exists
       Exec("INSERT OR IGNORE INTO app_settings(key, value) VALUES ('admin_password', '1234')");
+    }
+
+    private static void MigrateTransactionsAllowRebuy()
+    {
+      try
+      {
+        var schema = Query("SELECT sql FROM sqlite_master WHERE type='table' AND name='transactions'");
+        if (schema.Rows.Count == 0) return;
+        var createSql = schema.Rows[0]["sql"]?.ToString() ?? "";
+        if (createSql.Contains("'REBUY'", StringComparison.OrdinalIgnoreCase) ||
+            createSql.Contains("\"REBUY\"", StringComparison.OrdinalIgnoreCase))
+        {
+          // Already supports REBUY — still relabel any old rebuy rows stored as BUYIN
+          try
+          {
+            Exec(@"UPDATE transactions SET type = 'REBUY'
+                   WHERE type = 'BUYIN' AND notes LIKE '%Rebuy%'");
+          }
+          catch { }
+          return;
+        }
+
+        Exec(@"
+BEGIN;
+CREATE TABLE transactions_rebuy_mig (
+  tx_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  time      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  type      TEXT NOT NULL CHECK (type IN ('BUYIN','REBUY','CASHOUT')),
+  player_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+  cash_amt  REAL NOT NULL,
+  method    TEXT,
+  staff     TEXT,
+  notes     TEXT
+);
+INSERT INTO transactions_rebuy_mig(tx_id, time, type, cash_amt, method, staff, notes, player_id)
+SELECT tx_id, time,
+       CASE WHEN type = 'BUYIN' AND IFNULL(notes,'') LIKE '%Rebuy%' THEN 'REBUY' ELSE type END,
+       cash_amt, method, staff, notes, player_id
+FROM transactions;
+DROP TABLE transactions;
+ALTER TABLE transactions_rebuy_mig RENAME TO transactions;
+CREATE INDEX IF NOT EXISTS idx_tx_player_time ON transactions(player_id, time);
+COMMIT;");
+      }
+      catch
+      {
+        try { Exec("ROLLBACK"); } catch { }
+      }
     }
 
     // ----------------- Public helpers -----------------
@@ -480,6 +531,22 @@ CREATE TABLE IF NOT EXISTS app_settings (
       "Bronze", "Silver", "Gold", "Platinum", "Diamond"
     };
 
+    public static bool IsValidMembershipType(string? value)
+    {
+      var normalized = NormalizeMembershipType(value);
+      return normalized != "None";
+    }
+
+    public static string GetPlayerMembershipType(string playerId)
+    {
+      var result = Query(
+        "SELECT COALESCE(membership_type, 'None') as membership_type FROM players WHERE player_id = $id",
+        ("$id", playerId)
+      );
+      if (result.Rows.Count == 0) return "None";
+      return NormalizeMembershipType(result.Rows[0]["membership_type"]?.ToString());
+    }
+
     private static string NormalizeMembershipType(string? value)
     {
       if (string.IsNullOrWhiteSpace(value) || value.Equals("None", StringComparison.OrdinalIgnoreCase))
@@ -642,7 +709,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
     public static long GetPlayerSessionBuyInsCents(string playerId)
     {
       var result = ScalarLong(
-        "SELECT COALESCE(SUM(CAST(cash_amt * 100 AS INTEGER)), 0) FROM transactions WHERE player_id = $id AND type = 'BUYIN'",
+        "SELECT COALESCE(SUM(CAST(cash_amt * 100 AS INTEGER)), 0) FROM transactions WHERE player_id = $id AND type IN ('BUYIN','REBUY')",
         ("$id", playerId)
       );
       return result;
@@ -651,9 +718,19 @@ CREATE TABLE IF NOT EXISTS app_settings (
     public static int GetPlayerSessionBuyInCount(string playerId)
     {
       return (int)ScalarLong(
-        "SELECT COUNT(*) FROM transactions WHERE player_id = $id AND type = 'BUYIN'",
+        "SELECT COUNT(*) FROM transactions WHERE player_id = $id AND type IN ('BUYIN','REBUY')",
         ("$id", playerId)
       );
+    }
+
+    /// <summary>
+    /// Session tournament counts: initial buy-ins and rebuys.
+    /// </summary>
+    public static (int TotalBuyIns, int TotalRebuys) GetTournamentSessionStats()
+    {
+      var totalBuyIns = (int)ScalarLong("SELECT COUNT(*) FROM transactions WHERE type = 'BUYIN'");
+      var totalRebuys = (int)ScalarLong("SELECT COUNT(*) FROM transactions WHERE type = 'REBUY'");
+      return (totalBuyIns, totalRebuys);
     }
 
     // ----------------- Admin Password -----------------
@@ -738,9 +815,9 @@ CREATE TABLE IF NOT EXISTS app_settings (
     {
       InTransaction(tx =>
       {
-        if (txType == "BUYIN")
+        if (txType == "BUYIN" || txType == "REBUY")
         {
-          // Undo BUYIN: reverse all cashbox movements for this transaction
+          // Undo BUYIN/REBUY: reverse all cashbox movements for this transaction
           // Cash received was added (positive), so we subtract
           // Change given was subtracted (negative), so we add back
           Exec(@"

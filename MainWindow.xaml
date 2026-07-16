@@ -454,17 +454,19 @@
           </StackPanel>
         </Button>
 
-        <!-- Empty Button 6 -->
-        <Button Grid.Row="2" Grid.Column="1"
+        <!-- Tournament Info / Button 6 -->
+        <Button x:Name="TournamentInfoButton"
+                Grid.Row="2" Grid.Column="1"
                 Margin="5,5,0,5"
                 Padding="15,20"
+                Click="TournamentInfo_Click"
                 BorderThickness="2"
                 BorderBrush="LightGray"
                 IsEnabled="False">
           <StackPanel>
-            <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
-            <TextBlock Text="Button 6" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
-            <TextBlock Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock x:Name="TournamentInfoIcon" Text="📊" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+            <TextBlock x:Name="TournamentInfoTitle" Text="Button 6" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock x:Name="TournamentInfoSubtitle" Text="Coming soon" FontSize="10" HorizontalAlignment="Center" Opacity="0.3"/>
           </StackPanel>
         </Button>
 

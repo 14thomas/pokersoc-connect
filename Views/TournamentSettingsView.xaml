@@ -17,51 +17,23 @@
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel>
-        <GroupBox Header="Event Options" Margin="0,0,0,16">
+        <GroupBox Header="Pricing Structure" Margin="0,0,0,16">
           <StackPanel Margin="10">
-            <CheckBox x:Name="ArcOnlyCheck"
-                      Content="ARC Only (non-ARC buy-ins disabled)"
-                      FontSize="14"
-                      Margin="0,0,0,8"/>
-            <TextBlock Text="When enabled, the buy-in screen only offers ARC member pricing."
-                       FontSize="11" Foreground="Gray" TextWrapping="Wrap"/>
+            <TextBlock x:Name="PricingStructureSummary"
+                       Text=""
+                       FontSize="14"
+                       Margin="0,0,0,12"
+                       TextWrapping="Wrap"/>
+            <Button Content="Configure Pricing Structure…"
+                    Padding="16,14"
+                    FontSize="15"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Stretch"
+                    Background="#E8F4FD"
+                    Click="ConfigurePricing_Click"/>
+            <TextBlock Text="Choose ARC vs Non-ARC, or membership-tier pricing, then set buy-in and rebuy amounts."
+                       FontSize="11" Foreground="Gray" Margin="0,8,0,0" TextWrapping="Wrap"/>
           </StackPanel>
-        </GroupBox>
-
-        <GroupBox Header="Initial Buy-in Amounts" Margin="0,0,0,16">
-          <Grid Margin="10">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto"/>
-              <ColumnDefinition Width="120"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="ARC Member Buy-in ($):" VerticalAlignment="Center" Margin="0,0,10,8"/>
-            <TextBox x:Name="ArcBuyInBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Non-ARC Member Buy-in ($):" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBox x:Name="NonArcBuyInBox" Grid.Row="1" Grid.Column="1"/>
-          </Grid>
-        </GroupBox>
-
-        <GroupBox Header="Rebuy Amounts" Margin="0,0,0,16">
-          <Grid Margin="10">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto"/>
-              <ColumnDefinition Width="120"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="ARC Member Rebuy ($):" VerticalAlignment="Center" Margin="0,0,10,8"/>
-            <TextBox x:Name="ArcRebuyBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Non-ARC Member Rebuy ($):" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBox x:Name="NonArcRebuyBox" Grid.Row="1" Grid.Column="1"/>
-          </Grid>
         </GroupBox>
 
         <GroupBox Header="Rebuy Limit">

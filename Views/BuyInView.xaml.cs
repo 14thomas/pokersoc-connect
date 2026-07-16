@@ -84,29 +84,66 @@ namespace pokersoc_connect.Views
       var existingCount = Database.GetPlayerSessionBuyInCount(_playerId);
       _isRebuy = existingCount > 0;
       var canBuyIn = _tournamentSettings.CanBuyIn(existingCount);
+      var useMembership = _tournamentSettings.UsesMembershipPricing;
+
+      // Membership pricing: use the player's stored tier automatically — no selection screen
+      if (useMembership)
+      {
+        ArcTypeSelectionPanel.Visibility = Visibility.Collapsed;
+        MembershipTypeSelectionPanel.Visibility = Visibility.Collapsed;
+
+        if (!canBuyIn)
+        {
+          TournamentTypeView.Visibility = Visibility.Visible;
+          CashInputView.Visibility = Visibility.Collapsed;
+          var capText = _tournamentSettings.RebuyCap <= 0
+            ? "unlimited"
+            : _tournamentSettings.RebuyCap.ToString();
+          RebuyCapWarningText.Text = $"Rebuy limit reached ({capText} rebuy cap). No further buy-ins allowed.";
+          RebuyCapWarningText.Visibility = Visibility.Visible;
+          return;
+        }
+
+        var membershipType = Database.GetPlayerMembershipType(_playerId);
+        if (!Database.IsValidMembershipType(membershipType))
+        {
+          MessageBox.Show(
+            "This player has no membership type set.\n\nUse Edit on the current player to set Bronze, Silver, Gold, Platinum, or Diamond before buying in.",
+            "Membership Required",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+          Cancelled?.Invoke(this, EventArgs.Empty);
+          return;
+        }
+
+        SelectTournamentMembershipType(membershipType);
+        return;
+      }
 
       TournamentTypeSubtitle.Text = _isRebuy
         ? $"Rebuy #{existingCount} — select member type"
         : "First buy-in — select member type";
 
-      var arcPrice = _tournamentSettings.GetPriceCents(isArc: true, _isRebuy);
-      var nonArcPrice = _tournamentSettings.GetPriceCents(isArc: false, _isRebuy);
-      var arcLabel = _isRebuy ? "Rebuy" : "Initial buy-in";
-      var nonArcLabel = _isRebuy ? "Rebuy" : "Initial buy-in";
+      ArcTypeSelectionPanel.Visibility = Visibility.Visible;
+      MembershipTypeSelectionPanel.Visibility = Visibility.Collapsed;
+
+      var typeLabel = _isRebuy ? "Rebuy" : "Initial buy-in";
+      var arcPrice = _tournamentSettings.GetArcPriceCents(isArc: true, _isRebuy);
+      var nonArcPrice = _tournamentSettings.GetArcPriceCents(isArc: false, _isRebuy);
 
       ArcMemberPriceText.Text = (arcPrice / 100.0).ToString("C", culture);
-      ArcMemberTypeLabel.Text = arcLabel;
+      ArcMemberTypeLabel.Text = typeLabel;
       NonArcMemberPriceText.Text = (nonArcPrice / 100.0).ToString("C", culture);
-      NonArcMemberTypeLabel.Text = nonArcLabel;
+      NonArcMemberTypeLabel.Text = typeLabel;
 
       var arcOnly = _tournamentSettings.ArcOnly;
       ArcMemberTypeButton.Visibility = Visibility.Visible;
       NonArcMemberTypeButton.Visibility = arcOnly ? Visibility.Collapsed : Visibility.Visible;
+      ArcMemberTypeButton.IsEnabled = canBuyIn;
+      NonArcMemberTypeButton.IsEnabled = canBuyIn && !arcOnly;
 
       if (!canBuyIn)
       {
-        ArcMemberTypeButton.IsEnabled = false;
-        NonArcMemberTypeButton.IsEnabled = false;
         var capText = _tournamentSettings.RebuyCap <= 0
           ? "unlimited"
           : _tournamentSettings.RebuyCap.ToString();
@@ -115,12 +152,10 @@ namespace pokersoc_connect.Views
         return;
       }
 
-      ArcMemberTypeButton.IsEnabled = true;
-      NonArcMemberTypeButton.IsEnabled = !arcOnly;
       RebuyCapWarningText.Visibility = Visibility.Collapsed;
 
       if (arcOnly)
-        SelectTournamentType(isArc: true);
+        SelectTournamentArcType(isArc: true);
     }
 
     private void BackFromCashToTypeSelection()
@@ -131,17 +166,37 @@ namespace pokersoc_connect.Views
       RefreshTournamentTypeSelection();
     }
 
-    private void ArcMemberType_Click(object sender, RoutedEventArgs e) => SelectTournamentType(isArc: true);
+    private void ArcMemberType_Click(object sender, RoutedEventArgs e) => SelectTournamentArcType(isArc: true);
 
-    private void NonArcMemberType_Click(object sender, RoutedEventArgs e) => SelectTournamentType(isArc: false);
+    private void NonArcMemberType_Click(object sender, RoutedEventArgs e) => SelectTournamentArcType(isArc: false);
 
-    private void SelectTournamentType(bool isArc)
+    private void MembershipType_Click(object sender, RoutedEventArgs e)
+    {
+      var tier = (sender as Button)?.Tag?.ToString();
+      if (!string.IsNullOrWhiteSpace(tier))
+        SelectTournamentMembershipType(tier);
+    }
+
+    private void SelectTournamentArcType(bool isArc)
     {
       if (_tournamentSettings == null) return;
 
-      _fixedBuyInCents = _tournamentSettings.GetPriceCents(isArc, _isRebuy);
-      _buyInNotes = _tournamentSettings.GetBuyInLabel(isArc, _isRebuy);
+      _fixedBuyInCents = _tournamentSettings.GetArcPriceCents(isArc, _isRebuy);
+      _buyInNotes = _tournamentSettings.GetArcBuyInLabel(isArc, _isRebuy);
+      ProceedToCashAfterTypeSelection();
+    }
 
+    private void SelectTournamentMembershipType(string membershipType)
+    {
+      if (_tournamentSettings == null) return;
+
+      _fixedBuyInCents = _tournamentSettings.GetMembershipPriceCents(membershipType, _isRebuy);
+      _buyInNotes = _tournamentSettings.GetMembershipBuyInLabel(membershipType, _isRebuy);
+      ProceedToCashAfterTypeSelection();
+    }
+
+    private void ProceedToCashAfterTypeSelection()
+    {
       var culture = CultureInfo.GetCultureInfo("en-AU");
       TournamentInfoPanel.Visibility = Visibility.Visible;
       TournamentBuyInDisplay.Text = (_fixedBuyInCents / 100.0).ToString("C", culture);
@@ -876,7 +931,8 @@ namespace pokersoc_connect.Views
         new Dictionary<int, int>(_cashCounts), 
         (int)(_buyInAmount * 100),
         changeBreakdown,
-        string.IsNullOrWhiteSpace(_buyInNotes) ? null : _buyInNotes
+        string.IsNullOrWhiteSpace(_buyInNotes) ? null : _buyInNotes,
+        _isRebuy
       ));
     }
 
@@ -884,8 +940,8 @@ namespace pokersoc_connect.Views
     {
       if (_isTournamentMode && CashInputView.Visibility == Visibility.Visible)
       {
-        // ARC-only skips type selection, so go straight back to main
-        if (_tournamentSettings?.ArcOnly == true)
+        // Membership pricing and ARC-only skip type selection — go straight back to main
+        if (_tournamentSettings?.UsesMembershipPricing == true || _tournamentSettings?.ArcOnly == true)
         {
           Cancelled?.Invoke(this, EventArgs.Empty);
           return;
@@ -906,13 +962,15 @@ namespace pokersoc_connect.Views
     public int BuyInAmountCents { get; }
     public Dictionary<int, int> ChangeBreakdown { get; }
     public string? Notes { get; }
+    public bool IsRebuy { get; }
 
     public BuyInConfirmedEventArgs(string member,
                                  Dictionary<int, int> cashReceived,
                                  int buyInAmountCents,
                                  Dictionary<int, int> changeBreakdown,
-                                 string? notes = null)
-      => (MemberNumber, CashReceived, BuyInAmountCents, ChangeBreakdown, Notes) =
-         (member, cashReceived, buyInAmountCents, changeBreakdown, notes);
+                                 string? notes = null,
+                                 bool isRebuy = false)
+      => (MemberNumber, CashReceived, BuyInAmountCents, ChangeBreakdown, Notes, IsRebuy) =
+         (member, cashReceived, buyInAmountCents, changeBreakdown, notes, isRebuy);
   }
 }

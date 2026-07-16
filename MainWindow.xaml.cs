@@ -57,6 +57,15 @@ namespace pokersoc_connect
         CashOutIcon.Text = "🚧";
         CashOutTitle.Text = "Coming Soon";
         CashOutSubtitle.Text = "Tournament cash-out";
+
+        TournamentInfoButton.IsEnabled = true;
+        TournamentInfoButton.BorderBrush = System.Windows.Media.Brushes.Gray;
+        TournamentInfoIcon.Opacity = 1;
+        TournamentInfoTitle.Opacity = 1;
+        TournamentInfoSubtitle.Opacity = 0.7;
+        TournamentInfoIcon.Text = "📊";
+        TournamentInfoTitle.Text = "Tournament Info";
+        RefreshTournamentInfoButton();
       }
       else
       {
@@ -67,7 +76,23 @@ namespace pokersoc_connect
         CashOutIcon.Text = "💸";
         CashOutTitle.Text = "Cash-out";
         CashOutSubtitle.Text = "Record player cash-out";
+
+        TournamentInfoButton.IsEnabled = false;
+        TournamentInfoButton.BorderBrush = System.Windows.Media.Brushes.LightGray;
+        TournamentInfoIcon.Opacity = 0.3;
+        TournamentInfoTitle.Opacity = 0.3;
+        TournamentInfoSubtitle.Opacity = 0.3;
+        TournamentInfoIcon.Text = "📊";
+        TournamentInfoTitle.Text = "Button 6";
+        TournamentInfoSubtitle.Text = "Coming soon";
       }
+    }
+
+    private void RefreshTournamentInfoButton()
+    {
+      if (Database.GetSessionMode() != SessionMode.Tournament) return;
+      var (buyIns, rebuys) = Database.GetTournamentSessionStats();
+      TournamentInfoSubtitle.Text = $"Buy-ins: {buyIns}  ·  Rebuys: {rebuys}";
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -355,6 +380,7 @@ namespace pokersoc_connect
         Database.SetPlayerMembershipType(_currentPlayerId, membershipType);
         EditMembershipPanel.Visibility = Visibility.Collapsed;
         ShowPlayerInfo(_currentPlayerId);
+        UpdatePlayerButtons();
         StartPlayerIdExpiryTimer();
       }
       catch (Exception ex)
@@ -472,7 +498,18 @@ namespace pokersoc_connect
     {
       // Only enable buy-in/cash-out if player is verified AND not underage
       bool hasVerifiedPlayer = !string.IsNullOrWhiteSpace(_currentPlayerId) && _playerVerified && !_playerIsUnderage;
-      BuyInButton.IsEnabled = hasVerifiedPlayer;
+      bool canBuyIn = hasVerifiedPlayer;
+
+      // Membership-tier tournaments require a set membership type before buy-in
+      if (canBuyIn &&
+          Database.GetSessionMode() == SessionMode.Tournament &&
+          Database.GetTournamentSettings().UsesMembershipPricing &&
+          !Database.IsValidMembershipType(Database.GetPlayerMembershipType(_currentPlayerId)))
+      {
+        canBuyIn = false;
+      }
+
+      BuyInButton.IsEnabled = canBuyIn;
       CashOutButton.IsEnabled = hasVerifiedPlayer;
 
       // Edit works for any verified current player (to fix membership, etc.)
@@ -646,7 +683,19 @@ namespace pokersoc_connect
           return;
         }
 
-        view.SetTournamentMode(Database.GetTournamentSettings());
+        var settings = Database.GetTournamentSettings();
+        if (settings.UsesMembershipPricing &&
+            !Database.IsValidMembershipType(Database.GetPlayerMembershipType(_currentPlayerId)))
+        {
+          MessageBox.Show(this,
+            "This player has no membership type set.\n\nUse Edit on the current player to set their membership before buying in.",
+            "Membership Required",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+          return;
+        }
+
+        view.SetTournamentMode(settings);
       }
       
       // Pre-fill player ID if one is set
@@ -667,10 +716,12 @@ namespace pokersoc_connect
         {
           EnsurePlayer(playerId, tx);
 
+          var txType = args.IsRebuy ? "REBUY" : "BUYIN";
+
           Database.Exec(
             "INSERT INTO transactions(player_id, type, cash_amt, method, staff, notes) " +
-            "VALUES ($p, 'BUYIN', $cash, 'Cash', 'Dealer', $notes)",
-            tx, ("$p", playerId), ("$cash", buyInAmt), ("$notes", (object?)args.Notes ?? DBNull.Value)
+            "VALUES ($p, $type, $cash, 'Cash', 'Dealer', $notes)",
+            tx, ("$p", playerId), ("$type", txType), ("$cash", buyInAmt), ("$notes", (object?)args.Notes ?? DBNull.Value)
           );
 
           var txId = Database.ScalarLong("SELECT last_insert_rowid()", tx);
@@ -1058,7 +1109,22 @@ namespace pokersoc_connect
 
       var view = new TournamentSettingsView();
       view.CloseRequested += (_, __) => ShowTransactions();
-      view.SettingsSaved += (_, __) => RefreshActivity();
+      view.SettingsSaved += (_, __) => { RefreshActivity(); UpdatePlayerButtons(); };
+      view.ConfigurePricingRequested += (_, __) => ShowTournamentPricing();
+      ScreenHost.Content = view;
+      ScreenHost.Visibility = Visibility.Visible;
+    }
+
+    private void ShowTournamentPricing()
+    {
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+
+      var view = new TournamentPricingView();
+      view.CloseRequested += (_, __) => ShowTournamentSettings();
+      view.PricingSaved += (_, __) => { RefreshActivity(); UpdatePlayerButtons(); };
       ScreenHost.Content = view;
       ScreenHost.Visibility = Visibility.Visible;
     }
@@ -1072,6 +1138,29 @@ namespace pokersoc_connect
       }
 
         ShowLostChips();
+    }
+
+    private void TournamentInfo_Click(object sender, RoutedEventArgs e)
+    {
+      if (Database.GetSessionMode() != SessionMode.Tournament) return;
+      ShowTournamentInfo();
+    }
+
+    private void ShowTournamentInfo()
+    {
+      MainContent.Visibility = Visibility.Collapsed;
+      SettingsHost.Visibility = Visibility.Collapsed;
+      FoodHost.Visibility = Visibility.Collapsed;
+      ScreenHost.Visibility = Visibility.Collapsed;
+
+      var view = new Views.TournamentInfoView();
+      view.CloseRequested += (_, __) =>
+      {
+        RefreshTournamentInfoButton();
+        ShowTransactions();
+      };
+      ScreenHost.Content = view;
+      ScreenHost.Visibility = Visibility.Visible;
     }
 
     private void Players_Click(object sender, RoutedEventArgs e)
@@ -1117,6 +1206,7 @@ ORDER BY full_time DESC
           row["time"] = Database.UtcToLocalTimeString(raw, "HH:mm:ss");
       }
       TxGrid.ItemsSource = dt.DefaultView;
+      RefreshTournamentInfoButton();
     }
 
     // ===== Cashbox =====
@@ -1217,9 +1307,9 @@ ORDER BY denom_cents DESC", ("$tx", txId));
         .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
         .ToList();
 
-      if (type == "BUYIN")
+      if (type == "BUYIN" || type == "REBUY")
       {
-        // For BUYIN: separate cash received from change given back
+        // For BUYIN/REBUY: separate cash received from change given back
         var cashReceivedDt = Database.Query(@"
 SELECT denom_cents, SUM(delta_qty) AS qty
 FROM cashbox_movements
@@ -1240,11 +1330,11 @@ ORDER BY denom_cents DESC", ("$tx", txId));
           .Select(r => (denom: Convert.ToInt32(r["denom_cents"]), qty: Convert.ToInt32(r["qty"])))
           .ToList();
 
-        string title = "Buy-in breakdown";
+        string title = type == "REBUY" ? "Rebuy breakdown" : "Buy-in breakdown";
         string subtitle = "Cash received + change given back";
 
         var view = new BreakdownView(title, subtitle, Enumerable.Empty<(int,int)>(), cashReceived, changeGiven, false, dateTime, additionalInfo);
-        view.EnableDeletion(txId, "BUYIN");
+        view.EnableDeletion(txId, type);
         view.Back += (_, __) => ShowTransactions();
         view.Deleted += (_, __) => { RefreshActivity(); ShowTransactions(); };
         ShowScreen(view);
