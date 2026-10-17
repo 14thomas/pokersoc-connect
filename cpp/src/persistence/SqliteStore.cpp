@@ -21,6 +21,7 @@
 #include "domain/transaction/CashOut.h"
 #include "domain/transaction/CashboxTransactions.h"
 #include "domain/transaction/FoodSale.h"
+#include "domain/transaction/TournamentPayout.h"
 #include "domain/transaction/TransactionLog.h"
 #include "sqlite3.h"
 #include "util/Time.h"
@@ -43,6 +44,7 @@ using domain::Player;
 using domain::PlayerDirectory;
 using domain::Rebuy;
 using domain::SaleLine;
+using domain::TournamentPayout;
 using domain::Transaction;
 using domain::TransactionLog;
 using domain::TransactionType;
@@ -137,7 +139,9 @@ const char* eventKind(TransactionType type) {
         case TransactionType::CashTip:   return "TIP";
         case TransactionType::LostChips: return "LOST_CHIPS";
         case TransactionType::Exchange:  return "EXCHANGE";
-        case TransactionType::FoodSale:  return "FOOD_SALE";
+        case TransactionType::FoodSale:     return "FOOD_SALE";
+        case TransactionType::PrizePayout:  return "PRIZE_PAYOUT";
+        case TransactionType::BountyPayout: return "BOUNTY_PAYOUT";
     }
     return "UNKNOWN";
 }
@@ -275,6 +279,9 @@ void SqliteStore::recordTransaction(Transaction& transaction) {
                 seq = insertEvent(kind, buyIn.playerId(), 0, buyIn.notes(), "", time);
                 writeCount(seq, "CASH_IN", buyIn.cashReceived());
                 writeCount(seq, "CHANGE", buyIn.changeGiven());
+                insertLine(seq, "SPLIT", buyIn.prizeAmount().cents(), 1, "PRIZE");
+                insertLine(seq, "SPLIT", buyIn.bountyAmount().cents(), 1, "BOUNTY");
+                insertLine(seq, "SPLIT", buyIn.rakeAmount().cents(), 1, "RAKE");
                 break;
             }
             case TransactionType::CashOut: {
@@ -319,6 +326,16 @@ void SqliteStore::recordTransaction(Transaction& transaction) {
                 writeFood(seq, sale.lines());
                 writeCount(seq, "PAY", sale.payment());
                 writeCount(seq, "CHANGE", sale.change());
+                break;
+            }
+            case TransactionType::PrizePayout:
+            case TransactionType::BountyPayout: {
+                const auto& payout = static_cast<const TournamentPayout&>(transaction);
+                const long long extra = payout.kind() == TournamentPayout::Kind::Bounty
+                                            ? payout.bountyCount()
+                                            : payout.place();
+                seq = insertEvent(kind, payout.playerId(), extra, payout.notes(), "", time);
+                writeCount(seq, "CASH", payout.cashPaid());
                 break;
             }
         }
@@ -379,6 +396,7 @@ void SqliteStore::load(const DenominationTable& table, Cashbox& cashbox, Transac
 
             // role -> tally, resolving each line against cash or chip denominations
             std::map<std::string, DenominationCount> tallies;
+            std::map<std::string, long long> splits;
             std::vector<SaleLine> food;
             auto tally = [&tallies](const std::string& role) -> const DenominationCount& {
                 return tallies[role];
@@ -394,6 +412,10 @@ void SqliteStore::load(const DenominationTable& table, Cashbox& cashbox, Transac
                 if (role == "FOOD") {
                     food.push_back(SaleLine{columnText(lines.statement, 3),
                                             Money::fromCents(denomCents), qty});
+                    continue;
+                }
+                if (role == "SPLIT") {
+                    splits[columnText(lines.statement, 3)] = denomCents;
                     continue;
                 }
                 const bool isChip =
@@ -421,6 +443,20 @@ void SqliteStore::load(const DenominationTable& table, Cashbox& cashbox, Transac
                 } else {
                     transaction = std::make_unique<BuyIn>(event.playerId, cashIn, change, amount);
                 }
+                if (!splits.empty()) {
+                    static_cast<BuyIn&>(*transaction)
+                        .setSplit(Money::fromCents(splits["PRIZE"]),
+                                  Money::fromCents(splits["BOUNTY"]),
+                                  Money::fromCents(splits["RAKE"]));
+                }
+            } else if (event.kind == "PRIZE_PAYOUT" || event.kind == "BOUNTY_PAYOUT") {
+                const auto kind = event.kind == "BOUNTY_PAYOUT" ? TournamentPayout::Kind::Bounty
+                                                               : TournamentPayout::Kind::Placement;
+                const int extra = static_cast<int>(event.tipCents);
+                transaction = std::make_unique<TournamentPayout>(
+                    event.playerId, kind, tally("CASH"),
+                    kind == TournamentPayout::Kind::Placement ? extra : 0,
+                    kind == TournamentPayout::Kind::Bounty ? extra : 0);
             } else if (event.kind == "TIP") {
                 transaction = std::make_unique<CashTip>(tally("CASH"), event.playerId);
             } else if (event.kind == "LOST_CHIPS") {

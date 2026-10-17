@@ -26,6 +26,8 @@
 #include "domain/transaction/Transaction.h"
 #include "ui/qt/Screens.h"
 #include "ui/qt/SessionContext.h"
+#include "ui/qt/TournamentBoardWindow.h"
+#include "ui/qt/TournamentClock.h"
 #include "ui/qt/Widgets.h"
 #include "util/Time.h"
 
@@ -69,6 +71,8 @@ void styleTile(TileButton* tile, const QString& background, const QString& borde
 
 QString activityType(const Transaction& transaction) {
     if (transaction.type() == TransactionType::FoodSale) return "SALE";
+    if (transaction.type() == TransactionType::PrizePayout) return "PRIZE";
+    if (transaction.type() == TransactionType::BountyPayout) return "BOUNTY";
     if (transaction.type() == TransactionType::CashOut &&
         !static_cast<const CashOut&>(transaction).food().empty()) {
         return "CASHOUT_SALE";
@@ -82,6 +86,12 @@ MainWindow::MainWindow(std::unique_ptr<SessionContext> context, QWidget* parent)
     : QMainWindow(parent), ctx_(std::move(context)) {
     setAttribute(Qt::WA_DeleteOnClose);
     resize(1080, 720);
+
+    if (ctx_->isTournament()) {
+        clock_ = new TournamentClock(this);
+        clock_->setConfig(&ctx_->tournament().config());
+        connect(clock_, &TournamentClock::changed, this, [this] { refreshClockBar(); });
+    }
 
     auto* central = new QWidget;
     setCentralWidget(central);
@@ -115,6 +125,11 @@ MainWindow::MainWindow(std::unique_ptr<SessionContext> context, QWidget* parent)
 }
 
 MainWindow::~MainWindow() {
+    if (board_) {
+        board_->setAttribute(Qt::WA_DeleteOnClose, false);
+        delete board_.data();
+        board_ = nullptr;
+    }
     // Screens hold references into the session; destroy them before it.
     if (stack_) {
         while (stack_->count() > 0) {
@@ -149,8 +164,13 @@ void MainWindow::showEvent(QShowEvent* event) {
 
 QWidget* MainWindow::buildMainPage() {
     auto* page = new QWidget;
-    auto* columns = new QHBoxLayout(page);
-    columns->setContentsMargins(16, 16, 16, 16);
+    auto* root = new QVBoxLayout(page);
+    root->setContentsMargins(16, 16, 16, 16);
+    root->setSpacing(12);
+    if (ctx_->isTournament()) root->addWidget(buildClockBar());
+
+    auto* columns = new QHBoxLayout;
+    columns->setContentsMargins(0, 0, 0, 0);
     columns->setSpacing(18);
 
     auto* left = new QVBoxLayout;
@@ -185,7 +205,48 @@ QWidget* MainWindow::buildMainPage() {
 
     columns->addLayout(left, 2);
     columns->addWidget(buildTiles(), 3);
+    root->addLayout(columns, 1);
     return page;
+}
+
+QFrame* MainWindow::buildClockBar() {
+    clockBar_ = makePanel("#F3E5F5", "#8E24AA", 2, 8, 10);
+    auto* row = new QHBoxLayout;
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(10);
+    panelLayout(clockBar_)->addLayout(row);
+
+    clockLevel_ = makeLabel("Level 1 / 1", 14, true);
+    clockTime_ = makeLabel("00:00", 22, true, "#6A1B9A");
+    clockBlinds_ = makeLabel("Blinds —", 13, false, "#4A148C");
+    clockBlinds_->setWordWrap(true);
+
+    auto* labels = new QVBoxLayout;
+    labels->setContentsMargins(0, 0, 0, 0);
+    labels->setSpacing(0);
+    labels->addWidget(clockLevel_);
+    labels->addWidget(clockBlinds_);
+    row->addLayout(labels, 1);
+    row->addWidget(clockTime_);
+
+    clockStart_ = boldButton("Start", color::LightGreen, 13, "8px 12px");
+    clockPause_ = boldButton("Pause", "#FFE0B2", 13, "8px 12px");
+    QPushButton* prev = boldButton(QStringLiteral("◀"), color::ButtonFace, 13, "8px 10px");
+    QPushButton* next = boldButton(QStringLiteral("▶"), color::ButtonFace, 13, "8px 10px");
+    boardButton_ = boldButton("Open Board", "#E8F4FD", 13, "8px 14px");
+    row->addWidget(clockStart_);
+    row->addWidget(clockPause_);
+    row->addWidget(prev);
+    row->addWidget(next);
+    row->addWidget(boardButton_);
+
+    connect(clockStart_, &QPushButton::clicked, this, [this] { if (clock_) clock_->start(); });
+    connect(clockPause_, &QPushButton::clicked, this, [this] { if (clock_) clock_->pause(); });
+    connect(prev, &QPushButton::clicked, this, [this] { if (clock_) clock_->goToPreviousLevel(); });
+    connect(next, &QPushButton::clicked, this, [this] { if (clock_) clock_->goToNextLevel(); });
+    connect(boardButton_, &QPushButton::clicked, this, [this] { openTournamentBoard(); });
+    refreshClockBar();
+    return clockBar_;
 }
 
 QFrame* MainWindow::buildPlayerPanel() {
@@ -359,9 +420,9 @@ QWidget* MainWindow::buildTiles() {
     // infoTile_ is coloured by applySessionModeUi() instead, since its look
     // depends on session mode.
 
-    // Primary transaction actions on top, daily tools in the middle,
-    // settings/secondary tools at the bottom (what used to be top-left).
-    TileButton* tiles[] = {buyInTile_, cashOutTile_, cashbox, food, players, infoTile_, lostChipsTile_, settings};
+    // Secondary tools on top, daily tools in the middle, Buy-in / Cash-out at
+    // the bottom.
+    TileButton* tiles[] = {lostChipsTile_, settings, cashbox, food, players, infoTile_, buyInTile_, cashOutTile_};
     for (int i = 0; i < 8; ++i) grid->addWidget(tiles[i], i / 2, i % 2);
     makeUniform(grid, 4, 2);
 
@@ -371,7 +432,7 @@ QWidget* MainWindow::buildTiles() {
     connect(food, &QPushButton::clicked, this, [this] { openFood(); });
     connect(players, &QPushButton::clicked, this, [this] { showScreen(new PlayersScreen(*ctx_)); });
     connect(infoTile_, &QPushButton::clicked, this, [this] {
-        if (ctx_->isTournament()) showScreen(new TournamentInfoScreen(*ctx_));
+        if (ctx_->isTournament()) showScreen(new PrizingScreen(*ctx_));
     });
     connect(lostChipsTile_, &QPushButton::clicked, this, [this] {
         if (ctx_->isTournament()) {
@@ -415,15 +476,18 @@ void MainWindow::applySessionModeUi() {
         setWindowTitle(QStringLiteral("pokersoc-connect — Tournament"));
         lostChipsTile_->setIconText(QStringLiteral("🏆"));
         lostChipsTile_->setTitle("Tournament Settings");
-        lostChipsTile_->setSubtitle("Buy-in amounts and rebuys");
-        cashOutTile_->setIconText(QStringLiteral("🚧"));
-        cashOutTile_->setTitle("Coming Soon");
-        cashOutTile_->setSubtitle("Tournament cash-out");
+        lostChipsTile_->setSubtitle("Buy-in amounts and blinds");
+        styleTile(cashOutTile_, "#E8EAF6", "#3949AB");
+        cashOutTile_->setFaded(false);
+        cashOutTile_->setIconText(QStringLiteral("⏱"));
+        cashOutTile_->setTitle("Board Controls");
+        cashOutTile_->setSubtitle("Pause, skip level, display");
         infoTile_->setEnabled(true);
         styleTile(infoTile_, "#F3E5F5", "#8E24AA");
         infoTile_->setFaded(false);
-        infoTile_->setTitle("Tournament Info");
+        infoTile_->setTitle("Prizing");
         refreshTournamentTile();
+        refreshClockBar();
     } else {
         setWindowTitle(QStringLiteral("pokersoc-connect — Cash Game"));
         infoTile_->setEnabled(false);
@@ -436,7 +500,49 @@ void MainWindow::refreshTournamentTile() {
     if (!ctx_->isTournament()) return;
     const auto stats = ctx_->reports().tournamentStats();
     infoTile_->setSubtitle(
-        QStringLiteral("Buy-ins: %1  ·  Rebuys: %2").arg(stats.buyIns).arg(stats.rebuys));
+        QStringLiteral("Prize %1  ·  %2 entries").arg(money(stats.prizePool)).arg(stats.buyIns));
+    if (board_) board_->refreshStats();
+}
+
+void MainWindow::refreshClockBar() {
+    if (!clockBar_ || !clock_) return;
+    const int count = clock_->levelCount();
+    clockLevel_->setText(count <= 0 ? QStringLiteral("No blind structure")
+                                    : QStringLiteral("Level %1 / %2")
+                                          .arg(clock_->levelIndex() + 1)
+                                          .arg(count));
+    clockTime_->setText(clock_->remainingText());
+    clockTime_->setStyleSheet(clock_->running() ? "color:#2E7D32;" : "color:#E65100;");
+    if (const BlindLevel* level = clock_->currentLevel()) {
+        const QString next = clock_->upcomingLevel()
+                                 ? QStringLiteral("  →  next %1")
+                                       .arg(QString::fromStdString(clock_->upcomingLevel()->blindsLabel()))
+                                 : QStringLiteral("  ·  final level");
+        clockBlinds_->setText(QStringLiteral("Blinds %1  ·  Ante %2%3")
+                                  .arg(QString::fromStdString(level->blindsLabel()),
+                                       QString::fromStdString(level->anteLabel()), next));
+    } else {
+        clockBlinds_->setText("Set blinds in Tournament Settings");
+    }
+    clockStart_->setEnabled(!clock_->running() && count > 0);
+    clockPause_->setEnabled(clock_->running());
+    if (boardButton_) boardButton_->setText(board_ ? "Show Board" : "Open Board");
+}
+
+void MainWindow::openTournamentBoard() {
+    if (!ctx_->isTournament() || !clock_) return;
+    if (board_) {
+        board_->refreshStats();
+        board_->showOnRoomDisplay(this);
+        board_->raise();
+        board_->activateWindow();
+        refreshClockBar();
+        return;
+    }
+    board_ = new TournamentBoardWindow(*ctx_, *clock_);
+    connect(board_, &QObject::destroyed, this, [this] { refreshClockBar(); });
+    board_->showOnRoomDisplay(this);
+    refreshClockBar();
 }
 
 // ---------------------------------------------------------------------------
@@ -647,7 +753,7 @@ void MainWindow::updatePlayerButtons() {
         canBuyIn = ctx_->cashGame().config().hasRoom(history);
     }
     buyInTile_->setEnabled(canBuyIn);
-    cashOutTile_->setEnabled(hasVerified);
+    cashOutTile_->setEnabled(ctx_->isTournament() || hasVerified);
     editButton_->setEnabled(!currentId_.empty() && verified_);
 }
 
@@ -692,7 +798,7 @@ void MainWindow::showScreen(Screen* screen) {
     });
 }
 
-void MainWindow::showMain(bool) {
+void MainWindow::showMain(bool changed) {
     if (verified_ && !currentId_.empty()) {
         if (const Player* player = ctx_->players().find(currentId_)) {
             underage_ = player->isUnderage();
@@ -704,6 +810,7 @@ void MainWindow::showMain(bool) {
     refreshActivity();
     updatePlayerButtons();
     focusIdBoxIfEmpty();
+    if (changed && clock_) clock_->configChanged();
 }
 
 void MainWindow::openBuyIn() {
@@ -727,10 +834,27 @@ void MainWindow::openBuyIn() {
 
 void MainWindow::openCashOut() {
     if (ctx_->isTournament()) {
-        showScreen(new ComingSoonScreen(*ctx_, "Coming Soon", "Tournament cash-out is not available yet."));
+        openBoardControls();
         return;
     }
     showScreen(new CashOutScreen(*ctx_, currentId_));
+}
+
+void MainWindow::openBoardControls() {
+    if (!clock_) return;
+    auto* screen = new TournamentBoardControlScreen(*ctx_, *clock_);
+    connect(screen, &TournamentBoardControlScreen::openBoardRequested, this,
+            [this] { openTournamentBoard(); });
+    connect(screen, &TournamentBoardControlScreen::sendBoardToTvRequested, this,
+            [this] { openTournamentBoard(); });
+    connect(screen, &TournamentBoardControlScreen::toggleBoardFullscreenRequested, this, [this] {
+        if (!board_) openTournamentBoard();
+        if (board_) board_->setBoardFullScreen(!board_->isFullScreen());
+    });
+    connect(screen, &TournamentBoardControlScreen::closeBoardRequested, this, [this] {
+        if (board_) board_->close();
+    });
+    showScreen(screen);
 }
 
 void MainWindow::openFood() {

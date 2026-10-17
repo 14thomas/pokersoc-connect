@@ -10,6 +10,7 @@ enum class MovementReason {
     Exchange,  // Like-for-like denomination swap
     Sale,      // Food sale paid in cash
     Tip,       // Tip received
+    Prize,     // Tournament prize or bounty paid out
     Adjust,    // Manual correction
     Undo       // Reversal of a previous movement
 };
@@ -23,6 +24,7 @@ inline const char* movementReasonName(MovementReason reason) noexcept {
         case MovementReason::Exchange:  return "EXCHANGE";
         case MovementReason::Sale:      return "SALE";
         case MovementReason::Tip:       return "TIP";
+        case MovementReason::Prize:     return "PRIZE";
         case MovementReason::Adjust:    return "ADJUST";
         case MovementReason::Undo:      return "UNDO";
     }

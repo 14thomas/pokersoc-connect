@@ -5,6 +5,7 @@
 #include <string>
 
 #include <QMainWindow>
+#include <QPointer>
 
 #include "domain/player/MembershipType.h"
 #include "domain/session/SessionMode.h"
@@ -24,6 +25,8 @@ class Overlay;
 class Screen;
 class SessionContext;
 class TileButton;
+class TournamentBoardWindow;
+class TournamentClock;
 
 /// The session window: current player + activity log on the left, the eight
 /// big action tiles on the right. Every other screen replaces this page until
@@ -48,6 +51,7 @@ protected:
 
 private:
     QWidget* buildMainPage();
+    QFrame* buildClockBar();
     QFrame* buildPlayerPanel();
     QWidget* buildTiles();
     void buildCloseOverlay();
@@ -55,6 +59,9 @@ private:
 
     void applySessionModeUi();
     void refreshTournamentTile();
+    void refreshClockBar();
+    void openTournamentBoard();
+    void openBoardControls();
 
     // ---- current player ----
     void scanEntered();
@@ -118,6 +125,16 @@ private:
     TileButton* lostChipsTile_ = nullptr;
 
     Overlay* closeOverlay_ = nullptr;
+
+    TournamentClock* clock_ = nullptr;
+    QPointer<TournamentBoardWindow> board_;
+    QFrame* clockBar_ = nullptr;
+    QLabel* clockLevel_ = nullptr;
+    QLabel* clockTime_ = nullptr;
+    QLabel* clockBlinds_ = nullptr;
+    QPushButton* clockStart_ = nullptr;
+    QPushButton* clockPause_ = nullptr;
+    QPushButton* boardButton_ = nullptr;
 };
 
 } // namespace pokersoc::ui::qt

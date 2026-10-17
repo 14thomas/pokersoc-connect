@@ -30,6 +30,7 @@ class FoodService;
 class ImportExportService;
 class Ledger;
 class PlayerService;
+class PrizeService;
 class ReportService;
 } // namespace pokersoc::application
 
@@ -70,6 +71,7 @@ public:
     application::CashboxService& cashboxOps() noexcept { return *cashboxOps_; }
     application::FoodService& food() noexcept { return *food_; }
     application::ReportService& reports() noexcept { return *reports_; }
+    application::PrizeService& prizes() noexcept { return *prizes_; }
     application::AdminService& admin() noexcept { return *admin_; }
     application::ImportExportService& files() noexcept { return *files_; }
 
@@ -96,6 +98,7 @@ private:
     std::unique_ptr<application::CashboxService> cashboxOps_;
     std::unique_ptr<application::FoodService> food_;
     std::unique_ptr<application::ReportService> reports_;
+    std::unique_ptr<application::PrizeService> prizes_;
     std::unique_ptr<application::AdminService> admin_;
     std::unique_ptr<application::ImportExportService> files_;
 };

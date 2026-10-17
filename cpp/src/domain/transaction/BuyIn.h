@@ -25,7 +25,10 @@ public:
           DenominationCount cashReceived,
           DenominationCount changeGiven,
           Money buyInAmount,
-          std::string label = "");
+          std::string label = "",
+          Money prize = {},
+          Money bounty = {},
+          Money rake = {});
 
     TransactionType type() const noexcept override { return TransactionType::BuyIn; }
     Money amount() const noexcept override { return buyInAmount_; }
@@ -41,10 +44,18 @@ public:
     const std::string& label() const noexcept { return notes_; }
     virtual bool isRebuy() const noexcept { return false; }
 
+    Money prizeAmount() const noexcept { return prize_; }
+    Money bountyAmount() const noexcept { return bounty_; }
+    Money rakeAmount() const noexcept { return rake_; }
+    void setSplit(Money prize, Money bounty, Money rake);
+
 protected:
     DenominationCount cashReceived_;
     DenominationCount changeGiven_;
     Money buyInAmount_;
+    Money prize_;
+    Money bounty_;
+    Money rake_;
 };
 
 /// A rebuy is a buy-in made after the first; it counts toward the rebuy cap.

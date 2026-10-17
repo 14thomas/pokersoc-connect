@@ -1,5 +1,6 @@
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/WLEM7A2TAU/moc_MainWindow.cpp: C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/MainWindow.h \
   C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/moc_predefs.h \
+  C:/Qt/6.9.2/mingw_64/include/QtCore/QPointer \
   C:/Qt/6.9.2/mingw_64/include/QtCore/q17memory.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/q20functional.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/q20iterator.h \
@@ -70,6 +71,7 @@ C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/
   C:/Qt/6.9.2/mingw_64/include/QtCore/qoverload.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/qpair.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/qpoint.h \
+  C:/Qt/6.9.2/mingw_64/include/QtCore/qpointer.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/qprocessordetection.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/qrect.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/qrefcount.h \

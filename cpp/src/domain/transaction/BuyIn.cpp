@@ -10,12 +10,27 @@ BuyIn::BuyIn(std::string playerId,
              DenominationCount cashReceived,
              DenominationCount changeGiven,
              Money buyInAmount,
-             std::string label)
+             std::string label,
+             Money prize,
+             Money bounty,
+             Money rake)
     : Transaction(std::move(playerId)),
       cashReceived_(std::move(cashReceived)),
       changeGiven_(std::move(changeGiven)),
-      buyInAmount_(buyInAmount) {
+      buyInAmount_(buyInAmount),
+      prize_(prize),
+      bounty_(bounty),
+      rake_(rake) {
     notes_ = std::move(label);
+    if (prize_.isZero() && bounty_.isZero() && rake_.isZero()) {
+        prize_ = buyInAmount_;
+    }
+}
+
+void BuyIn::setSplit(Money prize, Money bounty, Money rake) {
+    prize_ = prize;
+    bounty_ = bounty;
+    rake_ = rake;
 }
 
 void BuyIn::apply(Cashbox& cashbox) const {

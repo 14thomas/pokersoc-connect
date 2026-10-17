@@ -71,6 +71,30 @@ void AppStore::saveTournamentConfig(const TournamentConfig& config) {
     setIntSetting("tnmt.gold_rebuy", config.goldRebuyCents);
     setIntSetting("tnmt.platinum_rebuy", config.platinumRebuyCents);
     setIntSetting("tnmt.diamond_rebuy", config.diamondRebuyCents);
+
+    setSetting("tnmt.blinds", config.blindsJson());
+    setSetting("tnmt.prizes", config.prizesJson());
+    setSetting("tnmt.prize_rounding", domain::prizeRoundingName(config.prizeRounding));
+    setIntSetting("tnmt.prize_leftover_first", config.leftoverToFirst ? 1 : 0);
+
+    const auto saveFees = [this](const char* bountyKey, const char* rakeKey, const domain::BuyInFees& fees) {
+        setIntSetting(bountyKey, fees.bountyCents);
+        setIntSetting(rakeKey, fees.rakeCents);
+    };
+    saveFees("tnmt.arc_bounty", "tnmt.arc_rake", config.arcFees);
+    saveFees("tnmt.nonarc_bounty", "tnmt.nonarc_rake", config.nonArcFees);
+    saveFees("tnmt.arc_rebuy_bounty", "tnmt.arc_rebuy_rake", config.arcRebuyFees);
+    saveFees("tnmt.nonarc_rebuy_bounty", "tnmt.nonarc_rebuy_rake", config.nonArcRebuyFees);
+    saveFees("tnmt.bronze_bounty", "tnmt.bronze_rake", config.bronzeFees);
+    saveFees("tnmt.silver_bounty", "tnmt.silver_rake", config.silverFees);
+    saveFees("tnmt.gold_bounty", "tnmt.gold_rake", config.goldFees);
+    saveFees("tnmt.platinum_bounty", "tnmt.platinum_rake", config.platinumFees);
+    saveFees("tnmt.diamond_bounty", "tnmt.diamond_rake", config.diamondFees);
+    saveFees("tnmt.bronze_rebuy_bounty", "tnmt.bronze_rebuy_rake", config.bronzeRebuyFees);
+    saveFees("tnmt.silver_rebuy_bounty", "tnmt.silver_rebuy_rake", config.silverRebuyFees);
+    saveFees("tnmt.gold_rebuy_bounty", "tnmt.gold_rebuy_rake", config.goldRebuyFees);
+    saveFees("tnmt.platinum_rebuy_bounty", "tnmt.platinum_rebuy_rake", config.platinumRebuyFees);
+    saveFees("tnmt.diamond_rebuy_bounty", "tnmt.diamond_rebuy_rake", config.diamondRebuyFees);
 }
 
 TournamentConfig AppStore::loadTournamentConfig() {
@@ -97,6 +121,35 @@ TournamentConfig AppStore::loadTournamentConfig() {
     config.goldRebuyCents = getIntSetting("tnmt.gold_rebuy", config.goldRebuyCents);
     config.platinumRebuyCents = getIntSetting("tnmt.platinum_rebuy", config.platinumRebuyCents);
     config.diamondRebuyCents = getIntSetting("tnmt.diamond_rebuy", config.diamondRebuyCents);
+
+    if (const auto blinds = getSetting("tnmt.blinds")) config.setBlindsFromJson(*blinds);
+    if (const auto prizes = getSetting("tnmt.prizes")) config.setPrizesFromJson(*prizes);
+    if (const auto rounding = getSetting("tnmt.prize_rounding")) {
+        config.prizeRounding = domain::prizeRoundingFromName(*rounding);
+    }
+    config.leftoverToFirst =
+        getIntSetting("tnmt.prize_leftover_first", config.leftoverToFirst ? 1 : 0) != 0;
+
+    const long long legacyBounty = getIntSetting("tnmt.bounty_cents", 0);
+    const long long legacyRake = getIntSetting("tnmt.rake_cents", 0);
+    const auto loadFees = [&](const char* bountyKey, const char* rakeKey, domain::BuyInFees& fees) {
+        fees.bountyCents = getIntSetting(bountyKey, legacyBounty);
+        fees.rakeCents = getIntSetting(rakeKey, legacyRake);
+    };
+    loadFees("tnmt.arc_bounty", "tnmt.arc_rake", config.arcFees);
+    loadFees("tnmt.nonarc_bounty", "tnmt.nonarc_rake", config.nonArcFees);
+    loadFees("tnmt.arc_rebuy_bounty", "tnmt.arc_rebuy_rake", config.arcRebuyFees);
+    loadFees("tnmt.nonarc_rebuy_bounty", "tnmt.nonarc_rebuy_rake", config.nonArcRebuyFees);
+    loadFees("tnmt.bronze_bounty", "tnmt.bronze_rake", config.bronzeFees);
+    loadFees("tnmt.silver_bounty", "tnmt.silver_rake", config.silverFees);
+    loadFees("tnmt.gold_bounty", "tnmt.gold_rake", config.goldFees);
+    loadFees("tnmt.platinum_bounty", "tnmt.platinum_rake", config.platinumFees);
+    loadFees("tnmt.diamond_bounty", "tnmt.diamond_rake", config.diamondFees);
+    loadFees("tnmt.bronze_rebuy_bounty", "tnmt.bronze_rebuy_rake", config.bronzeRebuyFees);
+    loadFees("tnmt.silver_rebuy_bounty", "tnmt.silver_rebuy_rake", config.silverRebuyFees);
+    loadFees("tnmt.gold_rebuy_bounty", "tnmt.gold_rebuy_rake", config.goldRebuyFees);
+    loadFees("tnmt.platinum_rebuy_bounty", "tnmt.platinum_rebuy_rake", config.platinumRebuyFees);
+    loadFees("tnmt.diamond_rebuy_bounty", "tnmt.diamond_rebuy_rake", config.diamondRebuyFees);
     return config;
 }
 

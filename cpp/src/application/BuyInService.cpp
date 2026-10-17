@@ -81,10 +81,17 @@ BuyInService::Result BuyInService::buyIn(const domain::Player& player,
         label += " - " + notes;
     }
 
+    Money prize = quote.prize;
+    Money bounty = quote.bounty;
+    Money rake = quote.rake;
+    if (prize.isZero() && bounty.isZero() && rake.isZero()) prize = quote.amount;
+
     std::unique_ptr<BuyIn> transaction =
         quote.isRebuy
-            ? std::make_unique<Rebuy>(player.id(), cashReceived, change, quote.amount, label)
-            : std::make_unique<BuyIn>(player.id(), cashReceived, change, quote.amount, label);
+            ? std::make_unique<Rebuy>(player.id(), cashReceived, change, quote.amount, label, prize,
+                                      bounty, rake)
+            : std::make_unique<BuyIn>(player.id(), cashReceived, change, quote.amount, label, prize,
+                                      bounty, rake);
 
     try {
         result.transaction = &ledger_.commit(std::move(transaction));

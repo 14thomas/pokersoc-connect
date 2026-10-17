@@ -736,14 +736,14 @@ int pokersoc::ui::qt::TournamentPricingScreen::qt_metacall(QMetaObject::Call _c,
     return _id;
 }
 namespace {
-struct qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t {};
+struct qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t {};
 } // unnamed namespace
 
-template <> constexpr inline auto pokersoc::ui::qt::TournamentInfoScreen::qt_create_metaobjectdata<qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t>()
+template <> constexpr inline auto pokersoc::ui::qt::PrizingScreen::qt_create_metaobjectdata<qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t>()
 {
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
-        "pokersoc::ui::qt::TournamentInfoScreen"
+        "pokersoc::ui::qt::PrizingScreen"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -752,42 +752,42 @@ template <> constexpr inline auto pokersoc::ui::qt::TournamentInfoScreen::qt_cre
     };
     QtMocHelpers::UintData qt_enums {
     };
-    return QtMocHelpers::metaObjectData<TournamentInfoScreen, qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+    return QtMocHelpers::metaObjectData<PrizingScreen, qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t>(QMC::MetaObjectFlag{}, qt_stringData,
             qt_methods, qt_properties, qt_enums);
 }
-Q_CONSTINIT const QMetaObject pokersoc::ui::qt::TournamentInfoScreen::staticMetaObject = { {
+Q_CONSTINIT const QMetaObject pokersoc::ui::qt::PrizingScreen::staticMetaObject = { {
     QMetaObject::SuperData::link<Screen::staticMetaObject>(),
-    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t>.stringdata,
-    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t>.data,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t>.data,
     qt_static_metacall,
     nullptr,
-    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t>.metaTypes,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t>.metaTypes,
     nullptr
 } };
 
-void pokersoc::ui::qt::TournamentInfoScreen::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void pokersoc::ui::qt::PrizingScreen::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
-    auto *_t = static_cast<TournamentInfoScreen *>(_o);
+    auto *_t = static_cast<PrizingScreen *>(_o);
     (void)_t;
     (void)_c;
     (void)_id;
     (void)_a;
 }
 
-const QMetaObject *pokersoc::ui::qt::TournamentInfoScreen::metaObject() const
+const QMetaObject *pokersoc::ui::qt::PrizingScreen::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *pokersoc::ui::qt::TournamentInfoScreen::qt_metacast(const char *_clname)
+void *pokersoc::ui::qt::PrizingScreen::qt_metacast(const char *_clname)
 {
     if (!_clname) return nullptr;
-    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt20TournamentInfoScreenE_t>.strings))
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt13PrizingScreenE_t>.strings))
         return static_cast<void*>(this);
     return Screen::qt_metacast(_clname);
 }
 
-int pokersoc::ui::qt::TournamentInfoScreen::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int pokersoc::ui::qt::PrizingScreen::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = Screen::qt_metacall(_c, _id, _a);
     return _id;
@@ -848,6 +848,127 @@ int pokersoc::ui::qt::ComingSoonScreen::qt_metacall(QMetaObject::Call _c, int _i
 {
     _id = Screen::qt_metacall(_c, _id, _a);
     return _id;
+}
+namespace {
+struct qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t {};
+} // unnamed namespace
+
+template <> constexpr inline auto pokersoc::ui::qt::TournamentBoardControlScreen::qt_create_metaobjectdata<qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t>()
+{
+    namespace QMC = QtMocConstants;
+    QtMocHelpers::StringRefStorage qt_stringData {
+        "pokersoc::ui::qt::TournamentBoardControlScreen",
+        "openBoardRequested",
+        "",
+        "closeBoardRequested",
+        "sendBoardToTvRequested",
+        "toggleBoardFullscreenRequested"
+    };
+
+    QtMocHelpers::UintData qt_methods {
+        // Signal 'openBoardRequested'
+        QtMocHelpers::SignalData<void()>(1, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'closeBoardRequested'
+        QtMocHelpers::SignalData<void()>(3, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'sendBoardToTvRequested'
+        QtMocHelpers::SignalData<void()>(4, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'toggleBoardFullscreenRequested'
+        QtMocHelpers::SignalData<void()>(5, 2, QMC::AccessPublic, QMetaType::Void),
+    };
+    QtMocHelpers::UintData qt_properties {
+    };
+    QtMocHelpers::UintData qt_enums {
+    };
+    return QtMocHelpers::metaObjectData<TournamentBoardControlScreen, qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+            qt_methods, qt_properties, qt_enums);
+}
+Q_CONSTINIT const QMetaObject pokersoc::ui::qt::TournamentBoardControlScreen::staticMetaObject = { {
+    QMetaObject::SuperData::link<Screen::staticMetaObject>(),
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t>.data,
+    qt_static_metacall,
+    nullptr,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t>.metaTypes,
+    nullptr
+} };
+
+void pokersoc::ui::qt::TournamentBoardControlScreen::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    auto *_t = static_cast<TournamentBoardControlScreen *>(_o);
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        switch (_id) {
+        case 0: _t->openBoardRequested(); break;
+        case 1: _t->closeBoardRequested(); break;
+        case 2: _t->sendBoardToTvRequested(); break;
+        case 3: _t->toggleBoardFullscreenRequested(); break;
+        default: ;
+        }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::openBoardRequested, 0))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::closeBoardRequested, 1))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::sendBoardToTvRequested, 2))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::toggleBoardFullscreenRequested, 3))
+            return;
+    }
+}
+
+const QMetaObject *pokersoc::ui::qt::TournamentBoardControlScreen::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *pokersoc::ui::qt::TournamentBoardControlScreen::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN8pokersoc2ui2qt28TournamentBoardControlScreenE_t>.strings))
+        return static_cast<void*>(this);
+    return Screen::qt_metacast(_clname);
+}
+
+int pokersoc::ui::qt::TournamentBoardControlScreen::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = Screen::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 4)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 4;
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 4)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 4;
+    }
+    return _id;
+}
+
+// SIGNAL 0
+void pokersoc::ui::qt::TournamentBoardControlScreen::openBoardRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
+}
+
+// SIGNAL 1
+void pokersoc::ui::qt::TournamentBoardControlScreen::closeBoardRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 1, nullptr);
+}
+
+// SIGNAL 2
+void pokersoc::ui::qt::TournamentBoardControlScreen::sendBoardToTvRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 2, nullptr);
+}
+
+// SIGNAL 3
+void pokersoc::ui::qt::TournamentBoardControlScreen::toggleBoardFullscreenRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 3, nullptr);
 }
 namespace {
 struct qt_meta_tag_ZN8pokersoc2ui2qt15BreakdownScreenE_t {};

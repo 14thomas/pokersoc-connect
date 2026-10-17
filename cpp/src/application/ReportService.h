@@ -43,8 +43,24 @@ public:
     struct TournamentStats {
         int buyIns = 0;
         int rebuys = 0;
-        domain::Money collected;
+        domain::Money collected;      // total buy-in + rebuy cash
+        domain::Money prizePool;      // portion allocated to places
+        domain::Money bountyPool;     // portion allocated to bounties
+        domain::Money rakeCollected;  // house fee
+        domain::Money prizePaid;
+        domain::Money bountyPaid;
+        int bountiesRedeemed = 0;
+        std::vector<int> paidPlaces;
         std::vector<TierCount> tiers; // only tiers with entries, in display order
+
+        domain::Money prizeRemaining() const noexcept { return prizePool - prizePaid; }
+        domain::Money bountyRemaining() const noexcept { return bountyPool - bountyPaid; }
+        bool placePaid(int place) const noexcept {
+            for (int paid : paidPlaces) {
+                if (paid == place) return true;
+            }
+            return false;
+        }
     };
 
     struct PlayerTotals {

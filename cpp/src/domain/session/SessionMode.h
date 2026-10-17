@@ -43,6 +43,11 @@ struct BuyInQuote {
     bool isRebuy = false;    // false = first buy-in, true = a later rebuy
     std::string label;       // human description, e.g. "ARC Member Rebuy"
     std::string message;     // reason when !allowed, or extra info
+    /// Tournament buy-in split (prize + bounty + rake == amount). Cash games
+    /// leave these at zero and the full amount is treated as chips.
+    Money prize;
+    Money bounty;
+    Money rake;
 
     /// Convenience for the common "not allowed" case.
     static BuyInQuote deny(std::string why, bool isRebuy = false) {

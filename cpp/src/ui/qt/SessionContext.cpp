@@ -10,6 +10,7 @@
 #include "application/ImportExportService.h"
 #include "application/Ledger.h"
 #include "application/PlayerService.h"
+#include "application/PrizeService.h"
 #include "application/ReportService.h"
 #include "domain/money/DenominationTable.h"
 #include "domain/session/CashGameMode.h"
@@ -58,6 +59,7 @@ SessionContext::SessionContext(std::string dbPath, const DenominationTable& tabl
     cashboxOps_ = std::make_unique<application::CashboxService>(mode, *ledger_);
     food_ = std::make_unique<application::FoodService>(catalog_, table_, mode, *ledger_, *store_);
     reports_ = std::make_unique<application::ReportService>(cashbox_, log_, attendance_);
+    prizes_ = std::make_unique<application::PrizeService>(*ledger_);
     admin_ = std::make_unique<application::AdminService>(*store_);
     files_ = std::make_unique<application::ImportExportService>(*players_, *food_);
 }

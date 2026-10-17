@@ -19,19 +19,23 @@ enum class TransactionType {
     CashTip,
     LostChips,
     Exchange,
-    FoodSale
+    FoodSale,
+    PrizePayout,
+    BountyPayout
 };
 
 inline const char* transactionTypeName(TransactionType type) noexcept {
     switch (type) {
-        case TransactionType::BuyIn:     return "BUYIN";
-        case TransactionType::Rebuy:     return "REBUY";
-        case TransactionType::CashOut:   return "CASHOUT";
-        case TransactionType::FloatAdd:  return "FLOAT_ADD";
-        case TransactionType::CashTip:   return "TIP";
-        case TransactionType::LostChips: return "LOST_CHIPS";
-        case TransactionType::Exchange:  return "EXCHANGE";
-        case TransactionType::FoodSale:  return "FOOD_SALE";
+        case TransactionType::BuyIn:        return "BUYIN";
+        case TransactionType::Rebuy:        return "REBUY";
+        case TransactionType::CashOut:      return "CASHOUT";
+        case TransactionType::FloatAdd:     return "FLOAT_ADD";
+        case TransactionType::CashTip:      return "TIP";
+        case TransactionType::LostChips:    return "LOST_CHIPS";
+        case TransactionType::Exchange:     return "EXCHANGE";
+        case TransactionType::FoodSale:     return "FOOD_SALE";
+        case TransactionType::PrizePayout:  return "PRIZE";
+        case TransactionType::BountyPayout: return "BOUNTY";
     }
     return "?";
 }

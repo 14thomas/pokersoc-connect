@@ -146,6 +146,11 @@ QWidget* BuyInScreen::buildCashPage() {
     tournamentType_ = makeLabel(QString(), 12, false, "rgba(0,0,0,204)");
     tournamentType_->setContentsMargins(0, 4, 0, 0);
     infoLayout->addWidget(tournamentType_);
+    tournamentSplit_ = makeLabel(QString(), 12, false, "#2E6DA4");
+    tournamentSplit_->setWordWrap(true);
+    tournamentSplit_->setContentsMargins(0, 6, 0, 0);
+    infoLayout->addWidget(tournamentSplit_);
+    tournamentSplit_->hide();
     panelLayout(playerBox)->addSpacing(8);
     panelLayout(playerBox)->addWidget(info);
     tournamentInfo_ = info;
@@ -346,6 +351,13 @@ bool BuyInScreen::proceedToCash() {
     buyInLabel_ = toQ(quote.label);
     tournamentAmount_->setText(money(quote.amount));
     tournamentType_->setText(buyInLabel_);
+    tournamentSplit_->setText(QStringLiteral("Prize %1    ·    Bounty %2    ·    Rake %3")
+                                  .arg(money(quote.prize.isZero() && quote.bounty.isZero() &&
+                                                     quote.rake.isZero()
+                                                 ? quote.amount
+                                                 : quote.prize),
+                                       money(quote.bounty), money(quote.rake)));
+    tournamentSplit_->show();
     tournamentInfo_->show();
 
     cash_.clear();

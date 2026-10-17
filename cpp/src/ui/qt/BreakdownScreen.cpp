@@ -15,6 +15,7 @@
 #include "domain/transaction/CashOut.h"
 #include "domain/transaction/CashboxTransactions.h"
 #include "domain/transaction/FoodSale.h"
+#include "domain/transaction/TournamentPayout.h"
 #include "domain/transaction/TransactionLog.h"
 #include "ui/qt/Screens.h"
 #include "ui/qt/SessionContext.h"
@@ -111,6 +112,8 @@ QString titleFor(const Transaction& transaction) {
         case TransactionType::CashTip: return "Cash Tip";
         case TransactionType::Exchange: return "Exchange breakdown";
         case TransactionType::FoodSale: return "Food sale";
+        case TransactionType::PrizePayout: return "Prize payout";
+        case TransactionType::BountyPayout: return "Bounty payout";
     }
     return "Transaction";
 }
@@ -246,6 +249,9 @@ void BreakdownScreen::buildGeneric(const Transaction& transaction, QVBoxLayout* 
             if (!buyIn.label().empty()) {
                 info = QStringLiteral("%1: %2").arg(toQ(buyIn.label()), money(buyIn.buyInAmount()));
             }
+            info += QStringLiteral("\nPrize %1  ·  Bounty %2  ·  Rake %3")
+                        .arg(money(buyIn.prizeAmount()), money(buyIn.bountyAmount()),
+                             money(buyIn.rakeAmount()));
             addHeader(layout, titleFor(transaction), subtitle, transaction.time(), info);
             addCash("Cash received", buyIn.cashReceived());
             addCash("Change given back", buyIn.changeGiven());
@@ -306,6 +312,14 @@ void BreakdownScreen::buildGeneric(const Transaction& transaction, QVBoxLayout* 
         }
         case TransactionType::CashOut:
             break;
+        case TransactionType::PrizePayout:
+        case TransactionType::BountyPayout: {
+            const auto& payout = static_cast<const TournamentPayout&>(transaction);
+            addHeader(layout, titleFor(transaction), toQ(payout.describe()), transaction.time(),
+                      QStringLiteral("Player: %1").arg(toQ(transaction.playerId())));
+            addCash("Cash paid out", payout.cashPaid());
+            break;
+        }
     }
 }
 

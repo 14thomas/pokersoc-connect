@@ -2,4 +2,6 @@
 #include "WLEM7A2TAU/moc_MainWindow.cpp"
 #include "WLEM7A2TAU/moc_Screens.cpp"
 #include "WLEM7A2TAU/moc_StartWindow.cpp"
+#include "WLEM7A2TAU/moc_TournamentBoardWindow.cpp"
+#include "WLEM7A2TAU/moc_TournamentClock.cpp"
 #include "WLEM7A2TAU/moc_Widgets.cpp"

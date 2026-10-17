@@ -5,7 +5,9 @@
 
 #include "domain/cashbox/Cashbox.h"
 #include "domain/player/Attendance.h"
+#include "domain/transaction/BuyIn.h"
 #include "domain/transaction/CashOut.h"
+#include "domain/transaction/TournamentPayout.h"
 #include "domain/transaction/Transaction.h"
 #include "domain/transaction/TransactionLog.h"
 
@@ -61,6 +63,11 @@ ReportService::Summary ReportService::summary() const {
                 summary.foodSalesTotal += cashOut.foodTotal();
                 break;
             }
+            case TransactionType::PrizePayout:
+            case TransactionType::BountyPayout:
+                ++summary.cashOuts;
+                summary.cashOutTotal += transaction->amount();
+                break;
             case TransactionType::Exchange:
                 ++summary.exchanges;
                 break;
@@ -93,12 +100,28 @@ ReportService::TournamentStats ReportService::tournamentStats() const {
         const bool isRebuy = type == TransactionType::Rebuy;
         (isRebuy ? stats.rebuys : stats.buyIns)++;
         stats.collected += transaction->amount();
+        const auto& buyIn = static_cast<const domain::BuyIn&>(*transaction);
+        stats.prizePool += buyIn.prizeAmount();
+        stats.bountyPool += buyIn.bountyAmount();
+        stats.rakeCollected += buyIn.rakeAmount();
 
         for (TierCount* count : byLength) {
             if (startsWithIgnoreCase(transaction->notes(), count->tier)) {
                 (isRebuy ? count->rebuys : count->buyIns)++;
                 break;
             }
+        }
+    }
+
+    for (const auto& transaction : log_.entries()) {
+        if (transaction->type() == TransactionType::PrizePayout) {
+            const auto& payout = static_cast<const domain::TournamentPayout&>(*transaction);
+            stats.prizePaid += payout.amount();
+            if (payout.place() > 0) stats.paidPlaces.push_back(payout.place());
+        } else if (transaction->type() == TransactionType::BountyPayout) {
+            const auto& payout = static_cast<const domain::TournamentPayout&>(*transaction);
+            stats.bountyPaid += payout.amount();
+            stats.bountiesRedeemed += payout.bountyCount();
         }
     }
 
@@ -131,7 +154,8 @@ ReportService::PlayerTotals ReportService::playerTotals(const std::string& playe
         if (type == TransactionType::BuyIn || type == TransactionType::Rebuy) {
             ++totals.buyIns;
             totals.boughtIn += transaction->amount();
-        } else if (type == TransactionType::CashOut) {
+        } else if (type == TransactionType::CashOut || type == TransactionType::PrizePayout ||
+                   type == TransactionType::BountyPayout) {
             ++totals.cashOuts;
             totals.paidOut += transaction->amount();
         }

@@ -29,6 +29,7 @@ add_library(pokersoc_core STATIC
     src/domain/transaction/BuyIn.cpp
     src/domain/transaction/CashboxTransactions.cpp
     src/domain/transaction/FoodSale.cpp
+    src/domain/transaction/TournamentPayout.cpp
     src/domain/food/ProductCatalog.cpp
     src/domain/player/Attendance.cpp
     src/domain/player/Player.cpp
@@ -44,6 +45,7 @@ add_library(pokersoc_core STATIC
     src/application/FoodService.cpp
     src/application/ImportExportService.cpp
     src/application/PlayerService.cpp
+    src/application/PrizeService.cpp
     src/application/ReportService.cpp
     src/persistence/AppStore.cpp
     src/persistence/SqliteStore.cpp
@@ -97,6 +99,8 @@ if (Qt6_FOUND)
         src/ui/qt/PlayersScreen.cpp
         src/ui/qt/SettingsScreen.cpp
         src/ui/qt/TournamentScreens.cpp
+        src/ui/qt/TournamentClock.cpp
+        src/ui/qt/TournamentBoardWindow.cpp
         src/ui/qt/BreakdownScreen.cpp
         src/ui/qt/MainWindow.h
         src/ui/qt/Screens.h
@@ -104,6 +108,8 @@ if (Qt6_FOUND)
         src/ui/qt/StartWindow.h
         src/ui/qt/Style.h
         src/ui/qt/Widgets.h
+        src/ui/qt/TournamentClock.h
+        src/ui/qt/TournamentBoardWindow.h
     )
     set_target_properties(pokersoc_gui PROPERTIES AUTOMOC ON)
     target_link_libraries(pokersoc_gui PRIVATE pokersoc_core Qt6::Widgets)

@@ -418,7 +418,7 @@ SettingsScreen::SettingsScreen(SessionContext& context, QWidget* parent) : Scree
              10);
     addAbout(makeLabel("Features:", 12, true), 5);
     const char* features[] = {
-        "Added a very light tournament mode.",
+        "Tournament room display: clock, blinds, next level, and live prize pool.",
         "Activity log filters to the scanned or entered player ID.",
         "Player logs track membership tier (Bronze, Silver, Gold, etc.).",
         "New player signup prompts for membership type (tournament mode only).",

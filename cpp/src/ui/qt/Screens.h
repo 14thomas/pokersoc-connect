@@ -11,6 +11,8 @@
 #include "ui/qt/Style.h"
 
 class QCheckBox;
+class QComboBox;
+class QGridLayout;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -33,6 +35,7 @@ class Overlay;
 class PasswordOverlay;
 class SessionContext;
 class TileButton;
+class TournamentClock;
 
 /// Common shape of a full-window screen hosted by the main window.
 class Screen : public QWidget {
@@ -106,6 +109,7 @@ private:
     QWidget* tournamentInfo_ = nullptr;
     QLabel* tournamentAmount_ = nullptr;
     QLabel* tournamentType_ = nullptr;
+    QLabel* tournamentSplit_ = nullptr;
     QLabel* cashTotal_ = nullptr;
     TileButton* nextButton_ = nullptr;
     CurrencyPad* pad_ = nullptr;
@@ -382,10 +386,50 @@ public:
     explicit TournamentPricingScreen(SessionContext& context, QWidget* parent = nullptr);
 };
 
-class TournamentInfoScreen : public Screen {
+class PrizingScreen : public Screen {
     Q_OBJECT
 public:
-    explicit TournamentInfoScreen(SessionContext& context, QWidget* parent = nullptr);
+    explicit PrizingScreen(SessionContext& context, QWidget* parent = nullptr);
+
+private:
+    void scanPlayer();
+    void clearPlayer();
+    void refresh();
+    void prizingChanged();
+    void persistPrizing();
+    void openBountyOverlay();
+    void openPlaceOverlay();
+    void payBounties();
+    void payPlace(int place, domain::Money amount);
+    void refreshPayoutPreview();
+    void bountyKey(const QString& key);
+    void refreshBountyPad();
+    domain::Money bountyUnitForPlayer() const;
+    QString idlePlayerText() const;
+
+    std::string playerId_;
+    int bountyCount_ = 0;
+    int bountyMaxCount_ = 0;
+    QString bountyDigits_;
+
+    QLineEdit* idBox_ = nullptr;
+    QLabel* playerText_ = nullptr;
+    QWidget* redeemPanel_ = nullptr;
+    QPushButton* bountyButton_ = nullptr;
+    QPushButton* placeButton_ = nullptr;
+    QLabel* prizePool_ = nullptr;
+    QLabel* bountyPool_ = nullptr;
+    QWidget* bountyPoolCard_ = nullptr;
+    QLabel* bountyHint_ = nullptr;
+    QComboBox* roundingBox_ = nullptr;
+    QCheckBox* leftoverBox_ = nullptr;
+    QLabel* payoutPreview_ = nullptr;
+    QTableWidget* prizesTable_ = nullptr;
+    Overlay* bountyOverlay_ = nullptr;
+    QLabel* bountyCountLabel_ = nullptr;
+    QLabel* bountyPayLabel_ = nullptr;
+    Overlay* placeOverlay_ = nullptr;
+    QVBoxLayout* placeList_ = nullptr;
 };
 
 class ComingSoonScreen : public Screen {
@@ -393,6 +437,38 @@ class ComingSoonScreen : public Screen {
 public:
     ComingSoonScreen(SessionContext& context, const QString& title, const QString& message,
                      QWidget* parent = nullptr);
+};
+
+class TournamentBoardControlScreen : public Screen {
+    Q_OBJECT
+public:
+    TournamentBoardControlScreen(SessionContext& context, TournamentClock& clock,
+                                 QWidget* parent = nullptr);
+
+signals:
+    void openBoardRequested();
+    void closeBoardRequested();
+    void sendBoardToTvRequested();
+    void toggleBoardFullscreenRequested();
+
+private:
+    void refresh();
+    void rebuildLevels();
+
+    TournamentClock& clock_;
+    QLabel* time_ = nullptr;
+    QLabel* status_ = nullptr;
+    QLabel* level_ = nullptr;
+    QLabel* blinds_ = nullptr;
+    QLabel* nextBlinds_ = nullptr;
+    QLabel* pot_ = nullptr;
+    QPushButton* start_ = nullptr;
+    QPushButton* pause_ = nullptr;
+    QPushButton* prevLevel_ = nullptr;
+    QPushButton* skipLevel_ = nullptr;
+    QWidget* levelsHost_ = nullptr;
+    QGridLayout* levelsGrid_ = nullptr;
+    std::vector<QPushButton*> levelButtons_;
 };
 
 // ---------------------------------------------------------------------------

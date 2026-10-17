@@ -37,6 +37,10 @@ BuyInQuote TournamentMode::quoteBuyIn(const Player& player,
     quote.isRebuy = isRebuy;
     quote.amount = config_.priceFor(player, isRebuy);
     quote.label = config_.labelFor(player, isRebuy);
+    const BuyInSplit parts = config_.split(player, isRebuy);
+    quote.prize = parts.prize;
+    quote.bounty = parts.bounty;
+    quote.rake = parts.rake;
     return quote;
 }
 
@@ -44,7 +48,7 @@ std::string TournamentMode::rulesSummary() const {
     const std::string cap =
         config_.rebuyCap <= 0 ? "unlimited rebuys" : (std::to_string(config_.rebuyCap) + " rebuy(s) max");
     return "Tournament: fixed buy-ins priced by " + config_.pricingSummary() + "; " + cap +
-           ". Payouts are prize-based (not yet configured).";
+           ". Payouts are prize and bounty based.";
 }
 
 } // namespace pokersoc::domain

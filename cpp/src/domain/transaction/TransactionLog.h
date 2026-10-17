@@ -51,7 +51,9 @@ public:
     Money totalPaidOut() const noexcept {
         Money sum;
         for (const auto& transaction : entries_) {
-            if (transaction->type() == TransactionType::CashOut) {
+            if (transaction->type() == TransactionType::CashOut ||
+                transaction->type() == TransactionType::PrizePayout ||
+                transaction->type() == TransactionType::BountyPayout) {
                 sum += transaction->amount();
             }
         }
