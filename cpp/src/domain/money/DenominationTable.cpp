@@ -19,14 +19,14 @@ DenominationTable DenominationTable::standardAustralian() {
         table.addCurrency(std::make_shared<Coin>(cents));
     }
 
-    // Chips: $5, $1, 25c, 5c.
-    for (std::int64_t cents : {500, 100, 25, 5}) {
+    // Chips: $25, $5, $1, 25c, 5c.
+    for (std::int64_t cents : {2500, 500, 100, 25, 5}) {
         table.addChip(std::make_shared<Chip>(cents));
     }
-    // Plaques: $100, $25.
-    for (std::int64_t cents : {10000, 2500}) {
-        table.addChip(std::make_shared<Plaque>(cents));
-    }
+    // There doesn't exist a $100 plaque, so we don't add it to the table.
+    // for (std::int64_t cents : {10000}) {
+    //     table.addChip(std::make_shared<Plaque>(cents));
+    // }
 
     return table;
 }

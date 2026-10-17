@@ -24,8 +24,16 @@ add_executable(pokersoc
     src/domain/money/DenominationCount.cpp
     src/domain/cashbox/Cashbox.cpp
     src/domain/transaction/CashOut.cpp
+    src/domain/transaction/BuyIn.cpp
+    src/domain/player/Player.cpp
+    src/domain/player/PlayerDirectory.cpp
+    src/domain/session/CashGameMode.cpp
+    src/domain/session/TournamentMode.cpp
+    src/domain/session/TournamentConfig.cpp
     src/application/CashOutService.cpp
     src/application/CashboxService.cpp
+    src/application/PlayerService.cpp
+    src/application/BuyInService.cpp
     src/persistence/SqliteStore.cpp
 )
 

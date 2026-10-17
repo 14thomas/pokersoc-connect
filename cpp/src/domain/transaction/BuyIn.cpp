@@ -1,0 +1,43 @@
+#include "domain/transaction/BuyIn.h"
+
+#include <utility>
+
+#include "domain/cashbox/Cashbox.h"
+
+namespace pokersoc::domain {
+
+BuyIn::BuyIn(std::string playerId,
+             DenominationCount cashReceived,
+             DenominationCount changeGiven,
+             Money buyInAmount,
+             std::string label)
+    : Transaction(std::move(playerId)),
+      cashReceived_(std::move(cashReceived)),
+      changeGiven_(std::move(changeGiven)),
+      buyInAmount_(buyInAmount),
+      label_(std::move(label)) {}
+
+void BuyIn::apply(Cashbox& cashbox) const {
+    cashbox.applyCount(cashReceived_, +1, MovementReason::BuyIn, playerId_, "Buy-in cash in");
+    cashbox.applyCount(changeGiven_, -1, MovementReason::BuyIn, playerId_, "Buy-in change");
+}
+
+void BuyIn::reverse(Cashbox& cashbox) const {
+    cashbox.applyCount(changeGiven_, +1, MovementReason::Undo, playerId_, "Undo buy-in change");
+    cashbox.applyCount(cashReceived_, -1, MovementReason::Undo, playerId_, "Undo buy-in cash in");
+}
+
+std::string BuyIn::describe() const {
+    std::string text = transactionTypeName(type());
+    text += " player=";
+    text += playerId_.empty() ? "(none)" : playerId_;
+    text += " amount=" + buyInAmount_.toString();
+    text += " cashIn=" + cashReceived_.total().toString();
+    text += " change=" + changeGiven_.total().toString();
+    if (!label_.empty()) {
+        text += " (" + label_ + ")";
+    }
+    return text;
+}
+
+} // namespace pokersoc::domain
