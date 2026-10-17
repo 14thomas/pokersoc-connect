@@ -1,6 +1,12 @@
 #include "application/CashOutService.h"
 
+#include <memory>
+#include <utility>
+
 #include "domain/cashbox/Cashbox.h"
+#include "domain/transaction/CashOut.h"
+#include "domain/transaction/TransactionLog.h"
+#include "persistence/AppStore.h"
 
 namespace pokersoc::application {
 
@@ -32,15 +38,18 @@ CashOutService::Result CashOutService::cashOut(const std::string& playerId,
         return result;
     }
 
-    auto transaction =
-        std::make_unique<CashOut>(playerId, chipsReturned, *change, tip);
-    transaction->apply(cashbox_); // withdraws the change from the cashbox
+    auto transaction = std::make_unique<CashOut>(playerId, chipsReturned, *change, tip);
+
+    // Persist first so the database is authoritative even if we crash next.
+    store_.recordCashOut(*transaction);
+    transaction->apply(cashbox_); // then mutate the in-memory cashbox
 
     result.success = true;
     result.message = "Paid " + owed.toString() + " to " +
                      (playerId.empty() ? "player" : playerId) + ".";
     result.change = std::move(*change);
-    result.transaction = std::move(transaction);
+    result.transaction = transaction.get();
+    log_.add(std::move(transaction));
     return result;
 }
 

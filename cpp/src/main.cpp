@@ -1,17 +1,23 @@
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
 #include <string>
 
 #include "application/CashOutService.h"
+#include "application/CashboxService.h"
 #include "domain/cashbox/Cashbox.h"
 #include "domain/money/CashDenomination.h"
 #include "domain/money/ChipDenomination.h"
 #include "domain/money/DenominationCount.h"
 #include "domain/money/DenominationTable.h"
 #include "domain/money/Money.h"
+#include "domain/transaction/TransactionLog.h"
+#include "persistence/SqliteStore.h"
 
 using namespace pokersoc::domain;
+using pokersoc::application::CashboxService;
 using pokersoc::application::CashOutService;
+using pokersoc::persistence::SqliteStore;
 
 namespace {
 
@@ -88,63 +94,73 @@ void printCashbox(const Cashbox& cashbox) {
     std::cout << "  total = " << cashbox.total().toString() << '\n';
 }
 
-void demoCashbox() {
-    const DenominationTable table = DenominationTable::standardAustralian();
-    Cashbox cashbox = Cashbox::withStandardCurrency(table);
-
-    // Build an opening float and load it.
-    DenominationCount openingFloat;
-    const auto addFloat = [&](std::int64_t cents, int qty) {
+DenominationCount buildOpeningFloat(const DenominationTable& table) {
+    DenominationCount floatCount;
+    const auto add = [&](std::int64_t cents, int qty) {
         if (const auto denomination = table.findCurrency(cents)) {
-            openingFloat.add(denomination, qty);
+            floatCount.add(denomination, qty);
         }
     };
-    addFloat(5000, 2); addFloat(2000, 5); addFloat(1000, 10); addFloat(500, 10);
-    addFloat(200, 20); addFloat(100, 20); addFloat(50, 20);
-    addFloat(20, 20); addFloat(10, 20); addFloat(5, 40);
-    cashbox.applyFloat(openingFloat);
+    add(5000, 2); add(2000, 5); add(1000, 10); add(500, 10);
+    add(200, 20); add(100, 20); add(50, 20);
+    add(20, 20); add(10, 20); add(5, 40);
+    return floatCount;
+}
 
-    std::cout << "=== Cashbox opening float ===\n";
-    printCashbox(cashbox);
-
-    // A player returns chips worth $35.50 and leaves a 50c tip.
+DenominationCount buildReturnedChips(const DenominationTable& table) {
     DenominationCount chips;
-    const auto addChip = [&](std::int64_t cents, int qty) {
+    const auto add = [&](std::int64_t cents, int qty) {
         if (const auto denomination = table.findChip(cents)) {
             chips.add(denomination, qty);
         }
     };
-    addChip(2500, 1); // $25 plaque
-    addChip(500, 2);  // 2 x $5 chip
-    addChip(25, 2);   // 2 x 25c chip
-    const Money tip = Money::fromDollars(0.50);
+    add(2500, 1); // $25 plaque
+    add(500, 2);  // 2 x $5 chip
+    add(25, 2);   // 2 x 25c chip
+    return chips;
+}
 
-    CashOutService service(cashbox);
-    const auto result = service.cashOut("ALICE", chips, tip);
+void demoPersistence() {
+    const DenominationTable table = DenominationTable::standardAustralian();
+    const std::string dbPath = "pokersoc.db";
+    std::remove(dbPath.c_str()); // start the demo from a clean database
 
-    std::cout << "\n=== Cash-out ===\n";
-    std::cout << "  chips returned " << chips.total().toString() << '\n';
-    std::cout << "  tip (kept)     " << tip.toString() << '\n';
-    if (result.success) {
-        std::cout << "  cash paid out  " << result.transaction->amount().toString() << ":\n";
-        for (const auto& entry : result.change.entries()) {
-            std::cout << "      " << entry.qty << " x " << std::left << std::setw(6)
-                      << entry.denomination->label() << "("
-                      << (entry.denomination->value() * entry.qty).toString() << ")\n";
+    // ---- Session 1: do real work; every action is written to the DB ----
+    {
+        SqliteStore store(dbPath);
+        Cashbox cashbox = Cashbox::withStandardCurrency(table);
+        TransactionLog log;
+        CashboxService cashboxService(cashbox, store);
+        CashOutService cashOutService(cashbox, log, store);
+
+        cashboxService.addFloat(buildOpeningFloat(table));
+
+        const auto result =
+            cashOutService.cashOut("ALICE", buildReturnedChips(table), Money::fromDollars(0.50));
+
+        std::cout << "=== Session 1 (live, writing to " << dbPath << ") ===\n";
+        std::cout << "  " << result.message << '\n';
+        std::cout << "  cashbox total = " << cashbox.total().toString()
+                  << ", cash-outs = " << log.size()
+                  << ", movements = " << cashbox.movements().size() << '\n';
+    } // store goes out of scope here -> simulate the app closing / crashing
+
+    // ---- Session 2: cold start, rebuild everything from the DB ----
+    {
+        SqliteStore store(dbPath);
+        Cashbox cashbox = Cashbox::withStandardCurrency(table); // starts empty
+        TransactionLog log;
+        store.load(table, cashbox, log); // replays the stored events
+
+        std::cout << "\n=== Session 2 (reloaded from " << dbPath << ") ===\n";
+        std::cout << "  cashbox total = " << cashbox.total().toString()
+                  << ", cash-outs = " << log.size()
+                  << ", movements = " << cashbox.movements().size() << '\n';
+        printCashbox(cashbox);
+        for (const auto& transaction : log.entries()) {
+            std::cout << "  " << transaction->describe() << '\n';
         }
-        std::cout << "  " << result.transaction->describe() << '\n';
-    } else {
-        std::cout << "  FAILED: " << result.message << '\n';
     }
-
-    std::cout << "\n=== Cashbox after cash-out ===\n";
-    printCashbox(cashbox);
-
-    std::cout << "\n=== Change check ===\n";
-    const Money odd = Money::fromDollars(12.34);
-    const auto change = cashbox.makeChange(odd);
-    std::cout << "  makeChange(" << odd.toString() << ") -> "
-              << (change ? "ok" : "cannot make exact change") << '\n';
 }
 
 } // namespace
@@ -154,6 +170,6 @@ int main() {
     demoMoney();
     demoDenominations();
     std::cout << '\n';
-    demoCashbox();
+    demoPersistence();
     return 0;
 }
