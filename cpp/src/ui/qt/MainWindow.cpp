@@ -1,6 +1,7 @@
 #include "ui/qt/MainWindow.h"
 
 #include <QCloseEvent>
+#include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -52,6 +53,18 @@ QPushButton* boldButton(const QString& text, const QString& background, int px =
     QPushButton* button = makeButton(text, QString(), px, true);
     button->setStyleSheet(buttonStyle(background, "#707070", "1px", "padding:" + padding + ";"));
     return button;
+}
+
+/// Gives a home-screen tile a soft tinted card look: rounded corners plus a
+/// gentle drop shadow so the grid reads as raised buttons rather than flat
+/// WPF chrome.
+void styleTile(TileButton* tile, const QString& background, const QString& border) {
+    tile->setColors(background, border, "1px", QStringLiteral("border-radius:16px;"));
+    auto* shadow = new QGraphicsDropShadowEffect(tile);
+    shadow->setBlurRadius(24);
+    shadow->setOffset(0, 4);
+    shadow->setColor(QColor(0, 0, 0, 50));
+    tile->setGraphicsEffect(shadow);
 }
 
 QString activityType(const Transaction& transaction) {
@@ -137,8 +150,8 @@ void MainWindow::showEvent(QShowEvent* event) {
 QWidget* MainWindow::buildMainPage() {
     auto* page = new QWidget;
     auto* columns = new QHBoxLayout(page);
-    columns->setContentsMargins(12, 12, 12, 12);
-    columns->setSpacing(12);
+    columns->setContentsMargins(16, 16, 16, 16);
+    columns->setSpacing(18);
 
     auto* left = new QVBoxLayout;
     left->setSpacing(0);
@@ -325,7 +338,7 @@ QWidget* MainWindow::buildTiles() {
     auto* holder = new QWidget;
     auto* grid = new QGridLayout(holder);
     grid->setContentsMargins(0, 0, 0, 0);
-    grid->setSpacing(10);
+    grid->setSpacing(16);
 
     buyInTile_ = new TileButton(QStringLiteral("💵"), "Buy-in", "Record player buy-in");
     cashOutTile_ = new TileButton(QStringLiteral("💸"), "Cash-out", "Record player cash-out");
@@ -336,7 +349,19 @@ QWidget* MainWindow::buildTiles() {
     lostChipsTile_ = new TileButton(QStringLiteral("💸"), "Lost Chips", "Record lost chips as tips");
     auto* settings = new TileButton(QStringLiteral("⚙"), "Settings", "Configure system");
 
-    TileButton* tiles[] = {lostChipsTile_, settings, cashbox, food, players, infoTile_, buyInTile_, cashOutTile_};
+    styleTile(buyInTile_, "#E8F5E9", "#43A047");
+    styleTile(cashOutTile_, "#FFF3E0", "#FB8C00");
+    styleTile(cashbox, "#FFFDE7", "#F9A825");
+    styleTile(food, "#FFEBEE", "#E53935");
+    styleTile(players, "#E3F2FD", "#1E88E5");
+    styleTile(lostChipsTile_, "#E0F2F1", "#00897B");
+    styleTile(settings, "#ECEFF1", "#607D8B");
+    // infoTile_ is coloured by applySessionModeUi() instead, since its look
+    // depends on session mode.
+
+    // Primary transaction actions on top, daily tools in the middle,
+    // settings/secondary tools at the bottom (what used to be top-left).
+    TileButton* tiles[] = {buyInTile_, cashOutTile_, cashbox, food, players, infoTile_, lostChipsTile_, settings};
     for (int i = 0; i < 8; ++i) grid->addWidget(tiles[i], i / 2, i % 2);
     makeUniform(grid, 4, 2);
 
@@ -395,14 +420,14 @@ void MainWindow::applySessionModeUi() {
         cashOutTile_->setTitle("Coming Soon");
         cashOutTile_->setSubtitle("Tournament cash-out");
         infoTile_->setEnabled(true);
-        infoTile_->setColors(color::ButtonFace, color::Gray);
+        styleTile(infoTile_, "#F3E5F5", "#8E24AA");
         infoTile_->setFaded(false);
         infoTile_->setTitle("Tournament Info");
         refreshTournamentTile();
     } else {
         setWindowTitle(QStringLiteral("pokersoc-connect — Cash Game"));
         infoTile_->setEnabled(false);
-        infoTile_->setColors(color::ButtonFace, color::LightGray);
+        styleTile(infoTile_, "#ECEFF1", color::LightGray);
         infoTile_->setFaded(true);
     }
 }

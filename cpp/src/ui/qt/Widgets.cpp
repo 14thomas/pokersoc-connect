@@ -64,8 +64,8 @@ void TileButton::setSubtitle(const QString& subtitle) {
 }
 
 void TileButton::setColors(const QString& background, const QString& border,
-                           const QString& borderWidth) {
-    setStyleSheet(buttonStyle(background, border, borderWidth));
+                           const QString& borderWidth, const QString& extra) {
+    setStyleSheet(buttonStyle(background, border, borderWidth, extra));
 }
 
 void TileButton::setSizes(int iconPx, int titlePx, int subtitlePx) {

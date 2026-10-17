@@ -37,7 +37,8 @@ public:
     void setTitle(const QString& title);
     void setSubtitle(const QString& subtitle);
     void setColors(const QString& background, const QString& border = color::Gray,
-                   const QString& borderWidth = QStringLiteral("2px"));
+                   const QString& borderWidth = QStringLiteral("2px"),
+                   const QString& extra = QString());
     void setSizes(int iconPx, int titlePx, int subtitlePx);
     /// The "coming soon" look: everything at 30% opacity.
     void setFaded(bool faded);
