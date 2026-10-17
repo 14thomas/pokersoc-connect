@@ -5,11 +5,13 @@
 
 namespace pokersoc::domain {
 
-/// The tunable settings of a cash game: the buy-in range. Kept as a small struct
-/// so it is easy to persist and pass around.
+/// The tunable settings of a cash game: the buy-in range, plus the cumulative
+/// amount a player may buy in for before they must have taken a timeout. Kept
+/// as a small struct so it is easy to persist and pass around.
 struct CashGameConfig {
-    Money minBuyIn = Money::fromCents(1000);   // $10 by default
-    Money maxBuyIn = Money::fromCents(50000);  // $500 by default
+    Money minBuyIn = Money::fromCents(1000);      // $10 by default
+    Money maxBuyIn = Money::fromCents(50000);     // $500 by default
+    Money sessionLimit = Money::fromCents(50000); // $500 by default; 0 = no limit
 };
 
 /// Cash game (a subclass of SessionMode). Chips are worth cash 1:1: a player
@@ -26,13 +28,15 @@ public:
 
     BuyInQuote quoteBuyIn(const Player& player,
                           Money requested,
-                          int existingBuyInCount) const override;
+                          const BuyInHistory& history) const override;
 
     bool allowsChipCashOut() const noexcept override { return true; }
+    bool chipsHaveCashValue() const noexcept override { return true; }
 
     std::string rulesSummary() const override;
 
     const CashGameConfig& config() const noexcept { return config_; }
+    CashGameConfig& config() noexcept { return config_; }
     Money minBuyIn() const noexcept { return config_.minBuyIn; }
     Money maxBuyIn() const noexcept { return config_.maxBuyIn; }
 

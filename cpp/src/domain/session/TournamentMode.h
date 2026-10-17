@@ -19,9 +19,10 @@ public:
 
     BuyInQuote quoteBuyIn(const Player& player,
                           Money requested,
-                          int existingBuyInCount) const override;
+                          const BuyInHistory& history) const override;
 
     bool allowsChipCashOut() const noexcept override { return false; }
+    bool chipsHaveCashValue() const noexcept override { return false; }
 
     std::string rulesSummary() const override;
 

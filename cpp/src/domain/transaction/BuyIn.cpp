@@ -14,8 +14,9 @@ BuyIn::BuyIn(std::string playerId,
     : Transaction(std::move(playerId)),
       cashReceived_(std::move(cashReceived)),
       changeGiven_(std::move(changeGiven)),
-      buyInAmount_(buyInAmount),
-      label_(std::move(label)) {}
+      buyInAmount_(buyInAmount) {
+    notes_ = std::move(label);
+}
 
 void BuyIn::apply(Cashbox& cashbox) const {
     cashbox.applyCount(cashReceived_, +1, MovementReason::BuyIn, playerId_, "Buy-in cash in");
@@ -28,14 +29,12 @@ void BuyIn::reverse(Cashbox& cashbox) const {
 }
 
 std::string BuyIn::describe() const {
-    std::string text = transactionTypeName(type());
-    text += " player=";
-    text += playerId_.empty() ? "(none)" : playerId_;
-    text += " amount=" + buyInAmount_.toString();
-    text += " cashIn=" + cashReceived_.total().toString();
-    text += " change=" + changeGiven_.total().toString();
-    if (!label_.empty()) {
-        text += " (" + label_ + ")";
+    std::string text = isRebuy() ? "Rebuy " : "Buy-in ";
+    text += buyInAmount_.toString();
+    text += " (cash in " + cashReceived_.total().toString();
+    text += ", change " + changeGiven_.total().toString() + ")";
+    if (!notes_.empty()) {
+        text += " - " + notes_;
     }
     return text;
 }

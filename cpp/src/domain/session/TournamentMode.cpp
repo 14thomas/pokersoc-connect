@@ -8,8 +8,8 @@ namespace pokersoc::domain {
 
 BuyInQuote TournamentMode::quoteBuyIn(const Player& player,
                                       Money /*requested*/,
-                                      int existingBuyInCount) const {
-    const bool isRebuy = existingBuyInCount > 0;
+                                      const BuyInHistory& history) const {
+    const bool isRebuy = history.count > 0;
 
     if (!config_.eligible(player)) {
         return BuyInQuote::deny(
@@ -19,7 +19,13 @@ BuyInQuote TournamentMode::quoteBuyIn(const Player& player,
             isRebuy);
     }
 
-    if (!config_.canBuyIn(existingBuyInCount)) {
+    if (config_.usesMembershipPricing() && player.membership() == MembershipType::None) {
+        return BuyInQuote::deny(
+            "Membership pricing is in use; set the player's membership tier before buying in.",
+            isRebuy);
+    }
+
+    if (!config_.canBuyIn(history.count)) {
         const std::string cap =
             config_.rebuyCap <= 0 ? "unlimited" : std::to_string(config_.rebuyCap);
         return BuyInQuote::deny("Rebuy limit reached (cap " + cap + "); no further buy-ins.",

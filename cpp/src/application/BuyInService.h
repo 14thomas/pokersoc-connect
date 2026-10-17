@@ -7,22 +7,18 @@
 #include "domain/session/SessionMode.h"
 
 namespace pokersoc::domain {
-class Cashbox;
-class TransactionLog;
 class Player;
 class BuyIn;
 } // namespace pokersoc::domain
 
-namespace pokersoc::persistence {
-class AppStore;
-}
-
 namespace pokersoc::application {
+
+class Ledger;
 
 /// Use case: buy a player in. GUI-agnostic — the console (and later the GUI)
 /// both call this. The active SessionMode decides the amount (cash game: the
 /// requested amount within limits; tournament: a fixed price); the service then
-/// makes change, persists, applies the cashbox movements and logs it.
+/// makes change and commits the transaction through the ledger.
 class BuyInService {
 public:
     struct Result {
@@ -34,32 +30,31 @@ public:
         bool isRebuy = false;
     };
 
-    BuyInService(domain::SessionMode& mode,
-                 domain::Cashbox& cashbox,
-                 domain::TransactionLog& log,
-                 persistence::AppStore& store)
-        : mode_(mode), cashbox_(cashbox), log_(log), store_(store) {}
+    BuyInService(domain::SessionMode& mode, Ledger& ledger) : mode_(mode), ledger_(ledger) {}
 
     /// Ask the mode what this buy-in would cost / whether it is allowed, without
-    /// changing anything. Lets the UI show the price before cash is tendered.
+    /// changing anything. Lets the UI show the price (and any confirmation that
+    /// is needed) before cash is tendered.
     domain::BuyInQuote preview(const domain::Player& player,
                                domain::Money requestedAmount) const;
 
     /// Perform the buy-in. `cashReceived` is the physical cash tendered;
     /// `requestedAmount` is the chip value the player asked to buy (used by cash
-    /// games, ignored by tournaments which use their fixed price).
+    /// games, ignored by tournaments which use their fixed price). If the quote
+    /// needs confirmation, `confirmed` must be true. `notes` are appended to the
+    /// pricing label.
     Result buyIn(const domain::Player& player,
                  const domain::DenominationCount& cashReceived,
-                 domain::Money requestedAmount);
+                 domain::Money requestedAmount,
+                 bool confirmed = false,
+                 const std::string& notes = "");
 
-    /// How many buy-ins (incl. rebuys) `playerId` has already made this session.
-    int existingBuyInCount(const std::string& playerId) const;
+    /// What `playerId` has already bought this session.
+    domain::BuyInHistory history(const std::string& playerId) const;
 
 private:
     domain::SessionMode& mode_;
-    domain::Cashbox& cashbox_;
-    domain::TransactionLog& log_;
-    persistence::AppStore& store_;
+    Ledger& ledger_;
 };
 
 } // namespace pokersoc::application

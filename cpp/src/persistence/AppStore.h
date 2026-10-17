@@ -1,20 +1,23 @@
 #pragma once
 
 #include <optional>
+#include <string>
 
 #include "domain/session/CashGameMode.h"    // CashGameConfig
 #include "domain/session/SessionMode.h"      // SessionModeType
 #include "domain/session/TournamentConfig.h" // TournamentConfig
 
 namespace pokersoc::domain {
-class DenominationCount;
-class CashOut;
-class BuyIn;
-class DenominationTable;
+class Attendance;
+struct AttendanceRecord;
 class Cashbox;
-class TransactionLog;
+class DenominationTable;
 class Player;
 class PlayerDirectory;
+struct Product;
+class ProductCatalog;
+class Transaction;
+class TransactionLog;
 } // namespace pokersoc::domain
 
 namespace pokersoc::persistence {
@@ -27,36 +30,64 @@ class AppStore {
 public:
     virtual ~AppStore() = default;
 
-    /// Persist an opening / additional float (a tally of currency).
-    virtual void recordFloat(const domain::DenominationCount& floatAmount) = 0;
+    // ---- transactions (an append-only event log) ----
 
-    /// Persist a completed cash-out (chips in, cash out, tip).
-    virtual void recordCashOut(const domain::CashOut& cashOut) = 0;
-
-    /// Persist a completed buy-in / rebuy (cash in, change out).
-    virtual void recordBuyIn(const domain::BuyIn& buyIn) = 0;
-
-    /// Persist (insert or update) a player profile.
-    virtual void recordPlayer(const domain::Player& player) = 0;
-
-    // ---- session configuration (which mode this session runs, and its rules) ----
-    virtual void saveSessionMode(domain::SessionModeType type) = 0;
-    /// The stored mode, or nullopt if this is a brand-new session.
-    virtual std::optional<domain::SessionModeType> loadSessionModeType() = 0;
-
-    virtual void saveCashGameConfig(const domain::CashGameConfig& config) = 0;
-    virtual domain::CashGameConfig loadCashGameConfig() = 0;
-
-    virtual void saveTournamentConfig(const domain::TournamentConfig& config) = 0;
-    virtual domain::TournamentConfig loadTournamentConfig() = 0;
-
-    /// Replay everything stored, rebuilding the cashbox and transaction log.
+    /// Persist any money transaction. Assigns its id and timestamp.
+    virtual void recordTransaction(domain::Transaction& transaction) = 0;
+    /// Mark a stored transaction as undone; it is skipped on future replays.
+    virtual void voidTransaction(long long id) = 0;
+    /// Replay every live transaction, rebuilding the cashbox and transaction log.
     virtual void load(const domain::DenominationTable& table,
                       domain::Cashbox& cashbox,
                       domain::TransactionLog& log) = 0;
 
+    // ---- players ----
+
+    /// Persist (insert or update) a player profile.
+    virtual void recordPlayer(const domain::Player& player) = 0;
     /// Load every stored player into the directory.
     virtual void loadPlayers(domain::PlayerDirectory& directory) = 0;
+
+    // ---- attendance (card scans) ----
+
+    virtual domain::AttendanceRecord recordAttendance(const std::string& playerId) = 0;
+    virtual void loadAttendance(domain::Attendance& attendance) = 0;
+
+    // ---- food catalog ----
+
+    /// Insert (id == 0) or update a product. Returns its id.
+    virtual long long saveProduct(const domain::Product& product) = 0;
+    /// Delete a product and clear any quick slot that pointed at it.
+    virtual void deleteProduct(long long id) = 0;
+    /// productId 0 empties the slot.
+    virtual void saveFoodSlot(int slot, long long productId) = 0;
+    virtual void loadCatalog(domain::ProductCatalog& catalog) = 0;
+
+    // ---- key/value settings ----
+
+    virtual void setSetting(const std::string& key, const std::string& value) = 0;
+    virtual std::optional<std::string> getSetting(const std::string& key) = 0;
+
+    // ---- maintenance ----
+
+    /// Write a consistent copy of the whole store to `path`. Throws on failure.
+    virtual void backupTo(const std::string& path) = 0;
+
+    // ---- session configuration (built on the settings above) ----
+
+    void saveSessionMode(domain::SessionModeType type);
+    /// The stored mode, or nullopt if this is a brand-new session.
+    std::optional<domain::SessionModeType> loadSessionModeType();
+
+    void saveCashGameConfig(const domain::CashGameConfig& config);
+    domain::CashGameConfig loadCashGameConfig();
+
+    void saveTournamentConfig(const domain::TournamentConfig& config);
+    domain::TournamentConfig loadTournamentConfig();
+
+protected:
+    void setIntSetting(const std::string& key, long long value);
+    long long getIntSetting(const std::string& key, long long fallback);
 };
 
 } // namespace pokersoc::persistence

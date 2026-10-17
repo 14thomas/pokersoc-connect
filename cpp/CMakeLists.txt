@@ -25,17 +25,41 @@ add_executable(pokersoc
     src/domain/cashbox/Cashbox.cpp
     src/domain/transaction/CashOut.cpp
     src/domain/transaction/BuyIn.cpp
+    src/domain/transaction/CashboxTransactions.cpp
+    src/domain/transaction/FoodSale.cpp
+    src/domain/food/ProductCatalog.cpp
+    src/domain/player/Attendance.cpp
     src/domain/player/Player.cpp
     src/domain/player/PlayerDirectory.cpp
     src/domain/session/CashGameMode.cpp
     src/domain/session/TournamentMode.cpp
     src/domain/session/TournamentConfig.cpp
+    src/application/Ledger.cpp
+    src/application/AdminService.cpp
+    src/application/BuyInService.cpp
     src/application/CashOutService.cpp
     src/application/CashboxService.cpp
+    src/application/FoodService.cpp
+    src/application/ImportExportService.cpp
     src/application/PlayerService.cpp
-    src/application/BuyInService.cpp
+    src/application/ReportService.cpp
+    src/persistence/AppStore.cpp
     src/persistence/SqliteStore.cpp
+    src/util/Csv.cpp
+    src/util/Json.cpp
+    src/util/Time.cpp
+    src/ui/console/ConsoleIO.cpp
+    src/ui/console/ConsoleApp.cpp
+    src/ui/console/ConsoleAdmin.cpp
+    src/ui/console/ConsoleCashbox.cpp
+    src/ui/console/ConsoleFood.cpp
+    src/ui/console/ConsolePlayers.cpp
 )
+
+if (MSVC)
+    target_compile_options(pokersoc PRIVATE /W4 /utf-8)
+    target_compile_definitions(pokersoc PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+endif()
 
 target_include_directories(pokersoc PRIVATE src)
 target_link_libraries(pokersoc PRIVATE sqlite3)

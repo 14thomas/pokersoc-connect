@@ -30,6 +30,12 @@ inline SessionModeType sessionModeTypeFromName(std::string_view name) noexcept {
     return SessionModeType::CashGame;
 }
 
+/// What a player has already bought this session.
+struct BuyInHistory {
+    int count = 0; // number of buy-ins + rebuys so far
+    Money total;   // their combined chip value
+};
+
 /// The outcome of asking a mode how a player's buy-in should be handled.
 struct BuyInQuote {
     bool allowed = false;    // did the mode permit this buy-in?
@@ -37,6 +43,10 @@ struct BuyInQuote {
     bool isRebuy = false;    // false = first buy-in, true = a later rebuy
     std::string label;       // human description, e.g. "ARC Member Rebuy"
     std::string message;     // reason when !allowed, or extra info
+    /// Allowed, but staff must confirm `confirmation` with the player first
+    /// (e.g. a cash-game player going over the session limit took a timeout).
+    bool needsConfirmation = false;
+    std::string confirmation;
 
     /// Convenience for the common "not allowed" case.
     static BuyInQuote deny(std::string why, bool isRebuy = false) {
@@ -60,15 +70,19 @@ public:
 
     /// Decide a buy-in for `player`. `requested` is the chip value the player
     /// asked to buy — cash games honour it (within their limits), tournaments
-    /// ignore it and use their fixed price. `existingBuyInCount` is how many
-    /// buy-ins the player has already made this session (0 = first buy-in).
+    /// ignore it and use their fixed price. `history` is what the player has
+    /// already bought this session (count 0 = first buy-in).
     virtual BuyInQuote quoteBuyIn(const Player& player,
                                   Money requested,
-                                  int existingBuyInCount) const = 0;
+                                  const BuyInHistory& history) const = 0;
 
     /// Cash games pay chip value back 1:1 on demand; tournaments pay prizes, so
     /// free chip cash-out is disabled there until prizing is designed.
     virtual bool allowsChipCashOut() const noexcept = 0;
+
+    /// Chips are worth cash only in a cash game, so only there can chips pay for
+    /// food or be banked as tips when found lying around.
+    virtual bool chipsHaveCashValue() const noexcept = 0;
 
     /// One-line human description of the mode's rules, for the UI header.
     virtual std::string rulesSummary() const = 0;

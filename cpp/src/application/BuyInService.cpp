@@ -1,17 +1,19 @@
 #include "application/BuyInService.h"
 
 #include <memory>
+#include <stdexcept>
 #include <utility>
 
+#include "application/Ledger.h"
 #include "domain/cashbox/Cashbox.h"
 #include "domain/player/Player.h"
 #include "domain/transaction/BuyIn.h"
 #include "domain/transaction/TransactionLog.h"
-#include "persistence/AppStore.h"
 
 namespace pokersoc::application {
 
 using domain::BuyIn;
+using domain::BuyInHistory;
 using domain::BuyInQuote;
 using domain::Cashbox;
 using domain::DenominationCount;
@@ -19,31 +21,40 @@ using domain::Money;
 using domain::Rebuy;
 using domain::TransactionType;
 
-int BuyInService::existingBuyInCount(const std::string& playerId) const {
-    int count = 0;
-    for (const auto& transaction : log_.entries()) {
+BuyInHistory BuyInService::history(const std::string& playerId) const {
+    BuyInHistory history;
+    for (const auto& transaction : ledger_.log().entries()) {
         const TransactionType type = transaction->type();
         if ((type == TransactionType::BuyIn || type == TransactionType::Rebuy) &&
             transaction->playerId() == playerId) {
-            ++count;
+            ++history.count;
+            history.total += transaction->amount();
         }
     }
-    return count;
+    return history;
 }
 
 BuyInQuote BuyInService::preview(const domain::Player& player, Money requestedAmount) const {
-    return mode_.quoteBuyIn(player, requestedAmount, existingBuyInCount(player.id()));
+    if (player.isUnderage()) {
+        return BuyInQuote::deny("Player is under 18 and cannot buy in.");
+    }
+    return mode_.quoteBuyIn(player, requestedAmount, history(player.id()));
 }
 
 BuyInService::Result BuyInService::buyIn(const domain::Player& player,
                                          const DenominationCount& cashReceived,
-                                         Money requestedAmount) {
+                                         Money requestedAmount,
+                                         bool confirmed,
+                                         const std::string& notes) {
     Result result;
 
-    const BuyInQuote quote =
-        mode_.quoteBuyIn(player, requestedAmount, existingBuyInCount(player.id()));
+    const BuyInQuote quote = preview(player, requestedAmount);
     if (!quote.allowed) {
         result.message = quote.message;
+        return result;
+    }
+    if (quote.needsConfirmation && !confirmed) {
+        result.message = quote.confirmation;
         return result;
     }
 
@@ -59,7 +70,7 @@ BuyInService::Result BuyInService::buyIn(const domain::Player& player,
     if (!changeDue.isZero()) {
         // Change can be drawn from the float plus the cash just handed over, so
         // probe a copy of the cashbox that already holds the received cash.
-        Cashbox probe = cashbox_;
+        Cashbox probe = ledger_.cashbox();
         probe.applyCount(cashReceived, +1, domain::MovementReason::BuyIn);
         auto made = probe.makeChange(changeDue);
         if (!made) {
@@ -70,24 +81,30 @@ BuyInService::Result BuyInService::buyIn(const domain::Player& player,
         change = std::move(*made);
     }
 
-    std::unique_ptr<BuyIn> transaction =
-        quote.isRebuy ? std::make_unique<Rebuy>(player.id(), cashReceived, change,
-                                                quote.amount, quote.label)
-                      : std::make_unique<BuyIn>(player.id(), cashReceived, change,
-                                                quote.amount, quote.label);
+    std::string label = quote.label;
+    if (!notes.empty()) {
+        label += " - " + notes;
+    }
 
-    store_.recordBuyIn(*transaction); // persist first (crash-safe)
-    transaction->apply(cashbox_);      // then mutate the in-memory cashbox
+    std::unique_ptr<BuyIn> transaction =
+        quote.isRebuy
+            ? std::make_unique<Rebuy>(player.id(), cashReceived, change, quote.amount, label)
+            : std::make_unique<BuyIn>(player.id(), cashReceived, change, quote.amount, label);
+
+    try {
+        result.transaction = &ledger_.commit(std::move(transaction));
+    } catch (const std::logic_error& error) {
+        result.message = error.what();
+        return result;
+    }
 
     result.success = true;
     result.isRebuy = quote.isRebuy;
     result.buyInAmount = quote.amount;
     result.change = change;
     result.message = (quote.isRebuy ? "Rebuy " : "Buy-in ") + quote.amount.toString() + " for " +
-                     (player.id().empty() ? "player" : player.id()) +
+                     (player.name().empty() ? player.id() : player.name()) +
                      (changeDue.isZero() ? "" : (", change " + changeDue.toString())) + ".";
-    result.transaction = transaction.get();
-    log_.add(std::move(transaction));
     return result;
 }
 

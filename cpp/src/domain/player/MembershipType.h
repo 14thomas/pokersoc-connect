@@ -21,6 +21,19 @@ inline const char* membershipTypeName(MembershipType type) noexcept {
     return "NONE";
 }
 
+/// Display / CSV label as the original app wrote it (e.g. "Gold", "None").
+inline const char* membershipTypeLabel(MembershipType type) noexcept {
+    switch (type) {
+        case MembershipType::None:     return "None";
+        case MembershipType::Bronze:   return "Bronze";
+        case MembershipType::Silver:   return "Silver";
+        case MembershipType::Gold:     return "Gold";
+        case MembershipType::Platinum: return "Platinum";
+        case MembershipType::Diamond:  return "Diamond";
+    }
+    return "None";
+}
+
 /// Inverse of membershipTypeName; unknown tokens fall back to `None`.
 inline MembershipType membershipTypeFromName(std::string_view name) noexcept {
     if (name == "BRONZE")   return MembershipType::Bronze;

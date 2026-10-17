@@ -17,7 +17,8 @@ class Cashbox;
 ///   cash into house = cashReceived.total() - changeGiven.total()  (== buyInAmount)
 ///
 /// Works for both session modes — the mode only decides the amount; the money
-/// movement is identical.
+/// movement is identical. The pricing label (e.g. "ARC Member Rebuy") is kept in
+/// the transaction notes so tournament stats survive a reload.
 class BuyIn : public Transaction {
 public:
     BuyIn(std::string playerId,
@@ -37,14 +38,13 @@ public:
     const DenominationCount& cashReceived() const noexcept { return cashReceived_; }
     const DenominationCount& changeGiven() const noexcept { return changeGiven_; }
     Money buyInAmount() const noexcept { return buyInAmount_; }
-    const std::string& label() const noexcept { return label_; }
+    const std::string& label() const noexcept { return notes_; }
     virtual bool isRebuy() const noexcept { return false; }
 
 protected:
     DenominationCount cashReceived_;
     DenominationCount changeGiven_;
     Money buyInAmount_;
-    std::string label_;
 };
 
 /// A rebuy is a buy-in made after the first; it counts toward the rebuy cap.

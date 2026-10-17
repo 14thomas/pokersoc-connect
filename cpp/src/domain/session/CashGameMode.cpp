@@ -4,8 +4,8 @@ namespace pokersoc::domain {
 
 BuyInQuote CashGameMode::quoteBuyIn(const Player& /*player*/,
                                     Money requested,
-                                    int existingBuyInCount) const {
-    const bool isRebuy = existingBuyInCount > 0;
+                                    const BuyInHistory& history) const {
+    const bool isRebuy = history.count > 0;
 
     if (requested < config_.minBuyIn) {
         return BuyInQuote::deny("Buy-in " + requested.toString() +
@@ -23,12 +23,27 @@ BuyInQuote CashGameMode::quoteBuyIn(const Player& /*player*/,
     quote.amount = requested;
     quote.isRebuy = isRebuy;
     quote.label = isRebuy ? "Cash game rebuy" : "Cash game buy-in";
+
+    const Money newTotal = history.total + requested;
+    if (config_.sessionLimit > Money{} && newTotal > config_.sessionLimit) {
+        quote.needsConfirmation = true;
+        quote.confirmation = "Session buy-ins so far: " + history.total.toString() +
+                             "\nThis buy-in: " + requested.toString() +
+                             "\nNew total: " + newTotal.toString() + " (over the " +
+                             config_.sessionLimit.toString() +
+                             " limit)\nHas the player taken their timeout?";
+    }
     return quote;
 }
 
 std::string CashGameMode::rulesSummary() const {
-    return "Cash game: buy in for any amount between " + config_.minBuyIn.toString() +
-           " and " + config_.maxBuyIn.toString() + "; cash chips out 1:1 any time.";
+    std::string text = "Cash game: buy in for any amount between " + config_.minBuyIn.toString() +
+                       " and " + config_.maxBuyIn.toString() + "; cash chips out 1:1 any time.";
+    if (config_.sessionLimit > Money{}) {
+        text += " Going over " + config_.sessionLimit.toString() +
+                " in a session requires a timeout.";
+    }
+    return text;
 }
 
 } // namespace pokersoc::domain

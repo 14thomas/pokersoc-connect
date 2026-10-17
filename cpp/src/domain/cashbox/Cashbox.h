@@ -29,9 +29,15 @@ public:
     // ---- mutations (each records a movement) ----
     void deposit(const Ptr& denomination, int qty, MovementReason reason,
                  std::string playerId = "", std::string note = "");
-    /// Throws std::logic_error if there is not enough stock to remove.
+    /// Throws std::logic_error if there is not enough stock to remove (unless
+    /// overdraw is allowed).
     void withdraw(const Ptr& denomination, int qty, MovementReason reason,
                   std::string playerId = "", std::string note = "");
+
+    /// While replaying history, an undone event can leave a denomination briefly
+    /// negative part-way through even though the final stock is valid, so the
+    /// store relaxes the stock check for the duration of a replay.
+    void setAllowOverdraw(bool allow) noexcept { allowOverdraw_ = allow; }
 
     /// Deposit a whole tally as the opening / additional float.
     void applyFloat(const DenominationCount& amount);
@@ -46,16 +52,23 @@ public:
     const std::vector<CashboxMovement>& movements() const noexcept { return movements_; }
     const std::vector<Ptr>& currency() const noexcept { return currency_; }
 
-    /// Greedy change for `amount` limited by current stock, high denominations
-    /// first. Returns nullopt if exact change cannot be made from what we hold.
+    /// Change for `amount` limited by current stock. Tries the usual greedy
+    /// (largest notes first); if stock gaps defeat greedy, falls back to an exact
+    /// search for the fewest pieces. Returns nullopt if exact change is impossible.
     std::optional<DenominationCount> makeChange(Money amount) const;
 
-private:
+    /// Can the cashbox currently supply every piece in `count`?
+    bool canSupply(const DenominationCount& count) const noexcept;
+
     Ptr denominationForCents(std::int64_t cents) const noexcept;
+
+private:
+    std::optional<DenominationCount> makeChangeExact(Money amount) const;
 
     std::vector<Ptr> currency_; // sorted high-to-low
     DenominationCount stock_;
     std::vector<CashboxMovement> movements_;
+    bool allowOverdraw_ = false;
 };
 
 } // namespace pokersoc::domain

@@ -1,28 +1,38 @@
 #pragma once
 
-namespace pokersoc::domain {
-class Cashbox;
-class DenominationCount;
-} // namespace pokersoc::domain
+#include <string>
 
-namespace pokersoc::persistence {
-class AppStore;
-}
+#include "application/Ledger.h"
+
+namespace pokersoc::domain {
+class DenominationCount;
+class SessionMode;
+} // namespace pokersoc::domain
 
 namespace pokersoc::application {
 
-/// Use case: manage the cashbox float. Persists the float before it touches the
-/// in-memory cashbox, so the database stays the source of truth.
+/// Use case: the money-desk operations that are not tied to a buy-in or
+/// cash-out — topping up the float, banking tips, keeping lost chips and
+/// swapping notes for coins. Everything goes through the ledger, so it is
+/// persisted first and can be undone.
 class CashboxService {
 public:
-    CashboxService(domain::Cashbox& cashbox, persistence::AppStore& store)
-        : cashbox_(cashbox), store_(store) {}
+    CashboxService(domain::SessionMode& mode, Ledger& ledger) : mode_(mode), ledger_(ledger) {}
 
-    void addFloat(const domain::DenominationCount& amount);
+    OperationResult addFloat(const domain::DenominationCount& cash);
+    OperationResult addTip(const domain::DenominationCount& cash,
+                           const std::string& playerId = "",
+                           const std::string& note = "");
+    /// Cash games only: chips found / left behind are kept as tips.
+    OperationResult recordLostChips(const domain::DenominationCount& chips,
+                                    const std::string& note = "");
+    /// `given` leaves the cashbox, `received` comes in; totals must match.
+    OperationResult exchange(const domain::DenominationCount& given,
+                             const domain::DenominationCount& received);
 
 private:
-    domain::Cashbox& cashbox_;
-    persistence::AppStore& store_;
+    domain::SessionMode& mode_;
+    Ledger& ledger_;
 };
 
 } // namespace pokersoc::application
