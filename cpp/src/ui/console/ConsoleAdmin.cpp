@@ -195,15 +195,15 @@ void ConsoleApp::cashGameSettings() {
     edited.minBuyIn = askMoney("  Minimum buy-in [" + config.minBuyIn.toString() + "]: ",
                                config.minBuyIn)
                           .value_or(config.minBuyIn);
-    edited.maxBuyIn = askMoney("  Maximum buy-in [" + config.maxBuyIn.toString() + "]: ",
+    edited.maxBuyIn = askMoney("  Maximum buy-in, 0 = none [" + config.maxBuyIn.toString() + "]: ",
                                config.maxBuyIn)
                           .value_or(config.maxBuyIn);
-    edited.sessionLimit = askMoney("  Session limit before a timeout, 0 = none [" +
+    edited.sessionLimit = askMoney("  Session cap per player, 0 = none [" +
                                        config.sessionLimit.toString() + "]: ",
                                    config.sessionLimit)
                               .value_or(config.sessionLimit);
-    if (edited.maxBuyIn < edited.minBuyIn) {
-        std::cout << "  The maximum must be at least the minimum; nothing changed.\n";
+    if (edited.maxBuyIn > domain::Money{} && edited.maxBuyIn < edited.minBuyIn) {
+        std::cout << "  The maximum must be at least the minimum (or 0 for none); nothing changed.\n";
         return;
     }
     config = edited;

@@ -33,20 +33,17 @@ public:
     BuyInService(domain::SessionMode& mode, Ledger& ledger) : mode_(mode), ledger_(ledger) {}
 
     /// Ask the mode what this buy-in would cost / whether it is allowed, without
-    /// changing anything. Lets the UI show the price (and any confirmation that
-    /// is needed) before cash is tendered.
+    /// changing anything. Lets the UI show the price before cash is tendered.
     domain::BuyInQuote preview(const domain::Player& player,
                                domain::Money requestedAmount) const;
 
     /// Perform the buy-in. `cashReceived` is the physical cash tendered;
     /// `requestedAmount` is the chip value the player asked to buy (used by cash
-    /// games, ignored by tournaments which use their fixed price). If the quote
-    /// needs confirmation, `confirmed` must be true. `notes` are appended to the
-    /// pricing label.
+    /// games, ignored by tournaments which use their fixed price). `notes` are
+    /// appended to the pricing label.
     Result buyIn(const domain::Player& player,
                  const domain::DenominationCount& cashReceived,
                  domain::Money requestedAmount,
-                 bool confirmed = false,
                  const std::string& notes = "");
 
     /// What `playerId` has already bought this session.

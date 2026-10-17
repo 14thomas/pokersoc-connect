@@ -44,17 +44,12 @@ BuyInQuote BuyInService::preview(const domain::Player& player, Money requestedAm
 BuyInService::Result BuyInService::buyIn(const domain::Player& player,
                                          const DenominationCount& cashReceived,
                                          Money requestedAmount,
-                                         bool confirmed,
                                          const std::string& notes) {
     Result result;
 
     const BuyInQuote quote = preview(player, requestedAmount);
     if (!quote.allowed) {
         result.message = quote.message;
-        return result;
-    }
-    if (quote.needsConfirmation && !confirmed) {
-        result.message = quote.confirmation;
         return result;
     }
 

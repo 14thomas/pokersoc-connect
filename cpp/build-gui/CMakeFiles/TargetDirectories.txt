@@ -1,0 +1,8 @@
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/sqlite3.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/pokersoc_core.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/pokersoc.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/pokersoc_gui.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/edit_cache.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/rebuild_cache.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/pokersoc_gui_autogen_timestamp_deps.dir
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/CMakeFiles/pokersoc_gui_autogen.dir

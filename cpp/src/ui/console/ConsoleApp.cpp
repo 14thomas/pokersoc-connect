@@ -179,10 +179,10 @@ bool ConsoleApp::chooseMode() {
 
     CashGameConfig config;
     config.minBuyIn = askMoney("Minimum buy-in [$10]: ", config.minBuyIn).value_or(config.minBuyIn);
-    config.maxBuyIn = askMoney("Maximum buy-in [$500]: ", config.maxBuyIn).value_or(config.maxBuyIn);
+    config.maxBuyIn =
+        askMoney("Maximum buy-in, 0 = none [$75]: ", config.maxBuyIn).value_or(config.maxBuyIn);
     config.sessionLimit =
-        askMoney("Session limit before a timeout is required (0 = none) [$500]: ",
-                 config.sessionLimit)
+        askMoney("Session cap per player (0 = none) [$500]: ", config.sessionLimit)
             .value_or(config.sessionLimit);
     if (inputClosed()) return false;
     store_->saveSessionMode(SessionModeType::CashGame);
@@ -356,12 +356,23 @@ void ConsoleApp::buyIn() {
     } else {
         const auto& config = static_cast<CashGameMode&>(session_->mode()).config();
         const BuyInHistory history = buyIns_->history(id);
+        if (!config.hasRoom(history)) {
+            std::cout << "  Player has reached the session buy-in cap of "
+                      << config.sessionLimit.toString() << ".\n";
+            return;
+        }
         if (history.count > 0) {
             std::cout << "  Session buy-ins so far: " << history.total.toString() << " ("
                       << history.count << ")\n";
         }
-        const auto amount = askMoney("  Buy-in amount (" + config.minBuyIn.toString() + " - " +
-                                     config.maxBuyIn.toString() + "): ");
+        const auto maxThis = config.ceiling(history);
+        Money minThis = config.minBuyIn;
+        if (maxThis && minThis > *maxThis) minThis = *maxThis;
+        const std::string range = maxThis ? (minThis.toString() + " - " + maxThis->toString())
+                                          : ("at least " + minThis.toString());
+        const auto amount = askMoney("  Buy-in amount (" + range + ")" +
+                                         (maxThis ? " [" + maxThis->toString() + "]" : "") + ": ",
+                                     maxThis);
         if (!amount) return;
         requested = *amount;
     }
@@ -372,16 +383,6 @@ void ConsoleApp::buyIn() {
         return;
     }
     std::cout << "  " << quote.label << ": " << quote.amount.toString() << '\n';
-
-    bool confirmed = false;
-    if (quote.needsConfirmation) {
-        std::cout << "  " << quote.confirmation << '\n';
-        if (!askYesNo("  Timeout taken? (y/n) [n]: ", false)) {
-            std::cout << "  Buy-in refused (no timeout).\n";
-            return;
-        }
-        confirmed = true;
-    }
 
     const auto cash = askCount("  Cash received [exact " + quote.amount.toString() + "]: ",
                                cashbox_.currency());
@@ -394,7 +395,7 @@ void ConsoleApp::buyIn() {
         notes = ask("  Notes (optional): ");
     }
 
-    const auto result = buyIns_->buyIn(*player, received, requested, confirmed, notes);
+    const auto result = buyIns_->buyIn(*player, received, requested, notes);
     std::cout << "  " << result.message << '\n';
     if (result.success) {
         std::cout << "  Give " << result.buyInAmount.toString() << " in chips.\n";
