@@ -41,6 +41,10 @@ public:
 
     const domain::BlindLevel* currentLevel() const noexcept;
     const domain::BlindLevel* upcomingLevel() const noexcept;
+    /// Blinds on the table now, including during a break.
+    const domain::BlindLevel* activeBlinds() const noexcept;
+    /// Seconds until the next break starts, or -1 when none follows.
+    int secondsUntilNextBreak() const noexcept;
 
 signals:
     void changed();

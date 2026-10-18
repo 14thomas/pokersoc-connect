@@ -30,6 +30,7 @@
 #include "ui/qt/SessionContext.h"
 #include "ui/qt/Style.h"
 #include "ui/qt/TournamentClock.h"
+#include "ui/qt/TournamentEditors.h"
 #include "ui/qt/Widgets.h"
 
 namespace pokersoc::ui::qt {
@@ -191,230 +192,7 @@ QGroupBox* makeFeeGroup(const QString& title, std::vector<FeeRow>& rows, const T
     return group;
 }
 
-QTableWidget* makeEditorTable(const QStringList& headers) {
-    auto* table = new QTableWidget(0, headers.size());
-    table->setHorizontalHeaderLabels(headers);
-    table->horizontalHeader()->setStretchLastSection(true);
-    table->horizontalHeader()->setHighlightSections(false);
-    table->verticalHeader()->setVisible(false);
-    table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table->setSelectionMode(QAbstractItemView::SingleSelection);
-    table->setMinimumHeight(160);
-    table->setMaximumHeight(240);
-    table->setFont(uiFont(12));
-    return table;
-}
-
-void setIntCell(QTableWidget* table, int row, int column, int value) {
-    auto* item = new QTableWidgetItem(QString::number(value));
-    item->setTextAlignment(Qt::AlignCenter);
-    table->setItem(row, column, item);
-}
-
-int cellInt(const QTableWidget* table, int row, int column, bool* ok) {
-    const QTableWidgetItem* item = table->item(row, column);
-    const QString text = item ? item->text().trimmed() : QString();
-    return text.toInt(ok);
-}
-
-void addBlindRow(QTableWidget* table, const BlindLevel& level) {
-    const int row = table->rowCount();
-    table->insertRow(row);
-    setIntCell(table, row, 0, row + 1);
-    table->item(row, 0)->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    setIntCell(table, row, 1, level.smallBlind);
-    setIntCell(table, row, 2, level.bigBlind);
-    setIntCell(table, row, 3, level.ante);
-    setIntCell(table, row, 4, level.durationMinutes);
-}
-
-void addPrizeRow(QTableWidget* table, const PrizeShare& prize) {
-    const int row = table->rowCount();
-    table->insertRow(row);
-    setIntCell(table, row, 0, prize.place);
-    setIntCell(table, row, 1, prize.percent);
-}
-
-bool readBlinds(QTableWidget* table, std::vector<BlindLevel>& out, QString& error) {
-    out.clear();
-    if (table->rowCount() < 1) {
-        error = "Add at least one blind level.";
-        return false;
-    }
-    for (int row = 0; row < table->rowCount(); ++row) {
-        bool okSb = false, okBb = false, okAnte = false, okMin = false;
-        BlindLevel level;
-        level.smallBlind = cellInt(table, row, 1, &okSb);
-        level.bigBlind = cellInt(table, row, 2, &okBb);
-        level.ante = cellInt(table, row, 3, &okAnte);
-        level.durationMinutes = cellInt(table, row, 4, &okMin);
-        if (!okSb || !okBb || !okAnte || !okMin || level.smallBlind < 0 || level.bigBlind < 0 ||
-            level.ante < 0 || level.durationMinutes < 1) {
-            error = QStringLiteral("Blind level %1 needs non-negative blinds/ante and duration of "
-                                   "1 minute or more.")
-                        .arg(row + 1);
-            return false;
-        }
-        out.push_back(level);
-    }
-    return true;
-}
-
-bool readPrizes(QTableWidget* table, std::vector<PrizeShare>& out, QString& error) {
-    out.clear();
-    if (table->rowCount() < 1) {
-        error = "Add at least one prize place.";
-        return false;
-    }
-    int total = 0;
-    for (int row = 0; row < table->rowCount(); ++row) {
-        bool okPlace = false, okPct = false;
-        PrizeShare prize;
-        prize.place = cellInt(table, row, 0, &okPlace);
-        prize.percent = cellInt(table, row, 1, &okPct);
-        if (!okPlace || !okPct || prize.place < 1 || prize.percent < 0 || prize.percent > 100) {
-            error = QStringLiteral("Prize row %1 needs a place of 1 or more and a percent from 0 to 100.")
-                        .arg(row + 1);
-            return false;
-        }
-        total += prize.percent;
-        out.push_back(prize);
-    }
-    if (total > 100) {
-        error = QStringLiteral("Prize percents add up to %1%. They cannot exceed 100%.").arg(total);
-        return false;
-    }
-    return true;
-}
-
 } // namespace
-
-// ---------------------------------------------------------------------------
-
-TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWidget* parent)
-    : Screen(context, parent) {
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(0);
-    QPushButton* close = nullptr;
-    layout->addWidget(makeScreenHeader("Tournament Settings", &close));
-    layout->addSpacing(16);
-    connect(close, &QPushButton::clicked, this, [this] { emit closed(false); });
-
-    const TournamentConfig& config = ctx_.tournament().config();
-    auto* content = new QWidget;
-    auto* sections = new QVBoxLayout(content);
-    sections->setContentsMargins(0, 0, 8, 0);
-    sections->setSpacing(16);
-
-    QGroupBox* pricing = makeGroup("Pricing Structure");
-    QLabel* summary = makeLabel("Current: " + toQ(config.pricingSummary()), 14);
-    summary->setWordWrap(true);
-    summary->setContentsMargins(0, 0, 0, 12);
-    groupLayout(pricing)->addWidget(summary);
-    QPushButton* configure = makeButton(QStringLiteral("Configure Pricing Structure…"), QString(), 15, true);
-    configure->setStyleSheet(buttonStyle("#E8F4FD", "#707070", "1px", "padding:14px 16px;"));
-    groupLayout(pricing)->addWidget(configure);
-    groupLayout(pricing)->addWidget(hint(
-        "Choose ARC vs Non-ARC or membership-tier pricing, and set buy-in, bounty, and rake together."));
-    sections->addWidget(pricing);
-    connect(configure, &QPushButton::clicked, this, [this] { emit configurePricing(); });
-
-    QGroupBox* rebuys = makeGroup("Rebuy Limit");
-    auto* unlimited = new QCheckBox("Unlimited rebuys");
-    unlimited->setFont(uiFont(14));
-    groupLayout(rebuys)->addWidget(unlimited);
-    groupLayout(rebuys)->addSpacing(8);
-    auto* capRow = new QHBoxLayout;
-    capRow->addWidget(makeLabel("Max rebuys per player:"));
-    capRow->addSpacing(10);
-    auto* cap = new QLineEdit;
-    cap->setFixedWidth(80);
-    cap->setValidator(new QIntValidator(0, 999, cap));
-    capRow->addWidget(cap);
-    capRow->addStretch(1);
-    groupLayout(rebuys)->addLayout(capRow);
-    groupLayout(rebuys)->addWidget(hint("Each player gets one initial buy-in plus up to this many rebuys."));
-    sections->addWidget(rebuys);
-
-    QGroupBox* blinds = makeGroup("Blind Structure");
-    QTableWidget* blindsTable = makeEditorTable({"Level", "Small", "Big", "Ante", "Minutes"});
-    for (const BlindLevel& level : config.blinds) addBlindRow(blindsTable, level);
-    groupLayout(blinds)->addWidget(blindsTable);
-    auto* blindsButtons = new QHBoxLayout;
-    QPushButton* addBlind = footerButton("Add Level", 120, false);
-    QPushButton* removeBlind = footerButton("Remove Last", 120, false);
-    blindsButtons->addWidget(addBlind);
-    blindsButtons->addWidget(removeBlind);
-    blindsButtons->addStretch(1);
-    groupLayout(blinds)->addSpacing(8);
-    groupLayout(blinds)->addLayout(blindsButtons);
-    sections->addWidget(blinds);
-    connect(addBlind, &QPushButton::clicked, this, [blindsTable] {
-        BlindLevel next{25, 50, 0, 15};
-        if (blindsTable->rowCount() > 0) {
-            bool ok = false;
-            next.smallBlind = cellInt(blindsTable, blindsTable->rowCount() - 1, 1, &ok);
-            next.bigBlind = cellInt(blindsTable, blindsTable->rowCount() - 1, 2, &ok);
-            next.ante = cellInt(blindsTable, blindsTable->rowCount() - 1, 3, &ok);
-            next.durationMinutes = cellInt(blindsTable, blindsTable->rowCount() - 1, 4, &ok);
-            if (next.bigBlind > 0) {
-                next.smallBlind = next.bigBlind;
-                next.bigBlind *= 2;
-            }
-        }
-        addBlindRow(blindsTable, next);
-        blindsTable->scrollToBottom();
-    });
-    connect(removeBlind, &QPushButton::clicked, this, [blindsTable] {
-        if (blindsTable->rowCount() > 0) blindsTable->removeRow(blindsTable->rowCount() - 1);
-    });
-
-    sections->addStretch(1);
-    layout->addWidget(makeScroll(content), 1);
-
-    const bool isUnlimited = config.rebuyCap <= 0;
-    unlimited->setChecked(isUnlimited);
-    cap->setText(isUnlimited ? "2" : QString::number(config.rebuyCap));
-    cap->setEnabled(!isUnlimited);
-    connect(unlimited, &QCheckBox::toggled, cap, [cap](bool on) { cap->setEnabled(!on); });
-
-    layout->addSpacing(16);
-    auto* footer = new QHBoxLayout;
-    footer->addStretch(1);
-    QPushButton* save = footerButton("Save Settings", 140, true);
-    footer->addWidget(save);
-    layout->addLayout(footer);
-    connect(save, &QPushButton::clicked, this, [this, unlimited, cap, blindsTable] {
-        int rebuyCap = 0;
-        if (!unlimited->isChecked()) {
-            bool ok = false;
-            rebuyCap = cap->text().trimmed().toInt(&ok);
-            if (!ok || rebuyCap < 1) {
-                QMessageBox::warning(this, "Validation Error",
-                                     "Please enter a valid rebuy cap (1 or more), or enable unlimited rebuys.");
-                return;
-            }
-        }
-        std::vector<BlindLevel> blinds;
-        QString problem;
-        if (!readBlinds(blindsTable, blinds, problem)) {
-            QMessageBox::warning(this, "Validation Error", problem);
-            return;
-        }
-        TournamentConfig& config = ctx_.tournament().config();
-        config.rebuyCap = rebuyCap;
-        config.blinds = std::move(blinds);
-        try {
-            ctx_.saveTournamentConfig();
-        } catch (const std::exception& saveError) {
-            QMessageBox::critical(this, "Error",
-                                  QStringLiteral("Could not save settings:\n%1").arg(saveError.what()));
-            return;
-        }
-        emit closed(true);
-    });
-}
 
 // ---------------------------------------------------------------------------
 
@@ -1153,8 +931,12 @@ void TournamentBoardControlScreen::rebuildLevels() {
     constexpr int columns = 4;
     for (int i = 0; i < count; ++i) {
         const BlindLevel* level = ctx_.tournament().config().levelAt(i);
-        const QString blinds = level ? QString::fromStdString(level->blindsLabel()) : QString();
-        auto* button = new QPushButton(QStringLiteral("Lv %1\n%2").arg(i + 1).arg(blinds));
+        const QString label = level && level->isBreak
+                                  ? QStringLiteral("Break\n%1 min").arg(level->durationMinutes)
+                                  : QStringLiteral("Lv %1\n%2")
+                                        .arg(i + 1)
+                                        .arg(level ? QString::fromStdString(level->blindsLabel()) : QString());
+        auto* button = new QPushButton(label);
         button->setFont(uiFont(13, true));
         button->setMinimumHeight(56);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -1184,17 +966,31 @@ void TournamentBoardControlScreen::refresh() {
         status_->setStyleSheet("color:#E65100;");
     }
 
-    if (const BlindLevel* level = clock_.currentLevel()) {
-        blinds_->setText(QStringLiteral("Blinds %1    Ante %2")
-                             .arg(QString::fromStdString(level->blindsLabel()),
-                                  QString::fromStdString(level->anteLabel())));
+    const BlindLevel* current = clock_.currentLevel();
+    if (current && current->isBreak) {
+        level_->setText(QStringLiteral("Break"));
+        if (clock_.running()) {
+            status_->setText("BREAK");
+            status_->setStyleSheet("color:#6A1B9A;");
+        }
+    }
+    if (const BlindLevel* level = clock_.activeBlinds()) {
+        blinds_->setText(current && current->isBreak
+                             ? QStringLiteral("Blinds stay %1    Big blind ante %2")
+                                   .arg(QString::fromStdString(level->blindsLabel()),
+                                        QString::fromStdString(level->anteLabel()))
+                             : QStringLiteral("Blinds %1    Big blind ante %2")
+                                   .arg(QString::fromStdString(level->blindsLabel()),
+                                        QString::fromStdString(level->anteLabel())));
     } else {
         blinds_->setText("Blinds —");
     }
     if (const BlindLevel* next = clock_.upcomingLevel()) {
-        nextBlinds_->setText(QStringLiteral("Next  %1  ·  ante %2")
-                                 .arg(QString::fromStdString(next->blindsLabel()),
-                                      QString::fromStdString(next->anteLabel())));
+        nextBlinds_->setText(next->isBreak
+                                 ? QStringLiteral("Next  Break  ·  %1 min").arg(next->durationMinutes)
+                                 : QStringLiteral("Next  %1  ·  big blind ante %2")
+                                       .arg(QString::fromStdString(next->blindsLabel()),
+                                            QString::fromStdString(next->anteLabel())));
     } else {
         nextBlinds_->setText("Final level");
     }

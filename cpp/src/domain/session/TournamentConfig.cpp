@@ -253,6 +253,7 @@ int jsonInt(const util::JsonValue& object, const char* key, int fallback) {
 } // namespace
 
 std::string BlindLevel::blindsLabel() const {
+    if (isBreak) return "Break";
     return groupedInt(smallBlind) + " / " + groupedInt(bigBlind);
 }
 
@@ -287,7 +288,9 @@ std::string TournamentConfig::blindsJson() const {
         const BlindLevel& level = blinds[i];
         out += "{\"sb\":" + std::to_string(level.smallBlind) + ",\"bb\":" +
                std::to_string(level.bigBlind) + ",\"ante\":" + std::to_string(level.ante) +
-               ",\"min\":" + std::to_string(level.durationMinutes) + "}";
+               ",\"min\":" + std::to_string(level.durationMinutes);
+        if (level.isBreak) out += ",\"break\":1";
+        out += "}";
     }
     out += "]";
     return out;
@@ -323,6 +326,11 @@ void TournamentConfig::setBlindsFromJson(const std::string& text) {
             if (level.bigBlind < 0) level.bigBlind = 0;
             if (level.ante < 0) level.ante = 0;
             if (level.durationMinutes < 1) level.durationMinutes = 15;
+            if (const util::JsonValue* brk = item.get("break")) {
+                level.isBreak = brk->kind == util::JsonValue::Kind::Bool
+                                    ? brk->boolean
+                                    : brk->kind == util::JsonValue::Kind::Number && brk->number != 0;
+            }
             parsed.push_back(level);
         }
         if (!parsed.empty()) blinds = std::move(parsed);
@@ -356,6 +364,14 @@ void TournamentConfig::setPrizesFromJson(const std::string& text) {
 const BlindLevel* TournamentConfig::levelAt(int index) const noexcept {
     if (index < 0 || index >= static_cast<int>(blinds.size())) return nullptr;
     return &blinds[static_cast<std::size_t>(index)];
+}
+
+const BlindLevel* TournamentConfig::activeBlinds(int index) const noexcept {
+    for (int i = index; i >= 0; --i) {
+        const BlindLevel* level = levelAt(i);
+        if (level && !level->isBreak) return level;
+    }
+    return levelAt(index);
 }
 
 } // namespace pokersoc::domain

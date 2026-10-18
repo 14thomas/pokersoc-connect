@@ -42,10 +42,12 @@ private:
     QLabel* status_ = nullptr;
     QLabel* level_ = nullptr;
     QLabel* time_ = nullptr;
+    QWidget* blindsRow_ = nullptr;
     QLabel* smallBlind_ = nullptr;
     QLabel* bigBlind_ = nullptr;
     QLabel* ante_ = nullptr;
     QLabel* nextBlinds_ = nullptr;
+    QLabel* nextBreak_ = nullptr;
     QLabel* pot_ = nullptr;
     QLabel* entries_ = nullptr;
     QLabel* rebuys_ = nullptr;

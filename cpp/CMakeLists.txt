@@ -99,6 +99,7 @@ if (Qt6_FOUND)
         src/ui/qt/PlayersScreen.cpp
         src/ui/qt/SettingsScreen.cpp
         src/ui/qt/TournamentScreens.cpp
+        src/ui/qt/TournamentSettingsScreen.cpp
         src/ui/qt/TournamentClock.cpp
         src/ui/qt/TournamentBoardWindow.cpp
         src/ui/qt/BreakdownScreen.cpp

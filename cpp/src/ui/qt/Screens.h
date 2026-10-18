@@ -378,6 +378,8 @@ public:
 
 signals:
     void configurePricing();
+    /// Rebuys or the blind structure were written.
+    void structureChanged();
 };
 
 class TournamentPricingScreen : public Screen {

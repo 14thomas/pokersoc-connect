@@ -603,12 +603,15 @@ template <> constexpr inline auto pokersoc::ui::qt::TournamentSettingsScreen::qt
     QtMocHelpers::StringRefStorage qt_stringData {
         "pokersoc::ui::qt::TournamentSettingsScreen",
         "configurePricing",
-        ""
+        "",
+        "structureChanged"
     };
 
     QtMocHelpers::UintData qt_methods {
         // Signal 'configurePricing'
         QtMocHelpers::SignalData<void()>(1, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'structureChanged'
+        QtMocHelpers::SignalData<void()>(3, 2, QMC::AccessPublic, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -633,11 +636,14 @@ void pokersoc::ui::qt::TournamentSettingsScreen::qt_static_metacall(QObject *_o,
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->configurePricing(); break;
+        case 1: _t->structureChanged(); break;
         default: ;
         }
     }
     if (_c == QMetaObject::IndexOfMethod) {
         if (QtMocHelpers::indexOfMethod<void (TournamentSettingsScreen::*)()>(_a, &TournamentSettingsScreen::configurePricing, 0))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (TournamentSettingsScreen::*)()>(_a, &TournamentSettingsScreen::structureChanged, 1))
             return;
     }
 }
@@ -661,14 +667,14 @@ int pokersoc::ui::qt::TournamentSettingsScreen::qt_metacall(QMetaObject::Call _c
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 2)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 2;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 2)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 1;
+        _id -= 2;
     }
     return _id;
 }
@@ -677,6 +683,12 @@ int pokersoc::ui::qt::TournamentSettingsScreen::qt_metacall(QMetaObject::Call _c
 void pokersoc::ui::qt::TournamentSettingsScreen::configurePricing()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
+}
+
+// SIGNAL 1
+void pokersoc::ui::qt::TournamentSettingsScreen::structureChanged()
+{
+    QMetaObject::activate(this, &staticMetaObject, 1, nullptr);
 }
 namespace {
 struct qt_meta_tag_ZN8pokersoc2ui2qt23TournamentPricingScreenE_t {};

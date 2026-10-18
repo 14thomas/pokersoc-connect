@@ -111,6 +111,23 @@ const BlindLevel* TournamentClock::upcomingLevel() const noexcept {
     return config_ ? config_->levelAt(levelIndex_ + 1) : nullptr;
 }
 
+const BlindLevel* TournamentClock::activeBlinds() const noexcept {
+    return config_ ? config_->activeBlinds(levelIndex_) : nullptr;
+}
+
+int TournamentClock::secondsUntilNextBreak() const noexcept {
+    if (!config_) return -1;
+    int seconds = remainingSeconds_;
+    const int count = levelCount();
+    for (int i = levelIndex_ + 1; i < count; ++i) {
+        const BlindLevel* level = config_->levelAt(i);
+        if (!level) break;
+        if (level->isBreak) return seconds < 0 ? 0 : seconds;
+        seconds += level->durationMinutes * 60;
+    }
+    return -1;
+}
+
 void TournamentClock::onTick() {
     if (!running_) return;
     if (remainingSeconds_ > 0) --remainingSeconds_;

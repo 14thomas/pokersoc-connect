@@ -514,13 +514,24 @@ void MainWindow::refreshClockBar() {
     clockTime_->setText(clock_->remainingText());
     clockTime_->setStyleSheet(clock_->running() ? "color:#2E7D32;" : "color:#E65100;");
     if (const BlindLevel* level = clock_->currentLevel()) {
-        const QString next = clock_->upcomingLevel()
-                                 ? QStringLiteral("  →  next %1")
-                                       .arg(QString::fromStdString(clock_->upcomingLevel()->blindsLabel()))
-                                 : QStringLiteral("  ·  final level");
-        clockBlinds_->setText(QStringLiteral("Blinds %1  ·  Ante %2%3")
-                                  .arg(QString::fromStdString(level->blindsLabel()),
-                                       QString::fromStdString(level->anteLabel()), next));
+        const BlindLevel* nextLevel = clock_->upcomingLevel();
+        const QString next = !nextLevel                            ? QStringLiteral("  ·  final level")
+                             : nextLevel->isBreak                  ? QStringLiteral("  →  next Break")
+                                                                   : QStringLiteral("  →  next %1")
+                                         .arg(QString::fromStdString(nextLevel->blindsLabel()));
+        if (level->isBreak) {
+            clockLevel_->setText(QStringLiteral("Break"));
+            const BlindLevel* staying = clock_->activeBlinds();
+            clockBlinds_->setText(
+                staying ? QStringLiteral("Blinds stay %1  ·  Big blind ante %2%3")
+                              .arg(QString::fromStdString(staying->blindsLabel()),
+                                   QString::fromStdString(staying->anteLabel()), next)
+                        : QStringLiteral("Break%1").arg(next));
+        } else {
+            clockBlinds_->setText(QStringLiteral("Blinds %1  ·  Big blind ante %2%3")
+                                      .arg(QString::fromStdString(level->blindsLabel()),
+                                           QString::fromStdString(level->anteLabel()), next));
+        }
     } else {
         clockBlinds_->setText("Set blinds in Tournament Settings");
     }
@@ -881,8 +892,11 @@ void MainWindow::openSettings() {
 void MainWindow::openTournamentSettings() {
     auto* screen = new TournamentSettingsScreen(*ctx_);
     connect(screen, &TournamentSettingsScreen::configurePricing, this, [this, screen] {
-        emit screen->closed(false);
+        emit screen->closed(true);
         openTournamentPricing();
+    });
+    connect(screen, &TournamentSettingsScreen::structureChanged, this, [this] {
+        if (clock_) clock_->configChanged();
     });
     showScreen(screen);
 }

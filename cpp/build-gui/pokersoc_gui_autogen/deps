@@ -634,6 +634,7 @@ pokersoc_gui_autogen/timestamp: \
 	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.cpp \
 	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.h \
 	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentScreens.cpp \
+	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentSettingsScreen.cpp \
 	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/Widgets.cpp \
 	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/Widgets.h \
 	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/main.cpp \

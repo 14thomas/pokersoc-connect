@@ -88,16 +88,21 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     time_->setContentsMargins(0, 4, 0, 8);
     root->addWidget(time_);
 
-    auto* blinds = new QHBoxLayout;
+    blindsRow_ = new QWidget;
+    auto* blinds = new QHBoxLayout(blindsRow_);
+    blinds->setContentsMargins(0, 0, 0, 0);
     blinds->setSpacing(18);
     blinds->addWidget(makeBlindCard("SMALL BLIND", &smallBlind_), 1);
     blinds->addWidget(makeBlindCard("BIG BLIND", &bigBlind_), 1);
-    blinds->addWidget(makeBlindCard("ANTE", &ante_), 1);
-    root->addLayout(blinds);
+    blinds->addWidget(makeBlindCard("BIG BLIND ANTE", &ante_), 1);
+    root->addWidget(blindsRow_);
 
     nextBlinds_ = creamLabel(QString(), 20, false, kMuted);
-    nextBlinds_->setContentsMargins(0, 16, 0, 8);
+    nextBlinds_->setContentsMargins(0, 16, 0, 0);
     root->addWidget(nextBlinds_);
+    nextBreak_ = creamLabel(QString(), 20, true, kGold);
+    nextBreak_->setContentsMargins(0, 6, 0, 8);
+    root->addWidget(nextBreak_);
 
     QFrame* potPanel = makePanel(kFeltPanel, kGold, 2, 12, 18);
     auto* potLayout = panelLayout(potPanel);
@@ -242,6 +247,7 @@ void TournamentBoardWindow::applyFonts() {
         label->setFont(boardFont(blindPx, true));
     }
     nextBlinds_->setFont(boardFont(qBound(14, h / 32, 28), false));
+    nextBreak_->setFont(boardFont(qBound(14, h / 32, 28), true));
     pot_->setFont(boardFont(qBound(28, h / 14, 72), true));
     entries_->setFont(boardFont(qBound(14, h / 36, 24), true));
     rebuys_->setFont(boardFont(qBound(14, h / 36, 24), true));
@@ -253,15 +259,20 @@ void TournamentBoardWindow::refreshClock() {
     if (count <= 0) {
         level_->setText("NO BLIND STRUCTURE");
         time_->setText("—");
+        blindsRow_->show();
         smallBlind_->setText("—");
         bigBlind_->setText("—");
         ante_->setText("—");
         nextBlinds_->setText("Add blinds in Tournament Settings");
+        nextBreak_->hide();
         status_->setText(QString());
         return;
     }
 
-    level_->setText(QStringLiteral("LEVEL  %1  /  %2").arg(index + 1).arg(count));
+    const BlindLevel* current = clock_.currentLevel();
+    level_->setText(current && current->isBreak
+                        ? QStringLiteral("BREAK")
+                        : QStringLiteral("LEVEL  %1  /  %2").arg(index + 1).arg(count));
     time_->setText(clock_.remainingText());
 
     const bool last = clock_.upcomingLevel() == nullptr;
@@ -275,6 +286,9 @@ void TournamentBoardWindow::refreshClock() {
     } else if (clock_.remainingSeconds() <= 30) {
         status_->setText("LEVEL UP");
         status_->setStyleSheet(QStringLiteral("color:%1;").arg(kHot));
+    } else if (current && current->isBreak) {
+        status_->setText("BREAK");
+        status_->setStyleSheet(QStringLiteral("color:%1;").arg(kGold));
     } else {
         status_->setText("LIVE");
         status_->setStyleSheet(QStringLiteral("color:%1;").arg(kGold));
@@ -286,22 +300,56 @@ void TournamentBoardWindow::refreshClock() {
                                                                       : kCream;
     time_->setStyleSheet(QStringLiteral("color:%1;").arg(timeColour));
 
-    if (const BlindLevel* level = clock_.currentLevel()) {
-        const QString blinds = QString::fromStdString(level->blindsLabel());
-        const QStringList parts = blinds.split(" / ");
-        smallBlind_->setText(parts.value(0, QStringLiteral("—")));
-        bigBlind_->setText(parts.value(1, QStringLiteral("—")));
-        ante_->setText(QString::fromStdString(level->anteLabel()));
+    const bool onBreak = current && current->isBreak;
+    blindsRow_->setVisible(!onBreak);
+    if (!onBreak) {
+        if (const BlindLevel* level = clock_.activeBlinds()) {
+            const QString blinds = QString::fromStdString(level->blindsLabel());
+            const QStringList parts = blinds.split(" / ");
+            smallBlind_->setText(parts.value(0, QStringLiteral("—")));
+            bigBlind_->setText(parts.value(1, QStringLiteral("—")));
+            ante_->setText(QString::fromStdString(level->anteLabel()));
+        }
     }
 
-    if (const BlindLevel* next = clock_.upcomingLevel()) {
-        const QString ante = next->ante > 0
-                                 ? QStringLiteral("  ·  ante %1").arg(QString::fromStdString(next->anteLabel()))
+    const BlindLevel* nextPlaying = nullptr;
+    for (int i = index + 1; i < count; ++i) {
+        const BlindLevel* level = ctx_.tournament().config().levelAt(i);
+        if (level && !level->isBreak) {
+            nextPlaying = level;
+            break;
+        }
+    }
+    if (nextPlaying) {
+        const QString ante = nextPlaying->ante > 0
+                                 ? QStringLiteral("  ·  big blind ante %1")
+                                       .arg(QString::fromStdString(nextPlaying->anteLabel()))
                                  : QString();
         nextBlinds_->setText(QStringLiteral("NEXT  %1%2")
-                                 .arg(QString::fromStdString(next->blindsLabel()), ante));
-    } else {
+                                 .arg(QString::fromStdString(nextPlaying->blindsLabel()), ante));
+    } else if (!onBreak) {
         nextBlinds_->setText("FINAL LEVEL");
+    } else {
+        nextBlinds_->setText(QString());
+    }
+
+    const int untilBreak = clock_.secondsUntilNextBreak();
+    if (untilBreak >= 0) {
+        const int hours = untilBreak / 3600;
+        const int minutes = (untilBreak % 3600) / 60;
+        const int seconds = untilBreak % 60;
+        const QString clockText = hours > 0
+                                      ? QStringLiteral("%1:%2:%3")
+                                            .arg(hours)
+                                            .arg(minutes, 2, 10, QChar('0'))
+                                            .arg(seconds, 2, 10, QChar('0'))
+                                      : QStringLiteral("%1:%2")
+                                            .arg(minutes, 2, 10, QChar('0'))
+                                            .arg(seconds, 2, 10, QChar('0'));
+        nextBreak_->setText(QStringLiteral("NEXT BREAK IN: %1").arg(clockText));
+        nextBreak_->show();
+    } else {
+        nextBreak_->hide();
     }
 }
 

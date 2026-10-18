@@ -2236,3 +2236,4 @@ C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.h
  mdp:C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/moc_predefs.h
  mdp:C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.h
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.cpp
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentSettingsScreen.cpp

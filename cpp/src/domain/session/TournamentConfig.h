@@ -33,15 +33,17 @@ const char* prizeRoundingName(PrizeRounding rounding) noexcept;
 PrizeRounding prizeRoundingFromName(std::string_view name) noexcept;
 
 /// One blind level on the tournament clock (chip units, not cash).
+/// A break keeps the previous blinds and only runs the clock.
 struct BlindLevel {
     int smallBlind = 25;
     int bigBlind = 50;
     int ante = 0;
     int durationMinutes = 15;
+    bool isBreak = false;
 
-    /// "100 / 200"
+    /// "100 / 200", or "Break".
     std::string blindsLabel() const;
-    /// "—" when there is no ante, otherwise a grouped number.
+    /// "—" when there is no big blind ante, otherwise a grouped number.
     std::string anteLabel() const;
 };
 
@@ -176,6 +178,8 @@ struct TournamentConfig {
     void setPrizesFromJson(const std::string& text);
 
     const BlindLevel* levelAt(int index) const noexcept;
+    /// Blinds in force at `index`: the row itself, or the last playing level before a break.
+    const BlindLevel* activeBlinds(int index) const noexcept;
 };
 
 } // namespace pokersoc::domain
