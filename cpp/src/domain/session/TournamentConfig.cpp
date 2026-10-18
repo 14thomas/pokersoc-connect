@@ -374,4 +374,33 @@ const BlindLevel* TournamentConfig::activeBlinds(int index) const noexcept {
     return levelAt(index);
 }
 
+int TournamentConfig::playingLevelCount() const noexcept {
+    int count = 0;
+    for (const BlindLevel& level : blinds) {
+        if (!level.isBreak) ++count;
+    }
+    return count;
+}
+
+int TournamentConfig::playingLevelNumber(int index) const noexcept {
+    if (index < 0 || index >= static_cast<int>(blinds.size())) return 0;
+    if (blinds[static_cast<std::size_t>(index)].isBreak) return 0;
+    int number = 0;
+    for (int i = 0; i <= index; ++i) {
+        if (!blinds[static_cast<std::size_t>(i)].isBreak) ++number;
+    }
+    return number;
+}
+
+int TournamentConfig::indexOfPlayingLevel(int number) const noexcept {
+    if (number < 1) return -1;
+    int found = 0;
+    for (int i = 0; i < static_cast<int>(blinds.size()); ++i) {
+        if (blinds[static_cast<std::size_t>(i)].isBreak) continue;
+        ++found;
+        if (found == number) return i;
+    }
+    return -1;
+}
+
 } // namespace pokersoc::domain

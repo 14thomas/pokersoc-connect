@@ -77,6 +77,19 @@ void AppStore::saveTournamentConfig(const TournamentConfig& config) {
     setSetting("tnmt.prize_rounding", domain::prizeRoundingName(config.prizeRounding));
     setIntSetting("tnmt.prize_leftover_first", config.leftoverToFirst ? 1 : 0);
 
+    setSetting("tnmt.name", config.name);
+    setIntSetting("tnmt.starting_stack", config.startingStack);
+    setIntSetting("tnmt.rego_ends_level", config.registrationEndsLevel);
+    setIntSetting("tnmt.board.rego", config.board.registrationEnd ? 1 : 0);
+    setIntSetting("tnmt.board.level", config.board.level ? 1 : 0);
+    setIntSetting("tnmt.board.break", config.board.timeToBreak ? 1 : 0);
+    setIntSetting("tnmt.board.break_len", config.board.breakLength ? 1 : 0);
+    setIntSetting("tnmt.board.avg", config.board.avgStack ? 1 : 0);
+    setIntSetting("tnmt.board.players", config.board.players ? 1 : 0);
+    setIntSetting("tnmt.board.reentries", config.board.reentries ? 1 : 0);
+    setIntSetting("tnmt.board.total", config.board.total ? 1 : 0);
+    setIntSetting("tnmt.board.remaining", config.board.remaining ? 1 : 0);
+
     const auto saveFees = [this](const char* bountyKey, const char* rakeKey, const domain::BuyInFees& fees) {
         setIntSetting(bountyKey, fees.bountyCents);
         setIntSetting(rakeKey, fees.rakeCents);
@@ -129,6 +142,24 @@ TournamentConfig AppStore::loadTournamentConfig() {
     }
     config.leftoverToFirst =
         getIntSetting("tnmt.prize_leftover_first", config.leftoverToFirst ? 1 : 0) != 0;
+
+    if (const auto name = getSetting("tnmt.name")) {
+        if (!name->empty()) config.name = *name;
+    }
+    config.startingStack =
+        static_cast<int>(getIntSetting("tnmt.starting_stack", config.startingStack));
+    if (config.startingStack < 1) config.startingStack = 1;
+    config.registrationEndsLevel =
+        static_cast<int>(getIntSetting("tnmt.rego_ends_level", config.registrationEndsLevel));
+    config.board.registrationEnd = getIntSetting("tnmt.board.rego", 1) != 0;
+    config.board.level = getIntSetting("tnmt.board.level", 1) != 0;
+    config.board.timeToBreak = getIntSetting("tnmt.board.break", 1) != 0;
+    config.board.breakLength = getIntSetting("tnmt.board.break_len", 1) != 0;
+    config.board.avgStack = getIntSetting("tnmt.board.avg", 1) != 0;
+    config.board.players = getIntSetting("tnmt.board.players", 1) != 0;
+    config.board.reentries = getIntSetting("tnmt.board.reentries", 1) != 0;
+    config.board.total = getIntSetting("tnmt.board.total", 1) != 0;
+    config.board.remaining = getIntSetting("tnmt.board.remaining", 1) != 0;
 
     const long long legacyBounty = getIntSetting("tnmt.bounty_cents", 0);
     const long long legacyRake = getIntSetting("tnmt.rake_cents", 0);

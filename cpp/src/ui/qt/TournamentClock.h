@@ -45,6 +45,11 @@ public:
     const domain::BlindLevel* activeBlinds() const noexcept;
     /// Seconds until the next break starts, or -1 when none follows.
     int secondsUntilNextBreak() const noexcept;
+    /// Seconds until structure index `index` begins, or 0 if already there/past.
+    /// -1 when the index is missing.
+    int secondsUntilIndex(int index) const noexcept;
+    /// Minutes of the next (or current) break, or -1 when none remains.
+    int nextBreakMinutes() const noexcept;
 
 signals:
     void changed();

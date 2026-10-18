@@ -124,6 +124,25 @@ struct TournamentConfig {
     PrizeRounding prizeRounding = PrizeRounding::Exact;
     bool leftoverToFirst = true;
 
+    std::string name = "Tournament";
+    int startingStack = 10000;
+    /// 1-based playing level (breaks skipped) at which registration closes.
+    /// 0 = registration stays open.
+    int registrationEndsLevel = 4;
+
+    /// Individual TV-board side-column items. Centre clock/blinds always show.
+    struct BoardDisplay {
+        bool registrationEnd = true;
+        bool level = true;
+        bool timeToBreak = true;
+        bool breakLength = true;
+        bool avgStack = true;
+        bool players = true;
+        bool reentries = true;
+        bool total = true;
+        bool remaining = true;
+    } board;
+
     TournamentConfig();
 
     static std::vector<BlindLevel> defaultBlinds();
@@ -180,6 +199,12 @@ struct TournamentConfig {
     const BlindLevel* levelAt(int index) const noexcept;
     /// Blinds in force at `index`: the row itself, or the last playing level before a break.
     const BlindLevel* activeBlinds(int index) const noexcept;
+
+    int playingLevelCount() const noexcept;
+    /// 1-based playing-level number at `index`, or 0 when that row is a break.
+    int playingLevelNumber(int index) const noexcept;
+    /// Structure index of the Nth playing level (1-based), or -1.
+    int indexOfPlayingLevel(int number) const noexcept;
 };
 
 } // namespace pokersoc::domain

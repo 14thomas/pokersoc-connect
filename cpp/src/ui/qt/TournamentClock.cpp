@@ -128,6 +128,25 @@ int TournamentClock::secondsUntilNextBreak() const noexcept {
     return -1;
 }
 
+int TournamentClock::secondsUntilIndex(int index) const noexcept {
+    if (!config_ || index < 0 || index >= levelCount()) return -1;
+    if (index <= levelIndex_) return 0;
+    int seconds = remainingSeconds_;
+    for (int i = levelIndex_ + 1; i < index; ++i) {
+        seconds += durationSeconds(i);
+    }
+    return seconds < 0 ? 0 : seconds;
+}
+
+int TournamentClock::nextBreakMinutes() const noexcept {
+    if (!config_) return -1;
+    for (int i = levelIndex_; i < levelCount(); ++i) {
+        const BlindLevel* level = config_->levelAt(i);
+        if (level && level->isBreak) return level->durationMinutes;
+    }
+    return -1;
+}
+
 void TournamentClock::onTick() {
     if (!running_) return;
     if (remainingSeconds_ > 0) --remainingSeconds_;

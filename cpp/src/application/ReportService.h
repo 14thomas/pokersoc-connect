@@ -43,6 +43,8 @@ public:
     struct TournamentStats {
         int buyIns = 0;
         int rebuys = 0;
+        int uniquePlayers = 0;
+        int remainingPlayers = 0;
         domain::Money collected;      // total buy-in + rebuy cash
         domain::Money prizePool;      // portion allocated to places
         domain::Money bountyPool;     // portion allocated to bounties

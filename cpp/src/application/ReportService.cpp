@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <unordered_set>
 
 #include "domain/cashbox/Cashbox.h"
 #include "domain/player/Attendance.h"
@@ -81,6 +82,8 @@ ReportService::TournamentStats ReportService::tournamentStats() const {
                                              "Diamond",    "ARC Member", "Non-ARC Member"};
 
     TournamentStats stats;
+    std::unordered_set<std::string> uniqueBuyers;
+    std::unordered_set<std::string> uniqueFinished;
     std::vector<TierCount> counts;
     for (const char* tier : kTierOrder) {
         counts.push_back(TierCount{tier, 0, 0});
@@ -99,6 +102,7 @@ ReportService::TournamentStats ReportService::tournamentStats() const {
         }
         const bool isRebuy = type == TransactionType::Rebuy;
         (isRebuy ? stats.rebuys : stats.buyIns)++;
+        if (!isRebuy) uniqueBuyers.insert(transaction->playerId());
         stats.collected += transaction->amount();
         const auto& buyIn = static_cast<const domain::BuyIn&>(*transaction);
         stats.prizePool += buyIn.prizeAmount();
@@ -118,12 +122,17 @@ ReportService::TournamentStats ReportService::tournamentStats() const {
             const auto& payout = static_cast<const domain::TournamentPayout&>(*transaction);
             stats.prizePaid += payout.amount();
             if (payout.place() > 0) stats.paidPlaces.push_back(payout.place());
+            uniqueFinished.insert(payout.playerId());
         } else if (transaction->type() == TransactionType::BountyPayout) {
             const auto& payout = static_cast<const domain::TournamentPayout&>(*transaction);
             stats.bountyPaid += payout.amount();
             stats.bountiesRedeemed += payout.bountyCount();
         }
     }
+
+    stats.uniquePlayers = static_cast<int>(uniqueBuyers.size());
+    int remaining = stats.uniquePlayers - static_cast<int>(uniqueFinished.size());
+    stats.remainingPlayers = remaining < 0 ? 0 : remaining;
 
     for (const auto& count : counts) {
         if (count.buyIns > 0 || count.rebuys > 0) {

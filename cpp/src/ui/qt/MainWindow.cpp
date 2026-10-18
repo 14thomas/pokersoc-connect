@@ -897,6 +897,7 @@ void MainWindow::openTournamentSettings() {
     });
     connect(screen, &TournamentSettingsScreen::structureChanged, this, [this] {
         if (clock_) clock_->configChanged();
+        if (board_) board_->refreshStats();
     });
     showScreen(screen);
 }

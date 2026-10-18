@@ -8,6 +8,7 @@
 #include <QAbstractButton>
 #include <QApplication>
 #include <QColor>
+#include <QComboBox>
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
 #include <QDropEvent>
@@ -21,6 +22,7 @@
 #include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QLocale>
 #include <QMessageBox>
 #include <QPainter>
@@ -124,6 +126,17 @@ constexpr char kPageStyle[] = R"(
 #overline { color: @subtle; font-size: 11px; font-weight: 600; }
 #summaryText { color: @text; font-size: 14px; }
 #emptyState { color: @subtle; font-size: 13px; }
+
+#textField { background: @surface; border: 1px solid @border; border-radius: 8px;
+             padding: 8px 12px; color: @text; font-size: 14px; min-width: 220px;
+             selection-background-color: @accentTint; selection-color: @text; }
+#textField:focus { border-color: @accent; }
+#combo { background: @surface; border: 1px solid @border; border-radius: 8px;
+         padding: 8px 12px; color: @text; font-size: 14px; min-width: 200px; }
+#combo:focus { border-color: @accent; }
+#combo::drop-down { border: none; width: 22px; }
+#combo QAbstractItemView { background: @surface; color: @text;
+                           selection-background-color: @accentSoft; }
 
 QPushButton { border-radius: 8px; padding: 0 16px; font-size: 14px; font-weight: 500; }
 QPushButton:disabled { color: @subtle; }
@@ -811,6 +824,78 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     capRow->setEnabled(!isUnlimited);
     connect(unlimited, &QAbstractButton::toggled, capRow, [capRow](bool on) { capRow->setEnabled(!on); });
 
+    // ── Event ───────────────────────────────────────────────────────────────
+    tsui::Card eventCard = tsui::card(
+        "Event", "Name the tournament and set when registration closes on the TV board.");
+    auto* nameEdit = new QLineEdit;
+    nameEdit->setObjectName(QStringLiteral("textField"));
+    nameEdit->setPlaceholderText(QStringLiteral("Tournament name"));
+    nameEdit->setMaxLength(80);
+    nameEdit->setText(toQ(initial.name));
+    eventCard.body->addWidget(
+        tsui::settingRow("Tournament name", "Shown at the top centre of the TV board.", nameEdit));
+    eventCard.body->addSpacing(14);
+    eventCard.body->addWidget(tsui::divider());
+    eventCard.body->addSpacing(14);
+    auto* stack = new tsui::CalmSpinBox;
+    stack->setObjectName(QStringLiteral("startingStack"));
+    stack->setAccessibleName(QStringLiteral("Starting stack"));
+    stack->setRange(100, 99999999);
+    stack->setSingleStep(100);
+    stack->setGroupSeparatorShown(true);
+    stack->setValue(initial.startingStack);
+    eventCard.body->addWidget(tsui::settingRow(
+        "Starting stack", "Chips each buy-in and re-entry puts in play, for average stack.",
+        tsui::stepper(stack)));
+    eventCard.body->addSpacing(14);
+    eventCard.body->addWidget(tsui::divider());
+    eventCard.body->addSpacing(14);
+    auto* regoBox = new QComboBox;
+    regoBox->setObjectName(QStringLiteral("combo"));
+    regoBox->setAccessibleName(QStringLiteral("Registration ends"));
+    eventCard.body->addWidget(tsui::settingRow(
+        "Registration ends", "Closes when this playing level begins. Breaks are not counted.",
+        regoBox));
+    cards->addWidget(eventCard.frame);
+
+    // ── TV board ────────────────────────────────────────────────────────────
+    tsui::Card boardCard =
+        tsui::card("TV board", "Each side-column item can be shown or hidden on the display board.");
+    const auto addToggle = [&](const QString& title, const QString& description, bool on) {
+        auto* sw = new tsui::Switch;
+        sw->setChecked(on);
+        boardCard.body->addWidget(tsui::settingRow(title, description, sw));
+        return sw;
+    };
+    auto* showRego =
+        addToggle("Registration ends", "Countdown in the left column.", initial.board.registrationEnd);
+    const auto addBoardDivider = [&] {
+        boardCard.body->addSpacing(14);
+        boardCard.body->addWidget(tsui::divider());
+        boardCard.body->addSpacing(14);
+    };
+    addBoardDivider();
+    auto* showLevel = addToggle("Level", "Current playing level in the right column.", initial.board.level);
+    addBoardDivider();
+    auto* showBreak =
+        addToggle("Time to break", "Countdown until the next break starts.", initial.board.timeToBreak);
+    addBoardDivider();
+    auto* showBreakLen =
+        addToggle("Next break length", "How long the next (or current) break is.", initial.board.breakLength);
+    addBoardDivider();
+    auto* showAvg = addToggle("Average stack", "Starting stack × entries, divided by remaining players.",
+                              initial.board.avgStack);
+    addBoardDivider();
+    auto* showPlayers = addToggle("Players", "Unique players who have bought in.", initial.board.players);
+    addBoardDivider();
+    auto* showReentries = addToggle("Re-entries", "Number of rebuys.", initial.board.reentries);
+    addBoardDivider();
+    auto* showTotal = addToggle("Total", "Buy-ins plus re-entries.", initial.board.total);
+    addBoardDivider();
+    auto* showRemaining =
+        addToggle("Remaining", "Players still in, after prize payouts.", initial.board.remaining);
+    cards->addWidget(boardCard.frame);
+
     // ── Blind structure ─────────────────────────────────────────────────────
     QLabel* chip = tsui::text(QString(), "chip");
     chip->setFixedHeight(22);  // QSS drops border-radius entirely if it exceeds half the height
@@ -862,7 +947,22 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
 
     // ── Behaviour ───────────────────────────────────────────────────────────
     auto quiet = std::make_shared<bool>(false);
-    const auto syncBlinds = [blindsTable, chip, empty, removeBlind] {
+    const auto rebuildRego = [regoBox, blindsTable, quiet](int select) {
+        *quiet = true;
+        regoBox->clear();
+        regoBox->addItem(QStringLiteral("Never"), 0);
+        int playing = 0;
+        for (int row = 0; row < blindsTable->rowCount(); ++row) {
+            if (blindRowIsBreak(blindsTable, row)) continue;
+            ++playing;
+            regoBox->addItem(QStringLiteral("Start of level %1").arg(playing), playing);
+        }
+        int idx = regoBox->findData(select);
+        if (idx < 0) idx = 0;
+        regoBox->setCurrentIndex(idx);
+        *quiet = false;
+    };
+    const auto syncBlinds = [blindsTable, chip, empty, removeBlind, rebuildRego, regoBox] {
         int minutes = 0;
         int levels = 0;
         int breaks = 0;
@@ -879,16 +979,32 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         chip->setVisible(blindsTable->rowCount() > 0);
         empty->setVisible(blindsTable->rowCount() == 0);
         removeBlind->setEnabled(blindsTable->rowCount() > 0);
+        rebuildRego(regoBox->currentData().toInt());
     };
+    rebuildRego(initial.registrationEndsLevel);
     syncBlinds();
 
-    const auto persist = [this, unlimited, cap, blindsTable, quiet] {
+    const auto persist = [this, unlimited, cap, blindsTable, quiet, nameEdit, stack, regoBox, showRego,
+                          showLevel, showBreak, showBreakLen, showAvg, showPlayers, showReentries,
+                          showTotal, showRemaining] {
         if (*quiet) return;
         std::vector<BlindLevel> blinds;
         QString problem;
         if (blindsTable->rowCount() > 0 && !readBlinds(blindsTable, blinds, problem)) return;
         TournamentConfig& config = ctx_.tournament().config();
         config.rebuyCap = unlimited->isChecked() ? 0 : cap->value();
+        config.name = toStd(nameEdit->text().trimmed());
+        config.startingStack = stack->value();
+        config.registrationEndsLevel = regoBox->currentData().toInt();
+        config.board.registrationEnd = showRego->isChecked();
+        config.board.level = showLevel->isChecked();
+        config.board.timeToBreak = showBreak->isChecked();
+        config.board.breakLength = showBreakLen->isChecked();
+        config.board.avgStack = showAvg->isChecked();
+        config.board.players = showPlayers->isChecked();
+        config.board.reentries = showReentries->isChecked();
+        config.board.total = showTotal->isChecked();
+        config.board.remaining = showRemaining->isChecked();
         config.blinds = std::move(blinds);
         try {
             ctx_.saveTournamentConfig();
@@ -908,6 +1024,13 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
 
     connect(unlimited, &QAbstractButton::toggled, this, persist);
     connect(cap, qOverload<int>(&QSpinBox::valueChanged), this, persist);
+    connect(nameEdit, &QLineEdit::textChanged, this, persist);
+    connect(stack, qOverload<int>(&QSpinBox::valueChanged), this, persist);
+    connect(regoBox, qOverload<int>(&QComboBox::currentIndexChanged), this, persist);
+    for (tsui::Switch* sw : {showRego, showLevel, showBreak, showBreakLen, showAvg, showPlayers,
+                             showReentries, showTotal, showRemaining}) {
+        connect(sw, &QAbstractButton::toggled, this, persist);
+    }
     connect(blindsTable, &QTableWidget::itemChanged, this, [syncBlinds, persist, quiet] {
         if (*quiet) return;
         syncBlinds();
@@ -919,7 +1042,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         persist();
     };
 
-    connect(addBlind, &QPushButton::clicked, this, [page, scroll, blindsTable, relabel] {
+    connect(addBlind, &QPushButton::clicked, this, [page, scroll, blindsTable, relabel, syncBlinds, persist] {
         tsui::commitPendingEdits(page);
         BlindLevel next{25, 50, 0, 15};
         for (int row = blindsTable->rowCount() - 1; row >= 0; --row) {
@@ -937,18 +1060,22 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         }
         addBlindRow(blindsTable, next);
         relabel();
+        syncBlinds();
+        persist();
         const int added = blindsTable->rowCount() - 1;
         blindsTable->setCurrentCell(added, tsui::kSmallCol);
         blindsTable->setFocus();
         QTimer::singleShot(0, scroll, [scroll, blindsTable, added] { tsui::revealRow(scroll, blindsTable, added); });
     });
-    connect(addBreak, &QPushButton::clicked, this, [page, scroll, blindsTable, relabel] {
+    connect(addBreak, &QPushButton::clicked, this, [page, scroll, blindsTable, relabel, syncBlinds, persist] {
         tsui::commitPendingEdits(page);
         BlindLevel brk;
         brk.isBreak = true;
         brk.durationMinutes = 10;
         addBlindRow(blindsTable, brk);
         relabel();
+        syncBlinds();
+        persist();
         const int added = blindsTable->rowCount() - 1;
         blindsTable->setCurrentCell(added, tsui::kMinutesCol);
         blindsTable->setFocus();
