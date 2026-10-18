@@ -1,5 +1,6 @@
 #include "ui/qt/TournamentBoardWindow.h"
 
+#include <QFontDatabase>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -38,8 +39,8 @@ using domain::TournamentConfig;
 namespace {
 
 constexpr const char* kNavy = "#0A1628";
-constexpr const char* kNavyPanel = "#13233A";
-constexpr const char* kNavyBorder = "#2A4A6B";
+constexpr const char* kNavyPanel = "#0E1C2E";
+constexpr const char* kNavyBorder = "#060E18";
 constexpr const char* kWhite = "#FFFFFF";
 constexpr const char* kWarn = "#FFB74D";
 constexpr const char* kHot = "#FF6B6B";
@@ -153,10 +154,10 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     headerRow->setContentsMargins(0, 0, 0, 0);
     headerRow->setSpacing(16);
     auto* leftPad = new QWidget;
-    leftPad->setFixedWidth(160);
+    leftPad->setFixedWidth(180);
     wallClock_ = boardLabel(QString(), 20, true, kWhite, Qt::AlignRight | Qt::AlignVCenter);
     wallClock_->setWordWrap(false);
-    wallClock_->setFixedWidth(160);
+    wallClock_->setFixedWidth(180);
     name_ = boardLabel(QString(), 32, true, kWhite, Qt::AlignHCenter | Qt::AlignVCenter);
     headerRow->addWidget(leftPad, 0, Qt::AlignVCenter);
     headerRow->addWidget(name_, 1);
@@ -217,7 +218,9 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     infoLayout->setSpacing(14);
     infoBlock_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    blindsBox_ = makePanel(kNavyPanel, kNavyBorder, 1, 22, 26);
+    constexpr int kBoxBorder = 6;
+    constexpr int kBoxPad = 26;
+    blindsBox_ = makePanel(kNavyPanel, kNavyBorder, kBoxBorder, 22, kBoxPad);
     auto* blindsLayout = panelLayout(blindsBox_);
     blindsLayout->setSpacing(10);
     blindsRow_ = makeBoardRow(QStringLiteral("BLINDS:"));
@@ -227,7 +230,7 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     anteRow_.widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     blindsBox_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    nextBox_ = makePanel(kNavyPanel, kNavyBorder, 1, 22, 22);
+    nextBox_ = makePanel(kNavyPanel, kNavyBorder, kBoxBorder, 22, kBoxPad);
     auto* nextLayout = panelLayout(nextBox_);
     nextRow_ = makeBoardRow(QStringLiteral("NEXT LEVEL:"));
     nextLayout->addWidget(nextRow_.widget);
@@ -394,33 +397,36 @@ void TournamentBoardWindow::layoutLogo() {
 void TournamentBoardWindow::applyFonts() {
     const int h = qMax(1, height());
     const int scale = qMin(h, qMax(1, width()));
-    name_->setFont(boardFont(qBound(26, scale / 22, 56), true));
-    wallClock_->setFont(boardFont(qBound(16, scale / 36, 32), true));
+    name_->setFont(boardFont(qBound(32, scale / 18, 68), true));
+    wallClock_->setFont(boardFont(qBound(20, scale / 28, 40), true));
+    // Main countdown size left unchanged.
     time_->setFont(boardFont(qBound(120, h / 3, 300), true));
-    const int labelPx = qBound(18, h / 24, 34);
-    const int valuePx = qBound(24, h / 18, 44);
+    const int labelPx = qBound(22, h / 20, 42);
+    const int valuePx = qBound(30, h / 15, 54);
     for (BoardRow* row : {&blindsRow_, &anteRow_, &nextRow_}) {
         row->label->setFont(boardFont(labelPx, true));
         row->value->setFont(boardFont(valuePx, true));
     }
-    const int rowH = qMax(valuePx, labelPx) + 10;
+    const int rowH = qMax(valuePx, labelPx) + 12;
     anteRow_.widget->setFixedHeight(rowH);
     blindsRow_.widget->setFixedHeight(rowH);
     nextRow_.widget->setFixedHeight(rowH);
-    blindsBox_->setFixedHeight(rowH * 2 + 10 + 52);
-    nextBox_->setFixedHeight(rowH + 44);
-    prizeTitle_->setFont(boardFont(qBound(18, h / 28, 32), true));
-    rego_.caption->setFont(boardFont(qBound(16, h / 32, 28), true));
-    rego_.value->setFont(boardFont(qBound(48, h / 10, 96), true));
-    const int capPx = qBound(11, h / 48, 16);
-    const int valPx = qBound(20, h / 22, 36);
+    // Keep room for matching borders + padding on both boxes.
+    constexpr int kBoxChrome = 26 * 2 + 6 * 2;
+    blindsBox_->setFixedHeight(rowH * 2 + 10 + kBoxChrome);
+    nextBox_->setFixedHeight(rowH + kBoxChrome);
+    prizeTitle_->setFont(boardFont(qBound(22, h / 24, 40), true));
+    rego_.caption->setFont(boardFont(qBound(20, h / 26, 34), true));
+    rego_.value->setFont(boardFont(qBound(60, h / 8, 120), true));
+    const int capPx = qBound(14, h / 38, 22);
+    const int valPx = qBound(26, h / 18, 46);
     for (SideStat* stat : {&level_, &timeToBreak_, &breakLength_, &avgStack_, &players_,
                            &reentries_, &total_, &remaining_}) {
         stat->caption->setFont(boardFont(capPx, true));
         stat->value->setFont(boardFont(valPx, true));
     }
-    const int prizeCap = qBound(22, h / 22, 40);
-    const int prizeVal = qBound(28, h / 16, 56);
+    const int prizeCap = qBound(28, h / 18, 50);
+    const int prizeVal = qBound(36, h / 13, 70);
     for (int i = 0; i < prizeLayout_->count(); ++i) {
         QLayoutItem* item = prizeLayout_->itemAt(i);
         QWidget* widget = item ? item->widget() : nullptr;
@@ -682,7 +688,28 @@ void TournamentBoardWindow::refreshAll() {
 }
 
 QFont TournamentBoardWindow::boardFont(int pixelSize, bool bold) const {
-    return uiFont(pixelSize, bold);
+    static const QString family = [] {
+        QString loaded;
+        const QStringList files = {
+            QStringLiteral("Fonts/Campton/CamptonBook.otf"),
+            QStringLiteral("Fonts/Campton/CamptonMedium.otf"),
+            QStringLiteral("Fonts/Campton/CamptonSemiBold.otf"),
+            QStringLiteral("Fonts/Campton/CamptonBold.otf"),
+            QStringLiteral("Fonts/Campton/CamptonExtraBold.otf"),
+        };
+        for (const QString& relative : files) {
+            const int id = QFontDatabase::addApplicationFont(assetPath(relative));
+            if (id < 0) continue;
+            const QStringList families = QFontDatabase::applicationFontFamilies(id);
+            if (!families.isEmpty() && loaded.isEmpty()) loaded = families.first();
+        }
+        return loaded.isEmpty() ? QStringLiteral("Segoe UI") : loaded;
+    }();
+
+    QFont font(family);
+    font.setPixelSize(pixelSize);
+    font.setWeight(bold ? QFont::Bold : QFont::Normal);
+    return font;
 }
 
 } // namespace pokersoc::ui::qt
