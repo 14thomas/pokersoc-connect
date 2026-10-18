@@ -1,5 +1,6 @@
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/WLEM7A2TAU/moc_TournamentBoardWindow.cpp: C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentBoardWindow.h \
   C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/moc_predefs.h \
+  C:/Qt/6.9.2/mingw_64/include/QtCore/QString \
   C:/Qt/6.9.2/mingw_64/include/QtCore/q17memory.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/q20functional.h \
   C:/Qt/6.9.2/mingw_64/include/QtCore/q20iterator.h \

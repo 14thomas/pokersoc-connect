@@ -9,6 +9,11 @@
 #include <QApplication>
 #include <QColor>
 #include <QComboBox>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QIODevice>
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
 #include <QDropEvent>
@@ -376,36 +381,62 @@ protected:
     }
 };
 
-// Blinds table cells: numeric editors, grouped thousands, "15 min" durations, and the level as a pill.
-// Writes values back in the same type addBlindRow() stored, so cellInt()/readBlinds() are unaffected.
+// Same as CalmSpinBox: page wheel must not change the selection under the cursor.
+class CalmComboBox final : public QComboBox {
+public:
+    explicit CalmComboBox(QWidget* parent = nullptr) : QComboBox(parent) {
+        setFocusPolicy(Qt::StrongFocus);
+    }
+
+protected:
+    void wheelEvent(QWheelEvent* event) override {
+        if (!hasFocus()) {
+            event->ignore();
+            return;
+        }
+        QComboBox::wheelEvent(event);
+    }
+};
+
+// Blinds table: free-text chip amounts (1.5K / 150K), spin for minutes, level as a pill.
 class BlindCellDelegate final : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
                           const QModelIndex& index) const override {
+        Q_UNUSED(option);
         if (index.column() == kLevelCol) return nullptr;
         if (index.column() != kMinutesCol && index.siblingAtColumn(kLevelCol).data(Qt::UserRole).toBool())
             return nullptr;
-        auto* spin = new QSpinBox(parent);
-        spin->setObjectName(QStringLiteral("cellEditor"));
-        spin->setFrame(false);
-        spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
-        spin->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        spin->setGroupSeparatorShown(true);
         if (index.column() == kMinutesCol) {
+            auto* spin = new QSpinBox(parent);
+            spin->setObjectName(QStringLiteral("cellEditor"));
+            spin->setFrame(false);
+            spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+            spin->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
             spin->setRange(0, 999);
             spin->setSuffix(QStringLiteral(" min"));
-        } else {
-            spin->setRange(0, 100'000'000);
-            spin->setStepType(QAbstractSpinBox::AdaptiveDecimalStepType);
+            return spin;
         }
-        return spin;  // range checks beyond "non-negative" stay in readBlinds()
+        auto* edit = new QLineEdit(parent);
+        edit->setObjectName(QStringLiteral("cellEditor"));
+        edit->setFrame(false);
+        edit->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        edit->setPlaceholderText(index.column() == kAnteCol ? QStringLiteral("0 or 1.5K")
+                                                            : QStringLiteral("100 or 1.5K"));
+        return edit;
     }
 
     void setEditorData(QWidget* editor, const QModelIndex& index) const override {
         if (auto* spin = qobject_cast<QSpinBox*>(editor)) {
             spin->setValue(index.data(Qt::EditRole).toString().trimmed().toInt());
+            return;
+        }
+        if (auto* edit = qobject_cast<QLineEdit*>(editor)) {
+            QString text = index.data(Qt::EditRole).toString().trimmed();
+            if (text == QStringLiteral("\u2014")) text.clear();
+            edit->setText(text);
             return;
         }
         QStyledItemDelegate::setEditorData(editor, index);
@@ -414,9 +445,11 @@ public:
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override {
         if (auto* spin = qobject_cast<QSpinBox*>(editor)) {
             spin->interpretText();
-            const bool storesText = index.data(Qt::EditRole).userType() == QMetaType::QString;
-            model->setData(index, storesText ? QVariant(QString::number(spin->value())) : QVariant(spin->value()),
-                           Qt::EditRole);
+            model->setData(index, spin->value(), Qt::EditRole);
+            return;
+        }
+        if (auto* edit = qobject_cast<QLineEdit*>(editor)) {
+            model->setData(index, edit->text().trimmed(), Qt::EditRole);
             return;
         }
         QStyledItemDelegate::setModelData(editor, model, index);
@@ -463,16 +496,23 @@ protected:
     void initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const override {
         QStyledItemDelegate::initStyleOption(option, index);
         option->state &= ~QStyle::State_HasFocus;  // no dotted focus rectangle
-        bool ok = false;
-        const int value = index.data(Qt::DisplayRole).toString().trimmed().toInt(&ok);
-        if (!ok) return;
-        QLocale locale = option->locale;
-        locale.setNumberOptions(QLocale::DefaultNumberOptions);  // item views strip separators by default
+        const QString raw = index.data(Qt::DisplayRole).toString().trimmed();
         switch (index.column()) {
         case kLevelCol: break;
-        case kMinutesCol: option->text = QStringLiteral("%1 min").arg(value); break;
-        case kAnteCol: option->text = value == 0 ? QStringLiteral("\u2014") : locale.toString(value); break;
-        default: option->text = locale.toString(value); break;
+        case kMinutesCol: {
+            bool ok = false;
+            const int value = raw.toInt(&ok);
+            if (ok) option->text = QStringLiteral("%1 min").arg(value);
+            break;
+        }
+        case kAnteCol:
+            option->text = (raw.isEmpty() || raw == QStringLiteral("0") || raw == QStringLiteral("\u2014"))
+                               ? QStringLiteral("\u2014")
+                               : raw;
+            break;
+        default:
+            option->text = raw;
+            break;
         }
     }
 };
@@ -850,7 +890,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     eventCard.body->addSpacing(14);
     eventCard.body->addWidget(tsui::divider());
     eventCard.body->addSpacing(14);
-    auto* regoBox = new QComboBox;
+    auto* regoBox = new tsui::CalmComboBox;
     regoBox->setObjectName(QStringLiteral("combo"));
     regoBox->setAccessibleName(QStringLiteral("Registration ends"));
     eventCard.body->addWidget(tsui::settingRow(
@@ -858,50 +898,72 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         regoBox));
     cards->addWidget(eventCard.frame);
 
-    // ── TV board ────────────────────────────────────────────────────────────
-    tsui::Card boardCard =
-        tsui::card("TV board", "Each side-column item can be shown or hidden on the display board.");
-    const auto addToggle = [&](const QString& title, const QString& description, bool on) {
-        auto* sw = new tsui::Switch;
-        sw->setChecked(on);
-        boardCard.body->addWidget(tsui::settingRow(title, description, sw));
-        return sw;
+    // ── Board chips ─────────────────────────────────────────────────────────
+    tsui::Card chipsCard = tsui::card(
+        "Board chips",
+        "Up to six denominations for the TV board (2 columns × 3 rows). "
+        "Choose an image from Assets/BoardChips, or Browse… to pick any filepath. "
+        "Values accept K/M (e.g. 1.5K, 100K). Highest value sits bottom-right.");
+    auto* chipsList = new QVBoxLayout;
+    chipsList->setSpacing(10);
+    chipsCard.body->addLayout(chipsList);
+    chipsCard.body->addSpacing(12);
+    auto* chipActions = new QHBoxLayout;
+    chipActions->setSpacing(8);
+    QPushButton* addChip = tsui::button("Add chip", "secondary");
+    QPushButton* removeChip = tsui::button("Remove last", "ghost");
+    chipActions->addWidget(addChip);
+    chipActions->addStretch(1);
+    chipActions->addWidget(removeChip);
+    chipsCard.body->addLayout(chipActions);
+    cards->addWidget(chipsCard.frame);
+
+    struct ChipRowWidgets {
+        QWidget* row = nullptr;
+        tsui::CalmComboBox* image = nullptr;
+        QPushButton* browse = nullptr;
+        QLineEdit* value = nullptr;
     };
-    auto* showRego =
-        addToggle("Registration ends", "Countdown in the left column.", initial.board.registrationEnd);
-    const auto addBoardDivider = [&] {
-        boardCard.body->addSpacing(14);
-        boardCard.body->addWidget(tsui::divider());
-        boardCard.body->addSpacing(14);
+    auto chipRows = std::make_shared<std::vector<ChipRowWidgets>>();
+
+    const auto boardChipImages = [] {
+        QStringList names;
+        const QDir dir(assetPath(QStringLiteral("BoardChips")));
+        for (const QFileInfo& info : dir.entryInfoList(
+                 {QStringLiteral("*.png"), QStringLiteral("*.PNG"), QStringLiteral("*.jpg"),
+                  QStringLiteral("*.jpeg"), QStringLiteral("*.webp")},
+                 QDir::Files, QDir::Name)) {
+            names += info.fileName();
+        }
+        return names;
     };
-    addBoardDivider();
-    auto* showLevel = addToggle("Level", "Current playing level in the right column.", initial.board.level);
-    addBoardDivider();
-    auto* showBreak =
-        addToggle("Time to break", "Countdown until the next break starts.", initial.board.timeToBreak);
-    addBoardDivider();
-    auto* showBreakLen =
-        addToggle("Next break length", "How long the next (or current) break is.", initial.board.breakLength);
-    addBoardDivider();
-    auto* showAvg = addToggle("Average stack", "Starting stack × entries, divided by remaining players.",
-                              initial.board.avgStack);
-    addBoardDivider();
-    auto* showPlayers = addToggle("Players", "Unique players who have bought in.", initial.board.players);
-    addBoardDivider();
-    auto* showReentries = addToggle("Re-entries", "Number of rebuys.", initial.board.reentries);
-    addBoardDivider();
-    auto* showTotal = addToggle("Total", "Buy-ins plus re-entries.", initial.board.total);
-    addBoardDivider();
-    auto* showRemaining =
-        addToggle("Remaining", "Players still in, after prize payouts.", initial.board.remaining);
-    cards->addWidget(boardCard.frame);
+
+    const auto fillImageCombo = [boardChipImages](QComboBox* box, const QString& selected) {
+        box->clear();
+        box->addItem(QStringLiteral("(none)"), QString());
+        for (const QString& name : boardChipImages()) {
+            box->addItem(name, name);
+        }
+        if (!selected.isEmpty()) {
+            int idx = box->findData(selected);
+            if (idx < 0) {
+                // Custom / absolute path chosen earlier.
+                box->addItem(QFileInfo(selected).fileName(), selected);
+                idx = box->count() - 1;
+            }
+            box->setCurrentIndex(idx);
+        } else {
+            box->setCurrentIndex(0);
+        }
+    };
 
     // ── Blind structure ─────────────────────────────────────────────────────
     QLabel* chip = tsui::text(QString(), "chip");
     chip->setFixedHeight(22);  // QSS drops border-radius entirely if it exceeds half the height
     tsui::Card blindsCard = tsui::card(
         "Blind structure",
-        "Double-click a cell to edit. Drag a row to reorder. A break keeps the blinds and only runs the clock.",
+        "Double-click a cell to edit (numbers or shorthand like 1.5K / 150K). Drag a row to reorder. "
+        "Import or save a JSON rounds file. A break keeps the blinds and only runs the clock.",
         chip);
     auto* blindsTable = new tsui::BlindTable;
     blindsTable->setColumnCount(5);
@@ -920,9 +982,13 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     QPushButton* addBlind = tsui::button("Add level", "secondary");
     addBlind->setIcon(tsui::glyphIcon(tsui::Glyph::Plus, tsui::token("text")));
     QPushButton* addBreak = tsui::button("Add break", "secondary");
+    QPushButton* importBlinds = tsui::button("Import…", "ghost");
+    QPushButton* saveBlinds = tsui::button("Save…", "ghost");
     QPushButton* removeBlind = tsui::button("Remove last", "ghost");
     blindActions->addWidget(addBlind);
     blindActions->addWidget(addBreak);
+    blindActions->addWidget(importBlinds);
+    blindActions->addWidget(saveBlinds);
     blindActions->addStretch(1);
     blindActions->addWidget(removeBlind);
     blindsCard.body->addLayout(blindActions);
@@ -984,9 +1050,12 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     rebuildRego(initial.registrationEndsLevel);
     syncBlinds();
 
-    const auto persist = [this, unlimited, cap, blindsTable, quiet, nameEdit, stack, regoBox, showRego,
-                          showLevel, showBreak, showBreakLen, showAvg, showPlayers, showReentries,
-                          showTotal, showRemaining] {
+    const auto syncChipButtons = [chipRows, addChip, removeChip] {
+        addChip->setEnabled(static_cast<int>(chipRows->size()) < 6);
+        removeChip->setEnabled(!chipRows->empty());
+    };
+
+    const auto persist = [this, unlimited, cap, blindsTable, quiet, nameEdit, stack, regoBox, chipRows] {
         if (*quiet) return;
         std::vector<BlindLevel> blinds;
         QString problem;
@@ -996,16 +1065,19 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         config.name = toStd(nameEdit->text().trimmed());
         config.startingStack = stack->value();
         config.registrationEndsLevel = regoBox->currentData().toInt();
-        config.board.registrationEnd = showRego->isChecked();
-        config.board.level = showLevel->isChecked();
-        config.board.timeToBreak = showBreak->isChecked();
-        config.board.breakLength = showBreakLen->isChecked();
-        config.board.avgStack = showAvg->isChecked();
-        config.board.players = showPlayers->isChecked();
-        config.board.reentries = showReentries->isChecked();
-        config.board.total = showTotal->isChecked();
-        config.board.remaining = showRemaining->isChecked();
         config.blinds = std::move(blinds);
+        config.boardChips.clear();
+        for (const ChipRowWidgets& row : *chipRows) {
+            BoardChip chip;
+            chip.imageFile = toStd(row.image->currentData().toString());
+            chip.value = toStd(row.value->text().trimmed());
+            if (chip.imageFile.empty() && parseChipAmount(chip.value) <= 0) continue;
+            config.boardChips.push_back(chip);
+        }
+        std::sort(config.boardChips.begin(), config.boardChips.end(),
+                  [](const BoardChip& a, const BoardChip& b) {
+                      return parseChipAmount(a.value) < parseChipAmount(b.value);
+                  });
         try {
             ctx_.saveTournamentConfig();
         } catch (const std::exception& saveError) {
@@ -1016,6 +1088,93 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         }
         emit structureChanged();
     };
+
+    const auto addChipRow = [this, chipsList, chipRows, fillImageCombo, quiet, persist,
+                             syncChipButtons](const BoardChip& chip) {
+        if (static_cast<int>(chipRows->size()) >= 6) return;
+        ChipRowWidgets widgets;
+        widgets.row = new QWidget;
+        auto* rowLayout = new QHBoxLayout(widgets.row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->setSpacing(12);
+        widgets.image = new tsui::CalmComboBox;
+        widgets.image->setObjectName(QStringLiteral("combo"));
+        widgets.image->setMinimumWidth(140);
+        fillImageCombo(widgets.image, toQ(chip.imageFile));
+        widgets.browse = tsui::button("Browse…", "ghost");
+        widgets.browse->setFixedWidth(88);
+        widgets.value = new QLineEdit;
+        widgets.value->setObjectName(QStringLiteral("textField"));
+        widgets.value->setAccessibleName(QStringLiteral("Chip value"));
+        widgets.value->setPlaceholderText(QStringLiteral("e.g. 1.5K"));
+        widgets.value->setFixedWidth(96);
+        widgets.value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        widgets.value->setText(toQ(chip.value));
+        rowLayout->addWidget(tsui::text("Image", "caption"), 0);
+        rowLayout->addWidget(widgets.image, 1);
+        rowLayout->addWidget(widgets.browse, 0);
+        rowLayout->addWidget(tsui::text("Value", "caption"), 0);
+        rowLayout->addWidget(widgets.value, 0);
+        chipsList->addWidget(widgets.row);
+        chipRows->push_back(widgets);
+        connect(widgets.image, qOverload<int>(&QComboBox::currentIndexChanged), this, [quiet, persist] {
+            if (*quiet) return;
+            persist();
+        });
+        connect(widgets.browse, &QPushButton::clicked, this,
+                [this, image = widgets.image, quiet, persist] {
+                    const QString chosen = QFileDialog::getOpenFileName(
+                        this, QStringLiteral("Select chip image"),
+                        assetPath(QStringLiteral("BoardChips")),
+                        QStringLiteral("Images (*.png *.jpg *.jpeg *.webp *.PNG *.JPG *.JPEG *.WEBP)"));
+                    if (chosen.isEmpty()) return;
+                    const QString path = QFileInfo(chosen).absoluteFilePath();
+                    int idx = image->findData(path);
+                    if (idx < 0) {
+                        // Prefer listing a BoardChips filename when the file lives there.
+                        const QDir boardDir(assetPath(QStringLiteral("BoardChips")));
+                        const QString relative = boardDir.relativeFilePath(path);
+                        const bool inBoardChips =
+                            !relative.startsWith(QLatin1String("..")) && !QFileInfo(relative).isAbsolute();
+                        const QString data = inBoardChips ? QFileInfo(path).fileName() : path;
+                        const QString label = QFileInfo(path).fileName();
+                        idx = image->findData(data);
+                        if (idx < 0) {
+                            image->addItem(label, data);
+                            idx = image->count() - 1;
+                        }
+                    }
+                    *quiet = true;
+                    image->setCurrentIndex(idx);
+                    *quiet = false;
+                    persist();
+                });
+        connect(widgets.value, &QLineEdit::editingFinished, this, [quiet, persist] {
+            if (*quiet) return;
+            persist();
+        });
+        syncChipButtons();
+    };
+
+    *quiet = true;
+    for (const BoardChip& chip : initial.boardChips) addChipRow(chip);
+    *quiet = false;
+    syncChipButtons();
+    connect(addChip, &QPushButton::clicked, this, [addChipRow, persist] {
+        addChipRow(BoardChip{});
+        persist();
+    });
+    connect(removeChip, &QPushButton::clicked, this, [chipRows, persist, syncChipButtons] {
+        if (chipRows->empty()) return;
+        ChipRowWidgets last = chipRows->back();
+        chipRows->pop_back();
+        if (last.row) {
+            last.row->setParent(nullptr);
+            last.row->deleteLater();
+        }
+        syncChipButtons();
+        persist();
+    });
     const auto relabel = [blindsTable, quiet] {
         *quiet = true;
         refreshBlindLabels(blindsTable);
@@ -1027,10 +1186,6 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     connect(nameEdit, &QLineEdit::textChanged, this, persist);
     connect(stack, qOverload<int>(&QSpinBox::valueChanged), this, persist);
     connect(regoBox, qOverload<int>(&QComboBox::currentIndexChanged), this, persist);
-    for (tsui::Switch* sw : {showRego, showLevel, showBreak, showBreakLen, showAvg, showPlayers,
-                             showReentries, showTotal, showRemaining}) {
-        connect(sw, &QAbstractButton::toggled, this, persist);
-    }
     connect(blindsTable, &QTableWidget::itemChanged, this, [syncBlinds, persist, quiet] {
         if (*quiet) return;
         syncBlinds();
@@ -1044,17 +1199,20 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
 
     connect(addBlind, &QPushButton::clicked, this, [page, scroll, blindsTable, relabel, syncBlinds, persist] {
         tsui::commitPendingEdits(page);
-        BlindLevel next{25, 50, 0, 15};
+        BlindLevel next{"25", "50", "", 15};
         for (int row = blindsTable->rowCount() - 1; row >= 0; --row) {
             if (blindRowIsBreak(blindsTable, row)) continue;
             bool ok = false;
-            next.smallBlind = cellInt(blindsTable, row, tsui::kSmallCol, &ok);
-            next.bigBlind = cellInt(blindsTable, row, tsui::kBigCol, &ok);
-            next.ante = cellInt(blindsTable, row, tsui::kAnteCol, &ok);
+            next.smallBlind = toStd(cellText(blindsTable, row, tsui::kSmallCol));
+            next.bigBlind = toStd(cellText(blindsTable, row, tsui::kBigCol));
+            next.ante = toStd(cellText(blindsTable, row, tsui::kAnteCol));
             next.durationMinutes = cellInt(blindsTable, row, tsui::kMinutesCol, &ok);
-            if (next.bigBlind > 0) {
+            const long long bb = parseChipAmount(next.bigBlind);
+            if (bb > 0) {
                 next.smallBlind = next.bigBlind;
-                next.bigBlind *= 2;
+                next.bigBlind = formatChipAmount(bb * 2);
+                const long long ante = parseChipAmount(next.ante);
+                if (ante > 0) next.ante = formatChipAmount(ante * 2);
             }
             break;
         }
@@ -1088,6 +1246,66 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         relabel();
         syncBlinds();
         persist();
+    });
+    connect(importBlinds, &QPushButton::clicked, this,
+            [this, page, blindsTable, quiet, relabel, syncBlinds, persist] {
+                tsui::commitPendingEdits(page);
+                const QString path = QFileDialog::getOpenFileName(
+                    this, QStringLiteral("Import blind structure"),
+                    assetPath(QStringLiteral("BlindStructures")),
+                    QStringLiteral("Blind structure JSON (*.json);;All files (*.*)"));
+                if (path.isEmpty()) return;
+                QFile file(path);
+                if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                    QMessageBox::critical(this, QStringLiteral("Import blinds"),
+                                          QStringLiteral("Couldn't open:\n%1").arg(path));
+                    return;
+                }
+                const QByteArray bytes = file.readAll();
+                TournamentConfig probe;
+                probe.blinds.clear();
+                probe.setBlindsFromJson(toStd(QString::fromUtf8(bytes)));
+                if (probe.blinds.empty()) {
+                    QMessageBox::critical(
+                        this, QStringLiteral("Import blinds"),
+                        QStringLiteral("No rounds found. Expected a JSON file with a \"rounds\" "
+                                       "array (or a bare array of levels)."));
+                    return;
+                }
+                *quiet = true;
+                blindsTable->setRowCount(0);
+                for (const BlindLevel& level : probe.blinds) addBlindRow(blindsTable, level);
+                *quiet = false;
+                relabel();
+                syncBlinds();
+                persist();
+            });
+    connect(saveBlinds, &QPushButton::clicked, this, [this, page, blindsTable] {
+        tsui::commitPendingEdits(page);
+        std::vector<BlindLevel> blinds;
+        QString problem;
+        if (!readBlinds(blindsTable, blinds, problem)) {
+            QMessageBox::warning(this, QStringLiteral("Save blinds"), problem);
+            return;
+        }
+        const QString path = QFileDialog::getSaveFileName(
+            this, QStringLiteral("Save blind structure"),
+            assetPath(QStringLiteral("BlindStructures")) + QStringLiteral("/blinds.json"),
+            QStringLiteral("Blind structure JSON (*.json);;All files (*.*)"));
+        if (path.isEmpty()) return;
+        TournamentConfig exportConfig;
+        exportConfig.blinds = std::move(blinds);
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+            QMessageBox::critical(this, QStringLiteral("Save blinds"),
+                                  QStringLiteral("Couldn't write:\n%1").arg(path));
+            return;
+        }
+        const std::string json = exportConfig.blindsStructureJson();
+        if (file.write(json.data(), static_cast<qint64>(json.size())) < 0) {
+            QMessageBox::critical(this, QStringLiteral("Save blinds"),
+                                  QStringLiteral("Couldn't write:\n%1").arg(path));
+        }
     });
 
     // Focus rings for keyboard users only; clicking empty space takes focus (committing a cell edit).

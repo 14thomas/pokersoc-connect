@@ -1546,6 +1546,7 @@ C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/Widgets.cpp
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/main.cpp
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentBoardWindow.h
  mmc:Q_OBJECT
+ mdp:C:/Qt/6.9.2/mingw_64/include/QtCore/QString
  mdp:C:/Qt/6.9.2/mingw_64/include/QtCore/q17memory.h
  mdp:C:/Qt/6.9.2/mingw_64/include/QtCore/q20functional.h
  mdp:C:/Qt/6.9.2/mingw_64/include/QtCore/q20iterator.h
@@ -2237,3 +2238,5 @@ C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.h
  mdp:C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.h
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentClock.cpp
 C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/TournamentSettingsScreen.cpp
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/SettingsChrome.h
+C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/SettingsChrome.cpp

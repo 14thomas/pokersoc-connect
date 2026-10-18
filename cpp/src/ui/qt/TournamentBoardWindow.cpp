@@ -1,7 +1,9 @@
 #include "ui/qt/TournamentBoardWindow.h"
 
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QFrame>
+#include <QGridLayout>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeySequence>
@@ -18,8 +20,12 @@
 #include <QSizePolicy>
 #include <QTime>
 #include <QTimer>
+#include <QVariant>
 #include <QVBoxLayout>
 #include <QWidget>
+
+#include <algorithm>
+#include <vector>
 
 #include "application/ReportService.h"
 #include "domain/session/TournamentConfig.h"
@@ -32,6 +38,7 @@
 namespace pokersoc::ui::qt {
 
 using domain::BlindLevel;
+using domain::BoardChip;
 using domain::Money;
 using domain::PrizePayout;
 using domain::TournamentConfig;
@@ -80,7 +87,8 @@ QString wallClockText() {
 }
 
 QString slashBlinds(const BlindLevel& level) {
-    return QStringLiteral("%1/%2").arg(grouped(level.smallBlind), grouped(level.bigBlind));
+    return QStringLiteral("%1/%2")
+        .arg(QString::fromStdString(level.smallBlind), QString::fromStdString(level.bigBlind));
 }
 
 QString placeOrdinal(int place) {
@@ -114,12 +122,12 @@ protected:
         p.setRenderHint(QPainter::SmoothPixmapTransform, true);
         p.setOpacity(0.067); // hehehehe to anyone that finds this
 
-        // Bottom toward 6 o'clock, top toward 3 — nudged a bit CCW (left).
-        const QPointF pivot(width() * 0.76, height() * 0.72);
+        // Diagonal watermark, centred enough that a large mark stays on-screen.
+        const QPointF pivot(width() * 0.66, height() * 0.595);
         p.translate(pivot);
         p.rotate(32.0);
 
-        const int targetW = qMax(140, qRound(width() * 0.36));
+        const int targetW = qMax(220, qRound(width() * 0.62));
         const QPixmap scaled =
             logo_.scaledToWidth(targetW, Qt::SmoothTransformation);
         p.drawPixmap(-scaled.width() / 2, -scaled.height() / 2, scaled);
@@ -146,7 +154,7 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     logo_ = new BoardLogoOverlay(central);
 
     auto* root = new QVBoxLayout(central);
-    root->setContentsMargins(36, 20, 36, 24);
+    root->setContentsMargins(36, 16, 36, 10);
     root->setSpacing(0);
 
     auto* header = new QWidget;
@@ -164,28 +172,41 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     headerRow->addWidget(wallClock_, 0, Qt::AlignVCenter);
     root->addWidget(header);
 
-    auto* body = new QWidget;
-    auto* columns = new QHBoxLayout(body);
-    columns->setContentsMargins(0, 24, 0, 16);
+    body_ = new QWidget;
+    auto* columns = new QHBoxLayout(body_);
+    columns->setContentsMargins(0, 16, 0, 4);
     columns->setSpacing(0);
 
     leftCol_ = new QWidget;
+    leftCol_->setMinimumWidth(0);
+    leftCol_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     auto* leftLayout = new QVBoxLayout(leftCol_);
-    leftLayout->setContentsMargins(4, 8, 24, 8);
-    leftLayout->setSpacing(8);
+    leftLayout->setContentsMargins(4, 4, 16, 0);
+    leftLayout->setSpacing(4);
+
+    // Upper zone: rego (centred) or prizes (scroll). Chips sit below.
+    auto* upper = new QWidget;
+    auto* upperLayout = new QVBoxLayout(upper);
+    upperLayout->setContentsMargins(0, 0, 0, 0);
+    upperLayout->setSpacing(8);
     leftTopStretch_ = new QWidget;
     leftBottomStretch_ = new QWidget;
     leftTopStretch_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     leftBottomStretch_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     rego_ = makeStat(QStringLiteral("REGISTRATION ENDS"), Qt::AlignHCenter | Qt::AlignVCenter);
-    leftLayout->addWidget(leftTopStretch_, 1);
-    leftLayout->addWidget(rego_.widget, 0);
-    leftLayout->addWidget(leftBottomStretch_, 1);
+    rego_.widget->setMinimumWidth(0);
+    rego_.caption->setMinimumWidth(0);
+    rego_.value->setMinimumWidth(0);
+    rego_.caption->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    rego_.value->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    upperLayout->addWidget(leftTopStretch_, 1);
+    upperLayout->addWidget(rego_.widget, 0);
+    upperLayout->addWidget(leftBottomStretch_, 1);
 
     prizeTitle_ = boardLabel(QStringLiteral("PRIZES"), 14, true, kWhite, Qt::AlignHCenter | Qt::AlignVCenter);
     prizeTitle_->setWordWrap(false);
     prizeTitle_->hide();
-    leftLayout->addWidget(prizeTitle_);
+    upperLayout->addWidget(prizeTitle_);
 
     prizeScroll_ = new QScrollArea;
     prizeScroll_->setWidgetResizable(true);
@@ -201,10 +222,40 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     prizeLayout_->addStretch(1);
     prizeScroll_->setWidget(prizeList_);
     prizeScroll_->hide();
-    leftLayout->addWidget(prizeScroll_, 1);
+    upperLayout->addWidget(prizeScroll_, 1);
+    leftLayout->addWidget(upper, 1);
 
-    auto* centre = new QWidget;
-    auto* centreLayout = new QVBoxLayout(centre);
+    chipBlock_ = new QWidget;
+    chipBlock_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    chipGrid_ = new QGridLayout(chipBlock_);
+    chipGrid_->setContentsMargins(0, 8, 0, 0);
+    chipGrid_->setHorizontalSpacing(10);
+    chipGrid_->setVerticalSpacing(6);
+    for (int i = 0; i < 6; ++i) {
+        ChipCell& cell = chipCells_[i];
+        cell.widget = new QWidget;
+        auto* cellLayout = new QVBoxLayout(cell.widget);
+        cellLayout->setContentsMargins(0, 0, 0, 0);
+        cellLayout->setSpacing(4);
+        cell.image = new QLabel;
+        cell.image->setAlignment(Qt::AlignCenter);
+        cell.image->setScaledContents(false);
+        cell.value = boardLabel(QString(), 18, true, kWhite, Qt::AlignHCenter | Qt::AlignVCenter);
+        cell.value->setWordWrap(false);
+        cellLayout->addWidget(cell.image, 0, Qt::AlignHCenter);
+        cellLayout->addWidget(cell.value, 0, Qt::AlignHCenter);
+        cell.widget->hide();
+        const int row = i / 2;
+        const int col = i % 2;
+        chipGrid_->addWidget(cell.widget, row, col);
+    }
+    chipBlock_->hide();
+    leftLayout->addWidget(chipBlock_, 0);
+
+    centreCol_ = new QWidget;
+    centreCol_->setMinimumWidth(0);
+    centreCol_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    auto* centreLayout = new QVBoxLayout(centreCol_);
     centreLayout->setContentsMargins(8, 0, 8, 0);
     centreLayout->setSpacing(0);
     time_ = boardLabel("00:00", 160, true, kWhite, Qt::AlignCenter);
@@ -246,8 +297,10 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     centreLayout->addStretch(5);
 
     rightCol_ = new QWidget;
+    rightCol_->setMinimumWidth(0);
+    rightCol_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     auto* rightLayout = new QVBoxLayout(rightCol_);
-    rightLayout->setContentsMargins(24, 8, 4, 8);
+    rightLayout->setContentsMargins(16, 4, 4, 0);
     rightLayout->setSpacing(0);
     level_ = makeStat(QStringLiteral("LEVEL"));
     timeToBreak_ = makeStat(QStringLiteral("TIME TO BREAK"));
@@ -265,12 +318,12 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
 
     leftDivider_ = makeDivider();
     rightDivider_ = makeDivider();
-    columns->addWidget(leftCol_, 5);
-    columns->addWidget(leftDivider_);
-    columns->addWidget(centre, 9);
-    columns->addWidget(rightDivider_);
-    columns->addWidget(rightCol_, 5);
-    root->addWidget(body, 1);
+    columns->addWidget(leftCol_, 0);
+    columns->addWidget(leftDivider_, 0);
+    columns->addWidget(centreCol_, 0);
+    columns->addWidget(rightDivider_, 0);
+    columns->addWidget(rightCol_, 0);
+    root->addWidget(body_, 1);
 
     auto* fullscreen = new QShortcut(QKeySequence(Qt::Key_F11), this);
     fullscreen->setContext(Qt::WindowShortcut);
@@ -299,7 +352,7 @@ TournamentBoardWindow::TournamentBoardWindow(SessionContext& context, Tournament
     wallTimer_->start();
 
     prizeScrollTimer_ = new QTimer(this);
-    prizeScrollTimer_->setInterval(40);
+    prizeScrollTimer_->setInterval(55);
     connect(prizeScrollTimer_, &QTimer::timeout, this, &TournamentBoardWindow::tickPrizeScroll);
 
     connect(&clock_, &TournamentClock::changed, this, &TournamentBoardWindow::refreshAll);
@@ -384,7 +437,12 @@ void TournamentBoardWindow::refreshStats() { refreshAll(); }
 void TournamentBoardWindow::resizeEvent(QResizeEvent* event) {
     QMainWindow::resizeEvent(event);
     layoutLogo();
+    layoutColumns();
     applyFonts();
+    if (prizesShowing_) {
+        measurePrizeLoop();
+        ensurePrizeScrollRunning();
+    }
 }
 
 void TournamentBoardWindow::layoutLogo() {
@@ -394,13 +452,48 @@ void TournamentBoardWindow::layoutLogo() {
     logo_->update();
 }
 
+void TournamentBoardWindow::layoutColumns() {
+    if (!body_ || !centreCol_) return;
+    const int w = body_->width();
+    if (w <= 2) return;
+
+    const bool left = leftCol_->isVisibleTo(body_);
+    const bool right = rightCol_->isVisibleTo(body_);
+    int units = 9;
+    if (left) units += 5;
+    if (right) units += 5;
+    int usable = w;
+    if (left) usable -= leftDivider_->width();
+    if (right) usable -= rightDivider_->width();
+    usable = qMax(0, usable);
+
+    const int side = usable * 5 / units;
+    int centre = usable;
+    if (left) {
+        leftCol_->setFixedWidth(side);
+        centre -= side;
+    }
+    if (right) {
+        rightCol_->setFixedWidth(side);
+        centre -= side;
+    }
+    centreCol_->setFixedWidth(qMax(0, centre));
+}
+
+int TournamentBoardWindow::chipImageSize() const {
+    const int h = qMax(1, height());
+    // Cap so three chip rows (image + value + spacing) always stay on-screen.
+    const int byHeight = qBound(52, (h - 160) / 8, 110);
+    return byHeight;
+}
+
 void TournamentBoardWindow::applyFonts() {
     const int h = qMax(1, height());
     const int scale = qMin(h, qMax(1, width()));
     name_->setFont(boardFont(qBound(32, scale / 18, 68), true));
     wallClock_->setFont(boardFont(qBound(20, scale / 28, 40), true));
-    // Main countdown size left unchanged.
-    time_->setFont(boardFont(qBound(120, h / 3, 300), true));
+    // Main countdown — a touch smaller so blinds boxes keep breathing room.
+    time_->setFont(boardFont(qBound(140, 6 * h / 22, 280), true));
     const int labelPx = qBound(22, h / 20, 42);
     const int valuePx = qBound(30, h / 15, 54);
     for (BoardRow* row : {&blindsRow_, &anteRow_, &nextRow_}) {
@@ -437,8 +530,6 @@ void TournamentBoardWindow::applyFonts() {
                     left->setFont(boardFont(prizeCap, true));
                 if (auto* right = qobject_cast<QLabel*>(layout->itemAt(1)->widget()))
                     right->setFont(boardFont(prizeVal, true));
-            } else if (layout->count() == 0) {
-                // empty
             } else if (auto* alone = qobject_cast<QLabel*>(widget)) {
                 alone->setFont(boardFont(prizeVal, true));
             }
@@ -446,9 +537,92 @@ void TournamentBoardWindow::applyFonts() {
             alone->setFont(boardFont(prizeVal, true));
         }
     }
+
+    const int chipPx = qBound(20, h / 22, 36);
+    const int chipImg = chipImageSize();
+    for (ChipCell& cell : chipCells_) {
+        cell.value->setFont(boardFont(chipPx, true));
+        const QPixmap src = cell.image->property("sourcePixmap").value<QPixmap>();
+        if (!src.isNull()) {
+            cell.image->setPixmap(
+                src.scaled(chipImg, chipImg, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            cell.image->setFixedSize(chipImg, chipImg);
+        } else if (cell.widget->isVisible()) {
+            cell.image->setFixedSize(chipImg, chipImg);
+        }
+    }
 }
 
 void TournamentBoardWindow::refreshWallClock() { wallClock_->setText(wallClockText()); }
+
+void TournamentBoardWindow::refreshChips() {
+    const TournamentConfig& config = ctx_.tournament().config();
+    std::vector<BoardChip> chips = config.boardChips;
+    std::sort(chips.begin(), chips.end(), [](const BoardChip& a, const BoardChip& b) {
+        return domain::parseChipAmount(a.value) < domain::parseChipAmount(b.value);
+    });
+    if (chips.size() > 6) chips.resize(6);
+
+    QString fingerprint;
+    for (const BoardChip& chip : chips) {
+        fingerprint += QStringLiteral("%1:%2;")
+                           .arg(QString::fromStdString(chip.imageFile))
+                           .arg(QString::fromStdString(chip.value));
+    }
+    if (fingerprint == chipsFingerprint_ && chipBlock_->isVisible() == !chips.empty()) {
+        // Still resize images with applyFonts.
+        return;
+    }
+    chipsFingerprint_ = fingerprint;
+
+    for (ChipCell& cell : chipCells_) {
+        cell.widget->hide();
+        cell.image->clear();
+        cell.image->setProperty("sourcePixmap", QVariant());
+        cell.value->clear();
+    }
+
+    if (chips.empty()) {
+        chipBlock_->hide();
+        return;
+    }
+
+    const int count = static_cast<int>(chips.size());
+    const int rows = (count + 1) / 2;
+    const int startRow = 3 - rows; // anchor used rows to the bottom of the 3×2 grid
+    const int chipImg = chipImageSize();
+
+    for (int i = 0; i < count; ++i) {
+        const BoardChip& chip = chips[static_cast<std::size_t>(i)];
+        const int gridRow = startRow + i / 2;
+        const int gridCol = i % 2;
+        ChipCell& cell = chipCells_[gridRow * 2 + gridCol];
+
+        const QString imageRef = QString::fromStdString(chip.imageFile);
+        QPixmap pix;
+        if (!imageRef.isEmpty()) {
+            const QFileInfo info(imageRef);
+            if (info.isAbsolute() || imageRef.contains(QLatin1Char('/')) ||
+                imageRef.contains(QLatin1Char('\\'))) {
+                pix = QPixmap(imageRef);
+            } else {
+                pix = QPixmap(assetPath(QStringLiteral("BoardChips/") + imageRef));
+            }
+        }
+        cell.image->setProperty("sourcePixmap", QVariant::fromValue(pix));
+        if (!pix.isNull()) {
+            cell.image->setPixmap(
+                pix.scaled(chipImg, chipImg, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            cell.image->setFixedSize(chipImg, chipImg);
+        } else {
+            cell.image->setFixedSize(chipImg, chipImg);
+        }
+        const QString label = QString::fromStdString(chip.value).trimmed();
+        cell.value->setText(label);
+        cell.widget->show();
+    }
+    chipBlock_->show();
+}
 
 void TournamentBoardWindow::refreshPrizes(bool regoClosed) {
     prizeTitle_->setVisible(regoClosed);
@@ -460,6 +634,8 @@ void TournamentBoardWindow::refreshPrizes(bool regoClosed) {
     if (!regoClosed) {
         prizesShowing_ = false;
         prizesFingerprint_.clear();
+        prizeLoopHeight_ = 0;
+        prizeLoopCount_ = 0;
         prizeScrollTimer_->stop();
         return;
     }
@@ -468,70 +644,191 @@ void TournamentBoardWindow::refreshPrizes(bool regoClosed) {
     const auto stats = ctx_.reports().tournamentStats();
     const auto payouts = config.prizePayouts(stats.prizePool);
     QString fingerprint;
+    std::vector<PrizePayout> unclaimed;
     for (const PrizePayout& prize : payouts) {
+        if (stats.placePaid(prize.place)) continue;
+        unclaimed.push_back(prize);
         fingerprint += QStringLiteral("%1:%2;").arg(prize.place).arg(prize.amount.cents());
     }
-    if (prizesShowing_ && fingerprint == prizesFingerprint_) return;
+    if (prizesShowing_ && fingerprint == prizesFingerprint_) {
+        // Same prize list — do not rebuild (that resets scroll). Just resume if needed.
+        if (prizeLoopCount_ > 0 && prizeLoopHeight_ > 0 && !prizeScrollTimer_->isActive()) {
+            if (QScrollBar* bar = prizeScroll_->verticalScrollBar(); bar && bar->maximum() > 0) {
+                prizeScrollTimer_->start();
+            }
+        }
+        return;
+    }
     prizesShowing_ = true;
     prizesFingerprint_ = fingerprint;
+    prizeLoopHeight_ = 0;
+    prizeLoopCount_ = 0;
 
     while (QLayoutItem* item = prizeLayout_->takeAt(0)) {
         if (QWidget* widget = item->widget()) widget->deleteLater();
         delete item;
     }
 
-    if (payouts.empty()) {
-        auto* empty = boardLabel(QStringLiteral("NO PRIZES SET"), 16, true, kWhite,
-                                 Qt::AlignHCenter | Qt::AlignVCenter);
+    if (unclaimed.empty()) {
+        auto* empty = boardLabel(payouts.empty() ? QStringLiteral("NO PRIZES SET")
+                                                : QStringLiteral("ALL PRIZES PAID"),
+                                 16, true, kWhite, Qt::AlignHCenter | Qt::AlignVCenter);
         prizeLayout_->addWidget(empty);
         prizeLayout_->addStretch(1);
         prizeScrollTimer_->stop();
         return;
     }
 
-    for (const PrizePayout& prize : payouts) {
-        auto* row = new QWidget;
-        auto* rowLayout = new QHBoxLayout(row);
-        rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->setSpacing(8);
-        auto* place = boardLabel(placeOrdinal(prize.place), 14, true, kWhite,
-                                 Qt::AlignLeft | Qt::AlignVCenter);
-        auto* amount = boardLabel(money(prize.amount).toUpper(), 18, true, kWhite,
-                                  Qt::AlignRight | Qt::AlignVCenter);
-        place->setWordWrap(false);
-        amount->setWordWrap(false);
-        rowLayout->addWidget(place, 0);
-        rowLayout->addWidget(amount, 1);
-        prizeLayout_->addWidget(row);
+    // One of each place. A second copy is only added later if the list overflows
+    // the viewport (seamless marquee) — otherwise duplicates would show on screen.
+    for (const PrizePayout& prize : unclaimed) {
+        addPrizeMarqueeRow(placeOrdinal(prize.place), money(prize.amount).toUpper());
     }
-    prizeLayout_->addStretch(1);
+    prizeLoopCount_ = static_cast<int>(unclaimed.size());
 
     prizeScroll_->verticalScrollBar()->setValue(0);
-    prizeScrollDir_ = 1;
+    // Layout/fonts need a frame before height/scrollbar max are valid.
     QTimer::singleShot(0, this, [this] {
         applyFonts();
-        QScrollBar* bar = prizeScroll_->verticalScrollBar();
-        if (bar && bar->maximum() > 0) prizeScrollTimer_->start();
-        else prizeScrollTimer_->stop();
+        ensurePrizeScrollRunning();
     });
+    QTimer::singleShot(100, this, [this] { ensurePrizeScrollRunning(); });
+}
+
+void TournamentBoardWindow::addPrizeMarqueeRow(const QString& placeText,
+                                               const QString& amountText) {
+    auto* row = new QWidget;
+    auto* rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    rowLayout->setSpacing(8);
+    auto* place = boardLabel(placeText, 14, true, kWhite, Qt::AlignLeft | Qt::AlignVCenter);
+    auto* amount = boardLabel(amountText, 18, true, kWhite, Qt::AlignRight | Qt::AlignVCenter);
+    place->setWordWrap(false);
+    amount->setWordWrap(false);
+    rowLayout->addWidget(place, 0);
+    rowLayout->addWidget(amount, 1);
+    prizeLayout_->addWidget(row);
+}
+
+void TournamentBoardWindow::measurePrizeLoop() {
+    prizeLoopHeight_ = 0;
+    if (prizeLoopCount_ <= 0) return;
+
+    // Prefer geometry of the second copy when present.
+    if (prizeLoopCount_ < prizeLayout_->count()) {
+        if (QLayoutItem* item = prizeLayout_->itemAt(prizeLoopCount_)) {
+            if (QWidget* second = item->widget()) {
+                if (second->y() > 0) prizeLoopHeight_ = second->y();
+            }
+        }
+        if (prizeLoopHeight_ > 0) return;
+    }
+
+    // Sum size of the first (unique) copy.
+    int total = 0;
+    for (int i = 0; i < prizeLoopCount_ && i < prizeLayout_->count(); ++i) {
+        QLayoutItem* item = prizeLayout_->itemAt(i);
+        QWidget* widget = item ? item->widget() : nullptr;
+        if (!widget) continue;
+        const int h = widget->height() > 0 ? widget->height() : widget->sizeHint().height();
+        total += qMax(1, h);
+        if (i + 1 < prizeLoopCount_) total += prizeLayout_->spacing();
+    }
+    prizeLoopHeight_ = total;
+}
+
+void TournamentBoardWindow::ensurePrizeScrollRunning() {
+    if (!prizeScroll_->isVisible() || prizeLoopCount_ <= 0) {
+        prizeScrollTimer_->stop();
+        return;
+    }
+
+    QScrollBar* bar = prizeScroll_->verticalScrollBar();
+    const int savedScroll = bar ? bar->value() : 0;
+    const bool hadDuplicate = prizeLayout_->count() >= prizeLoopCount_ * 2;
+
+    // Measure the unique list height without destroying an existing marquee copy.
+    int singleH = 0;
+    for (int i = 0; i < prizeLoopCount_ && i < prizeLayout_->count(); ++i) {
+        QLayoutItem* item = prizeLayout_->itemAt(i);
+        QWidget* widget = item ? item->widget() : nullptr;
+        if (!widget) continue;
+        const int h = widget->height() > 0 ? widget->height() : widget->sizeHint().height();
+        singleH += qMax(1, h);
+        if (i + 1 < prizeLoopCount_) singleH += prizeLayout_->spacing();
+    }
+    if (hadDuplicate && prizeLoopHeight_ > 0) singleH = prizeLoopHeight_;
+
+    const int viewH = prizeScroll_->viewport()->height();
+    if (!bar || viewH <= 0 || singleH <= viewH) {
+        // Fits on screen — drop any marquee duplicate and stop.
+        while (prizeLayout_->count() > prizeLoopCount_) {
+            QLayoutItem* item = prizeLayout_->takeAt(prizeLayout_->count() - 1);
+            if (QWidget* widget = item->widget()) widget->deleteLater();
+            delete item;
+        }
+        prizeLoopHeight_ = 0;
+        if (bar) bar->setValue(0);
+        prizeScrollTimer_->stop();
+        return;
+    }
+
+    if (!hadDuplicate) {
+        struct RowText {
+            QString place;
+            QString amount;
+        };
+        std::vector<RowText> rows;
+        rows.reserve(static_cast<std::size_t>(prizeLoopCount_));
+        for (int i = 0; i < prizeLoopCount_; ++i) {
+            QLayoutItem* item = prizeLayout_->itemAt(i);
+            QWidget* row = item ? item->widget() : nullptr;
+            auto* lay = row ? qobject_cast<QHBoxLayout*>(row->layout()) : nullptr;
+            if (!lay || lay->count() < 2) continue;
+            auto* place = qobject_cast<QLabel*>(lay->itemAt(0)->widget());
+            auto* amount = qobject_cast<QLabel*>(lay->itemAt(1)->widget());
+            if (!place || !amount) continue;
+            rows.push_back({place->text(), amount->text()});
+        }
+        for (const RowText& row : rows) addPrizeMarqueeRow(row.place, row.amount);
+        prizeList_->updateGeometry();
+        if (prizeScroll_->widget()) prizeScroll_->widget()->adjustSize();
+    }
+
+    measurePrizeLoop();
+    if (prizeLoopHeight_ <= 0) prizeLoopHeight_ = qMax(1, singleH);
+
+    // Restore scroll after any layout change (mod loop height for seamless wrap).
+    if (prizeLoopHeight_ > 0) {
+        bar->setValue(savedScroll % prizeLoopHeight_);
+    } else {
+        bar->setValue(savedScroll);
+    }
+
+    if (bar->maximum() <= 0) {
+        prizeScrollTimer_->stop();
+        return;
+    }
+    if (!prizeScrollTimer_->isActive()) prizeScrollTimer_->start();
 }
 
 void TournamentBoardWindow::tickPrizeScroll() {
     QScrollBar* bar = prizeScroll_->verticalScrollBar();
-    if (!bar || bar->maximum() <= 0 || !prizeScroll_->isVisible()) {
+    if (!bar || !prizeScroll_->isVisible()) {
         prizeScrollTimer_->stop();
         return;
     }
-    const int next = bar->value() + prizeScrollDir_;
-    if (next >= bar->maximum()) {
-        bar->setValue(bar->maximum());
-        prizeScrollDir_ = -1;
-    } else if (next <= bar->minimum()) {
-        bar->setValue(bar->minimum());
-        prizeScrollDir_ = 1;
-    } else {
-        bar->setValue(next);
+    if (bar->maximum() <= 0) {
+        // Viewport may have grown; keep the timer alive and retry next tick.
+        return;
     }
+    if (prizeLoopHeight_ <= 0) measurePrizeLoop();
+    if (prizeLoopHeight_ <= 0) prizeLoopHeight_ = qMax(1, (bar->maximum() + 1) / 2);
+
+    int next = bar->value() + 1;
+    // Seamless wrap: content repeats, so subtracting one loop height is invisible.
+    if (next >= prizeLoopHeight_) next -= prizeLoopHeight_;
+    bar->setValue(next);
 }
 
 void TournamentBoardWindow::refreshAll() {
@@ -548,10 +845,10 @@ void TournamentBoardWindow::refreshAll() {
     const bool last = clock_.upcomingLevel() == nullptr;
     const bool ended = count > 0 && last && clock_.remainingSeconds() <= 0;
 
-    const auto setAnte = [this](int ante) {
-        if (ante > 0) {
+    const auto setAnte = [this](const BlindLevel* level) {
+        if (level && level->hasAnte()) {
             anteRow_.label->setText(QStringLiteral("BIG BLIND ANTE:"));
-            anteRow_.value->setText(grouped(ante));
+            anteRow_.value->setText(QString::fromStdString(level->ante));
         } else {
             anteRow_.label->setText(QString());
             anteRow_.value->setText(QString());
@@ -562,27 +859,24 @@ void TournamentBoardWindow::refreshAll() {
         time_->setText(QStringLiteral("—"));
         time_->setStyleSheet(QStringLiteral("color:%1;").arg(kWhite));
         blindsRow_.value->setText(QStringLiteral("—"));
-        setAnte(0);
+        setAnte(nullptr);
         nextRow_.value->setText(QStringLiteral("—"));
     } else {
         time_->setText(clock_.remainingText());
-        const QString timeColour = ended                             ? kHot
-                                   : !clock_.running()               ? kWarn
-                                   : clock_.remainingSeconds() <= 30 ? kHot
-                                   : clock_.remainingSeconds() <= 60 ? kWarn
-                                                                     : kWhite;
+        // White while running/ended; yellow only when paused.
+        const QString timeColour = (!ended && !clock_.running()) ? kWarn : kWhite;
         time_->setStyleSheet(QStringLiteral("color:%1;").arg(timeColour));
 
         const BlindLevel* blinds = clock_.activeBlinds();
         if (onBreak) {
             blindsRow_.value->setText(QStringLiteral("BREAK"));
-            setAnte(blinds ? blinds->ante : 0);
+            setAnte(blinds);
         } else if (blinds) {
             blindsRow_.value->setText(slashBlinds(*blinds));
-            setAnte(blinds->ante);
+            setAnte(blinds);
         } else {
             blindsRow_.value->setText(QStringLiteral("—"));
-            setAnte(0);
+            setAnte(nullptr);
         }
 
         const BlindLevel* nextPlaying = nullptr;
@@ -595,8 +889,8 @@ void TournamentBoardWindow::refreshAll() {
         }
         if (nextPlaying) {
             QString next = slashBlinds(*nextPlaying);
-            if (nextPlaying->ante > 0) {
-                next += QStringLiteral(" (%1)").arg(grouped(nextPlaying->ante));
+            if (nextPlaying->hasAnte()) {
+                next += QStringLiteral(" (%1)").arg(QString::fromStdString(nextPlaying->ante));
             }
             nextRow_.value->setText(next);
         } else {
@@ -604,11 +898,14 @@ void TournamentBoardWindow::refreshAll() {
         }
     }
 
-    const bool showLeft = board.registrationEnd;
+    refreshChips();
+    const bool hasChips = !config.boardChips.empty();
+    const bool showLeft = board.registrationEnd || hasChips;
     leftCol_->setVisible(showLeft);
     leftDivider_->setVisible(showLeft);
+    layoutColumns();
     bool regoClosed = false;
-    if (showLeft) {
+    if (showLeft && board.registrationEnd) {
         const int closeLevel = config.registrationEndsLevel;
         const int closeIndex = config.indexOfPlayingLevel(closeLevel);
         if (closeLevel < 1 || closeIndex < 0) {
@@ -621,6 +918,15 @@ void TournamentBoardWindow::refreshAll() {
             regoClosed = false;
         }
         refreshPrizes(regoClosed);
+    } else if (showLeft) {
+        // Chips only — hide rego / prizes.
+        refreshPrizes(false);
+        rego_.widget->hide();
+        leftTopStretch_->hide();
+        leftBottomStretch_->hide();
+        prizeTitle_->hide();
+        prizeScroll_->hide();
+        prizeScrollTimer_->stop();
     } else {
         prizeScrollTimer_->stop();
     }
@@ -684,6 +990,7 @@ void TournamentBoardWindow::refreshAll() {
     rightCol_->setVisible(showRight);
     rightDivider_->setVisible(showRight);
 
+    layoutColumns();
     applyFonts();
 }
 

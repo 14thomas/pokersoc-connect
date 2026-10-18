@@ -100,6 +100,7 @@ if (Qt6_FOUND)
         src/ui/qt/SettingsScreen.cpp
         src/ui/qt/TournamentScreens.cpp
         src/ui/qt/TournamentSettingsScreen.cpp
+        src/ui/qt/SettingsChrome.cpp
         src/ui/qt/TournamentClock.cpp
         src/ui/qt/TournamentBoardWindow.cpp
         src/ui/qt/BreakdownScreen.cpp
@@ -109,6 +110,7 @@ if (Qt6_FOUND)
         src/ui/qt/StartWindow.h
         src/ui/qt/Style.h
         src/ui/qt/Widgets.h
+        src/ui/qt/SettingsChrome.h
         src/ui/qt/TournamentClock.h
         src/ui/qt/TournamentBoardWindow.h
     )

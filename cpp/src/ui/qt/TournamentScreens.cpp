@@ -28,10 +28,19 @@
 #include "domain/session/TournamentMode.h"
 #include "ui/qt/Screens.h"
 #include "ui/qt/SessionContext.h"
+#include "ui/qt/SettingsChrome.h"
 #include "ui/qt/Style.h"
 #include "ui/qt/TournamentClock.h"
 #include "ui/qt/TournamentEditors.h"
 #include "ui/qt/Widgets.h"
+
+#include <QAbstractButton>
+#include <QFrame>
+#include <QMessageBox>
+#include <QScrollBar>
+#include <QStyle>
+#include <QToolButton>
+#include <exception>
 
 namespace pokersoc::ui::qt {
 
@@ -796,86 +805,119 @@ ComingSoonScreen::ComingSoonScreen(SessionContext& context, const QString& title
 TournamentBoardControlScreen::TournamentBoardControlScreen(SessionContext& context,
                                                            TournamentClock& clock, QWidget* parent)
     : Screen(context, parent), clock_(clock) {
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(0);
-    QPushButton* close = nullptr;
-    layout->addWidget(makeScreenHeader("Board Controls", &close));
-    layout->addSpacing(16);
-    connect(close, &QPushButton::clicked, this, [this] { emit closed(false); });
+    namespace sc = settings;
+    const TournamentConfig& initial = ctx_.tournament().config();
 
-    auto* content = new QWidget;
-    auto* sections = new QVBoxLayout(content);
-    sections->setContentsMargins(0, 0, 8, 0);
-    sections->setSpacing(16);
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    auto* page = new QWidget;
+    page->setObjectName(QStringLiteral("tsPage"));
+    page->setAttribute(Qt::WA_StyledBackground, true);
+    page->setStyleSheet(sc::pageStyleSheet());
+    outer->addWidget(page);
+    auto* pageLayout = new QVBoxLayout(page);
+    pageLayout->setContentsMargins(0, 0, 0, 0);
+    pageLayout->setSpacing(0);
 
-    QFrame* status = makePanel("#F3E5F5", "#8E24AA", 2, 8, 16);
-    auto* statusLayout = panelLayout(status);
+    auto* header = new QWidget;
+    auto* headerRow = new QHBoxLayout(header);
+    headerRow->setContentsMargins(0, 0, 0, 0);
+    headerRow->setSpacing(16);
+    auto* headings = new QVBoxLayout;
+    headings->setSpacing(4);
+    headings->addWidget(sc::text("Board controls", "pageTitle"));
+    headings->addWidget(sc::text("Run the clock, open the TV board, and choose what it shows.",
+                                 "pageSubtitle", true));
+    headerRow->addLayout(headings, 1);
+    QToolButton* close = sc::iconButton(sc::Glyph::Close, "Close");
+    headerRow->addWidget(close, 0, Qt::AlignTop);
+    auto* headerBar = new QFrame;
+    headerBar->setObjectName(QStringLiteral("headerBar"));
+    pageLayout->addWidget(sc::constrain(header, {32, 28, 32, 20}, headerBar));
+    connect(close, &QToolButton::clicked, this, [this] { emit closed(true); });
+
+    auto* column = new QWidget;
+    auto* cards = new QVBoxLayout(column);
+    cards->setContentsMargins(0, 0, 0, 0);
+    cards->setSpacing(16);
+
+    // ── Status ──────────────────────────────────────────────────────────────
+    sc::Card statusCard = sc::card("Clock status", "Live view of the current level and prize pools.");
     auto* statusRow = new QHBoxLayout;
-    level_ = makeLabel(QString(), 16, true);
-    status_ = makeLabel(QString(), 16, true, "#E65100");
+    level_ = sc::text(QString(), "clockMeta");
+    status_ = sc::text(QString(), "clockStatus");
     status_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     statusRow->addWidget(level_, 1);
     statusRow->addWidget(status_);
-    statusLayout->addLayout(statusRow);
-    time_ = makeLabel("00:00", 48, true, "#6A1B9A", Qt::AlignCenter);
-    time_->setContentsMargins(0, 8, 0, 8);
-    statusLayout->addWidget(time_);
-    blinds_ = makeLabel(QString(), 16, true, QString(), Qt::AlignCenter);
-    nextBlinds_ = makeLabel(QString(), 14, false, color::Gray, Qt::AlignCenter);
-    pot_ = makeLabel(QString(), 14, true, QString(), Qt::AlignCenter);
-    pot_->setContentsMargins(0, 8, 0, 0);
-    statusLayout->addWidget(blinds_);
-    statusLayout->addWidget(nextBlinds_);
-    statusLayout->addWidget(pot_);
-    sections->addWidget(status);
+    statusCard.body->addLayout(statusRow);
+    statusCard.body->addSpacing(8);
+    time_ = sc::text("00:00", "clockTime");
+    time_->setAlignment(Qt::AlignCenter);
+    statusCard.body->addWidget(time_);
+    statusCard.body->addSpacing(8);
+    blinds_ = sc::text(QString(), "clockBlinds");
+    blinds_->setAlignment(Qt::AlignCenter);
+    nextBlinds_ = sc::text(QString(), "clockNext");
+    nextBlinds_->setAlignment(Qt::AlignCenter);
+    pot_ = sc::text(QString(), "clockPot");
+    pot_->setAlignment(Qt::AlignCenter);
+    pot_->setWordWrap(true);
+    statusCard.body->addWidget(blinds_);
+    statusCard.body->addSpacing(4);
+    statusCard.body->addWidget(nextBlinds_);
+    statusCard.body->addSpacing(10);
+    statusCard.body->addWidget(pot_);
+    cards->addWidget(statusCard.frame);
 
-    QGroupBox* clockGroup = makeGroup("Clock");
-    start_ = actionButton("Start / Resume", color::LightGreen);
-    pause_ = actionButton("Pause", "#FFE0B2");
+    // ── Clock ───────────────────────────────────────────────────────────────
+    sc::Card clockCard =
+        sc::card("Clock", "Pause for a floor decision. Skip jumps to the next blinds and restarts that level.");
+    start_ = sc::button("Start / Resume", "primary");
+    pause_ = sc::button("Pause", "secondary");
     auto* runRow = new QHBoxLayout;
     runRow->setSpacing(8);
     runRow->addWidget(start_, 1);
     runRow->addWidget(pause_, 1);
-    groupLayout(clockGroup)->addLayout(runRow);
-    groupLayout(clockGroup)->addSpacing(8);
-    prevLevel_ = actionButton("◀  Previous level", color::ButtonFace);
-    skipLevel_ = actionButton("Skip level  ▶", color::ButtonFace);
+    clockCard.body->addLayout(runRow);
+    clockCard.body->addSpacing(10);
+    prevLevel_ = sc::button("Previous level", "secondary");
+    skipLevel_ = sc::button("Skip level", "secondary");
     auto* levelRow = new QHBoxLayout;
     levelRow->setSpacing(8);
     levelRow->addWidget(prevLevel_, 1);
     levelRow->addWidget(skipLevel_, 1);
-    groupLayout(clockGroup)->addLayout(levelRow);
-    groupLayout(clockGroup)->addSpacing(8);
+    clockCard.body->addLayout(levelRow);
+    clockCard.body->addSpacing(10);
     auto* timeRow = new QHBoxLayout;
     timeRow->setSpacing(8);
-    QPushButton* minusMin = actionButton("−1 min", "#FFEBEE");
-    QPushButton* minusSec = actionButton("−30 s", "#FFF3E0");
-    QPushButton* reset = actionButton("Reset level", "#E3F2FD");
-    QPushButton* plusSec = actionButton("+30 s", "#FFF3E0");
-    QPushButton* plusMin = actionButton("+1 min", "#E8F5E9");
+    QPushButton* minusMin = sc::button("−1 min", "ghost");
+    QPushButton* minusSec = sc::button("−30 s", "ghost");
+    QPushButton* reset = sc::button("Reset level", "secondary");
+    QPushButton* plusSec = sc::button("+30 s", "ghost");
+    QPushButton* plusMin = sc::button("+1 min", "ghost");
     for (QPushButton* button : {minusMin, minusSec, reset, plusSec, plusMin}) {
         timeRow->addWidget(button, 1);
     }
-    groupLayout(clockGroup)->addLayout(timeRow);
-    groupLayout(clockGroup)->addWidget(
-        hint("Pause for a floor decision. Skip jumps to the next blinds and restarts that level's clock."));
-    sections->addWidget(clockGroup);
+    clockCard.body->addLayout(timeRow);
+    cards->addWidget(clockCard.frame);
 
-    QGroupBox* jump = makeGroup("Jump to Level");
+    // ── Jump to level ───────────────────────────────────────────────────────
+    sc::Card jumpCard =
+        sc::card("Jump to level", "Jumps restart the clock at the start of that level.");
     levelsHost_ = new QWidget;
     levelsGrid_ = new QGridLayout(levelsHost_);
     levelsGrid_->setContentsMargins(0, 0, 0, 0);
     levelsGrid_->setSpacing(8);
-    groupLayout(jump)->addWidget(levelsHost_);
-    groupLayout(jump)->addWidget(hint("Jumps restart the clock at the start of that level."));
-    sections->addWidget(jump);
+    jumpCard.body->addWidget(levelsHost_);
+    cards->addWidget(jumpCard.frame);
 
-    QGroupBox* display = makeGroup("Room Display");
-    QPushButton* openBoard = actionButton("Open / Show Board", "#E8F4FD");
-    QPushButton* sendTv = actionButton("Send to other screen", "#E0F2F1");
-    QPushButton* fullscreen = actionButton("Toggle fullscreen", "#FFF8E1");
-    QPushButton* closeBoard = actionButton("Close board", color::LightCoral);
+    // ── Room display ────────────────────────────────────────────────────────
+    sc::Card displayCard =
+        sc::card("Room display", "Open the board on the TV, then keep this window for buy-ins and clock control.");
+    QPushButton* openBoard = sc::button("Open / show board", "secondary");
+    QPushButton* sendTv = sc::button("Send to other screen", "secondary");
+    QPushButton* fullscreen = sc::button("Toggle fullscreen", "secondary");
+    QPushButton* closeBoard = sc::button("Close board", "danger");
     auto* displayRow1 = new QHBoxLayout;
     displayRow1->setSpacing(8);
     displayRow1->addWidget(openBoard, 1);
@@ -884,19 +926,65 @@ TournamentBoardControlScreen::TournamentBoardControlScreen(SessionContext& conte
     displayRow2->setSpacing(8);
     displayRow2->addWidget(fullscreen, 1);
     displayRow2->addWidget(closeBoard, 1);
-    groupLayout(display)->addLayout(displayRow1);
-    groupLayout(display)->addSpacing(8);
-    groupLayout(display)->addLayout(displayRow2);
-    groupLayout(display)->addWidget(
-        hint("Open the board on the TV, then keep this window for buy-ins and clock control."));
-    sections->addWidget(display);
-    sections->addStretch(1);
+    displayCard.body->addLayout(displayRow1);
+    displayCard.body->addSpacing(10);
+    displayCard.body->addLayout(displayRow2);
+    cards->addWidget(displayCard.frame);
 
-    layout->addWidget(makeScroll(content), 1);
-    layout->addSpacing(16);
-    QPushButton* back = makeButton("Back to Main", QString(), 16);
-    back->setStyleSheet("QPushButton { padding:12px 20px; }");
-    layout->addWidget(back, 0, Qt::AlignHCenter);
+    // ── TV board side items ─────────────────────────────────────────────────
+    sc::Card boardCard =
+        sc::card("TV board", "Each side-column item can be shown or hidden on the display board.");
+    const auto addToggle = [&](const QString& title, const QString& description, bool on) {
+        auto* sw = new sc::Switch;
+        sw->setChecked(on);
+        boardCard.body->addWidget(sc::settingRow(title, description, sw));
+        return sw;
+    };
+    const auto addBoardDivider = [&] {
+        boardCard.body->addSpacing(14);
+        boardCard.body->addWidget(sc::divider());
+        boardCard.body->addSpacing(14);
+    };
+    showRego_ = addToggle("Registration ends", "Countdown in the left column.", initial.board.registrationEnd);
+    addBoardDivider();
+    showLevel_ = addToggle("Level", "Current playing level in the right column.", initial.board.level);
+    addBoardDivider();
+    showBreak_ =
+        addToggle("Time to break", "Countdown until the next break starts.", initial.board.timeToBreak);
+    addBoardDivider();
+    showBreakLen_ =
+        addToggle("Next break length", "How long the next (or current) break is.", initial.board.breakLength);
+    addBoardDivider();
+    showAvg_ = addToggle("Average stack", "Starting stack × entries, divided by remaining players.",
+                         initial.board.avgStack);
+    addBoardDivider();
+    showPlayers_ = addToggle("Players", "Unique players who have bought in.", initial.board.players);
+    addBoardDivider();
+    showReentries_ = addToggle("Re-entries", "Number of rebuys.", initial.board.reentries);
+    addBoardDivider();
+    showTotal_ = addToggle("Total", "Buy-ins plus re-entries.", initial.board.total);
+    addBoardDivider();
+    showRemaining_ =
+        addToggle("Remaining", "Players still in, after prize payouts.", initial.board.remaining);
+    cards->addWidget(boardCard.frame);
+    cards->addStretch(1);
+
+    auto* scroll = new sc::OverlayScrollArea;
+    scroll->setObjectName(QStringLiteral("scroll"));
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    QWidget* content = sc::constrain(column, {32, 0, 32, 32});
+    content->setObjectName(QStringLiteral("scrollContent"));
+    scroll->setWidget(content);
+    pageLayout->addWidget(scroll, 1);
+    connect(scroll->verticalScrollBar(), &QScrollBar::valueChanged, headerBar, [headerBar](int value) {
+        if (headerBar->property("scrolled").toBool() == (value > 0)) return;
+        headerBar->setProperty("scrolled", value > 0);
+        headerBar->style()->unpolish(headerBar);
+        headerBar->style()->polish(headerBar);
+        headerBar->update();
+    });
 
     connect(start_, &QPushButton::clicked, &clock_, &TournamentClock::start);
     connect(pause_, &QPushButton::clicked, &clock_, &TournamentClock::pause);
@@ -912,9 +1000,13 @@ TournamentBoardControlScreen::TournamentBoardControlScreen(SessionContext& conte
     connect(fullscreen, &QPushButton::clicked, this,
             &TournamentBoardControlScreen::toggleBoardFullscreenRequested);
     connect(closeBoard, &QPushButton::clicked, this, &TournamentBoardControlScreen::closeBoardRequested);
-    connect(back, &QPushButton::clicked, this, [this] { emit closed(false); });
+    for (QAbstractButton* sw : {showRego_, showLevel_, showBreak_, showBreakLen_, showAvg_, showPlayers_,
+                                showReentries_, showTotal_, showRemaining_}) {
+        connect(sw, &QAbstractButton::toggled, this, &TournamentBoardControlScreen::persistBoardDisplay);
+    }
     connect(&clock_, &TournamentClock::changed, this, &TournamentBoardControlScreen::refresh);
 
+    sc::installFocusVisible(page);
     rebuildLevels();
     refresh();
 }
@@ -924,8 +1016,8 @@ void TournamentBoardControlScreen::rebuildLevels() {
     levelButtons_.clear();
     const int count = clock_.levelCount();
     if (count <= 0) {
-        levelsGrid_->addWidget(makeLabel("No blind structure. Add levels in Tournament Settings.", 13, false,
-                                         color::Gray));
+        levelsGrid_->addWidget(
+            settings::text("No blind structure. Add levels in Tournament Settings.", "emptyState", true));
         return;
     }
     constexpr int columns = 4;
@@ -934,12 +1026,14 @@ void TournamentBoardControlScreen::rebuildLevels() {
         const QString label = level && level->isBreak
                                   ? QStringLiteral("Break\n%1 min").arg(level->durationMinutes)
                                   : QStringLiteral("Lv %1\n%2")
-                                        .arg(i + 1)
+                                        .arg(ctx_.tournament().config().playingLevelNumber(i))
                                         .arg(level ? QString::fromStdString(level->blindsLabel()) : QString());
         auto* button = new QPushButton(label);
-        button->setFont(uiFont(13, true));
+        button->setObjectName(QStringLiteral("levelJump"));
         button->setMinimumHeight(56);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        button->setCursor(Qt::PointingHandCursor);
+        button->setFocusPolicy(Qt::TabFocus);
         levelsGrid_->addWidget(button, i / columns, i % columns);
         connect(button, &QPushButton::clicked, this, [this, i] { clock_.goToLevel(i); });
         levelButtons_.push_back(button);
@@ -947,23 +1041,47 @@ void TournamentBoardControlScreen::rebuildLevels() {
     for (int column = 0; column < columns; ++column) levelsGrid_->setColumnStretch(column, 1);
 }
 
+void TournamentBoardControlScreen::persistBoardDisplay() {
+    TournamentConfig& config = ctx_.tournament().config();
+    config.board.registrationEnd = showRego_->isChecked();
+    config.board.level = showLevel_->isChecked();
+    config.board.timeToBreak = showBreak_->isChecked();
+    config.board.breakLength = showBreakLen_->isChecked();
+    config.board.avgStack = showAvg_->isChecked();
+    config.board.players = showPlayers_->isChecked();
+    config.board.reentries = showReentries_->isChecked();
+    config.board.total = showTotal_->isChecked();
+    config.board.remaining = showRemaining_->isChecked();
+    try {
+        ctx_.saveTournamentConfig();
+    } catch (const std::exception& saveError) {
+        QMessageBox::critical(this, QStringLiteral("Board controls"),
+                              QStringLiteral("Couldn't save board display: %1")
+                                  .arg(QString::fromUtf8(saveError.what())));
+        return;
+    }
+    emit boardDisplayChanged();
+}
+
 void TournamentBoardControlScreen::refresh() {
     const int count = clock_.levelCount();
     const int index = clock_.levelIndex();
     time_->setText(clock_.remainingText());
-    time_->setStyleSheet(clock_.running() ? "color:#2E7D32;" : "color:#E65100;");
     level_->setText(count <= 0 ? QStringLiteral("No blind structure")
                                : QStringLiteral("Level %1 / %2").arg(index + 1).arg(count));
     const bool ended = count > 0 && !clock_.upcomingLevel() && clock_.remainingSeconds() <= 0;
+    const char* timeTone = "paused";
+    const char* statusTone = "paused";
     if (ended) {
         status_->setText("ENDED");
-        status_->setStyleSheet("color:#C62828;");
+        timeTone = "ended";
+        statusTone = "ended";
     } else if (clock_.running()) {
         status_->setText("LIVE");
-        status_->setStyleSheet("color:#2E7D32;");
+        timeTone = "live";
+        statusTone = "live";
     } else {
         status_->setText("PAUSED");
-        status_->setStyleSheet("color:#E65100;");
     }
 
     const BlindLevel* current = clock_.currentLevel();
@@ -971,9 +1089,16 @@ void TournamentBoardControlScreen::refresh() {
         level_->setText(QStringLiteral("Break"));
         if (clock_.running()) {
             status_->setText("BREAK");
-            status_->setStyleSheet("color:#6A1B9A;");
+            statusTone = "break";
         }
     }
+    time_->setProperty("tone", QLatin1String(timeTone));
+    status_->setProperty("tone", QLatin1String(statusTone));
+    time_->style()->unpolish(time_);
+    time_->style()->polish(time_);
+    status_->style()->unpolish(status_);
+    status_->style()->polish(status_);
+
     if (const BlindLevel* level = clock_.activeBlinds()) {
         blinds_->setText(current && current->isBreak
                              ? QStringLiteral("Blinds stay %1    Big blind ante %2")
@@ -1006,10 +1131,12 @@ void TournamentBoardControlScreen::refresh() {
     skipLevel_->setEnabled(clock_.upcomingLevel() != nullptr);
 
     for (int i = 0; i < static_cast<int>(levelButtons_.size()); ++i) {
-        const bool current = i == index;
-        levelButtons_[i]->setStyleSheet(
-            buttonStyle(current ? "#E8F4FD" : color::ButtonFace, current ? "#2E6DA4" : "#707070",
-                        current ? "3px" : "1px", "padding:8px;"));
+        const bool on = i == index;
+        if (levelButtons_[i]->property("current").toBool() == on) continue;
+        levelButtons_[i]->setProperty("current", on);
+        levelButtons_[i]->style()->unpolish(levelButtons_[i]);
+        levelButtons_[i]->style()->polish(levelButtons_[i]);
+        levelButtons_[i]->update();
     }
 }
 

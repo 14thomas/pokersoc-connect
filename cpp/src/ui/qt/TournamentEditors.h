@@ -31,10 +31,21 @@ inline void setIntCell(QTableWidget* table, int row, int column, int value) {
     table->setItem(row, column, item);
 }
 
+inline void setTextCell(QTableWidget* table, int row, int column, const QString& text) {
+    auto* item = new QTableWidgetItem(text);
+    item->setTextAlignment(Qt::AlignCenter);
+    table->setItem(row, column, item);
+}
+
 inline int cellInt(const QTableWidget* table, int row, int column, bool* ok) {
     const QTableWidgetItem* item = table->item(row, column);
     const QString text = item ? item->text().trimmed() : QString();
     return text.toInt(ok);
+}
+
+inline QString cellText(const QTableWidget* table, int row, int column) {
+    const QTableWidgetItem* item = table->item(row, column);
+    return item ? item->text().trimmed() : QString();
 }
 
 inline bool blindRowIsBreak(const QTableWidget* table, int row) {
@@ -61,9 +72,9 @@ inline void addBlindRow(QTableWidget* table, const domain::BlindLevel& level) {
     label->setFlags(dragFlags);
     label->setData(Qt::UserRole, level.isBreak);
     label->setText(level.isBreak ? QStringLiteral("Break") : QString::number(row + 1));
-    setIntCell(table, row, 1, level.smallBlind);
-    setIntCell(table, row, 2, level.bigBlind);
-    setIntCell(table, row, 3, level.ante);
+    setTextCell(table, row, 1, toQ(level.smallBlind));
+    setTextCell(table, row, 2, toQ(level.bigBlind));
+    setTextCell(table, row, 3, level.hasAnte() ? toQ(level.ante) : QString());
     setIntCell(table, row, 4, level.durationMinutes);
     if (level.isBreak) {
         for (int column : {1, 2, 3}) {
@@ -100,13 +111,13 @@ inline bool readBlinds(QTableWidget* table, std::vector<domain::BlindLevel>& out
             out.push_back(level);
             continue;
         }
-        bool okSb = false, okBb = false, okAnte = false;
-        level.smallBlind = cellInt(table, row, 1, &okSb);
-        level.bigBlind = cellInt(table, row, 2, &okBb);
-        level.ante = cellInt(table, row, 3, &okAnte);
-        if (!okSb || !okBb || !okAnte || !okMin || level.smallBlind < 0 || level.bigBlind < 0 ||
-            level.ante < 0 || level.durationMinutes < 1) {
-            error = QStringLiteral("Level %1 needs non-negative blinds and big blind ante, and a "
+        level.smallBlind = toStd(cellText(table, row, 1));
+        level.bigBlind = toStd(cellText(table, row, 2));
+        QString anteText = cellText(table, row, 3);
+        if (anteText == QStringLiteral("\u2014") || anteText == QStringLiteral("-")) anteText.clear();
+        level.ante = toStd(anteText);
+        if (level.smallBlind.empty() || level.bigBlind.empty() || !okMin || level.durationMinutes < 1) {
+            error = QStringLiteral("Level %1 needs small/big blind text (e.g. 100 or 1.5K) and a "
                                    "duration of 1 minute or more.")
                         .arg(row + 1);
             return false;

@@ -10,6 +10,7 @@
 #include "domain/session/SessionMode.h"
 #include "ui/qt/Style.h"
 
+class QAbstractButton;
 class QCheckBox;
 class QComboBox;
 class QGridLayout;
@@ -452,10 +453,13 @@ signals:
     void closeBoardRequested();
     void sendBoardToTvRequested();
     void toggleBoardFullscreenRequested();
+    /// Side-column visibility toggles were saved.
+    void boardDisplayChanged();
 
 private:
     void refresh();
     void rebuildLevels();
+    void persistBoardDisplay();
 
     TournamentClock& clock_;
     QLabel* time_ = nullptr;
@@ -471,6 +475,15 @@ private:
     QWidget* levelsHost_ = nullptr;
     QGridLayout* levelsGrid_ = nullptr;
     std::vector<QPushButton*> levelButtons_;
+    QAbstractButton* showRego_ = nullptr;
+    QAbstractButton* showLevel_ = nullptr;
+    QAbstractButton* showBreak_ = nullptr;
+    QAbstractButton* showBreakLen_ = nullptr;
+    QAbstractButton* showAvg_ = nullptr;
+    QAbstractButton* showPlayers_ = nullptr;
+    QAbstractButton* showReentries_ = nullptr;
+    QAbstractButton* showTotal_ = nullptr;
+    QAbstractButton* showRemaining_ = nullptr;
 };
 
 // ---------------------------------------------------------------------------

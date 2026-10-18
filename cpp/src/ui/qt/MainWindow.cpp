@@ -862,6 +862,9 @@ void MainWindow::openBoardControls() {
         if (!board_) openTournamentBoard();
         if (board_) board_->setBoardFullScreen(!board_->isFullScreen());
     });
+    connect(screen, &TournamentBoardControlScreen::boardDisplayChanged, this, [this] {
+        if (board_) board_->refreshStats();
+    });
     connect(screen, &TournamentBoardControlScreen::closeBoardRequested, this, [this] {
         if (board_) board_->close();
     });

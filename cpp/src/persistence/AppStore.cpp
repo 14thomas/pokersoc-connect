@@ -74,6 +74,7 @@ void AppStore::saveTournamentConfig(const TournamentConfig& config) {
 
     setSetting("tnmt.blinds", config.blindsJson());
     setSetting("tnmt.prizes", config.prizesJson());
+    setSetting("tnmt.board_chips", config.boardChipsJson());
     setSetting("tnmt.prize_rounding", domain::prizeRoundingName(config.prizeRounding));
     setIntSetting("tnmt.prize_leftover_first", config.leftoverToFirst ? 1 : 0);
 
@@ -137,6 +138,7 @@ TournamentConfig AppStore::loadTournamentConfig() {
 
     if (const auto blinds = getSetting("tnmt.blinds")) config.setBlindsFromJson(*blinds);
     if (const auto prizes = getSetting("tnmt.prizes")) config.setPrizesFromJson(*prizes);
+    if (const auto chips = getSetting("tnmt.board_chips")) config.setBoardChipsFromJson(*chips);
     if (const auto rounding = getSetting("tnmt.prize_rounding")) {
         config.prizeRounding = domain::prizeRoundingFromName(*rounding);
     }

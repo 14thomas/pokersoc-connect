@@ -1,8 +1,10 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QString>
 
 class QFrame;
+class QGridLayout;
 class QLabel;
 class QScrollArea;
 class QTimer;
@@ -41,13 +43,25 @@ private:
         QLabel* value = nullptr;
     };
 
+    struct ChipCell {
+        QWidget* widget = nullptr;
+        QLabel* image = nullptr;
+        QLabel* value = nullptr;
+    };
+
     SideStat makeStat(const QString& caption, Qt::Alignment align = Qt::AlignLeft | Qt::AlignVCenter);
     BoardRow makeBoardRow(const QString& caption);
     QWidget* makeDivider();
     void applyFonts();
     void layoutLogo();
+    void layoutColumns();
+    int chipImageSize() const;
     void refreshWallClock();
+    void refreshChips();
     void refreshPrizes(bool regoClosed);
+    void addPrizeMarqueeRow(const QString& placeText, const QString& amountText);
+    void measurePrizeLoop();
+    void ensurePrizeScrollRunning();
     void tickPrizeScroll();
     void refreshAll();
     QFont boardFont(int pixelSize, bool bold = false) const;
@@ -59,6 +73,8 @@ private:
 
     QWidget* logo_ = nullptr;
     QWidget* infoBlock_ = nullptr;
+    QWidget* body_ = nullptr;
+    QWidget* centreCol_ = nullptr;
 
     QLabel* name_ = nullptr;
     QLabel* wallClock_ = nullptr;
@@ -80,9 +96,15 @@ private:
     QWidget* prizeList_ = nullptr;
     QVBoxLayout* prizeLayout_ = nullptr;
     QLabel* prizeTitle_ = nullptr;
-    int prizeScrollDir_ = 1;
     bool prizesShowing_ = false;
     QString prizesFingerprint_;
+    int prizeLoopHeight_ = 0;
+    int prizeLoopCount_ = 0;
+
+    QWidget* chipBlock_ = nullptr;
+    QGridLayout* chipGrid_ = nullptr;
+    ChipCell chipCells_[6];
+    QString chipsFingerprint_;
 
     SideStat rego_;
     SideStat level_;

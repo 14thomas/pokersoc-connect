@@ -1,6 +1,9 @@
 #include "domain/session/TournamentConfig.h"
 
 #include <algorithm>
+#include <cctype>
+#include <climits>
+#include <cstdlib>
 
 #include "domain/player/Player.h"
 #include "util/Json.h"
@@ -252,13 +255,66 @@ int jsonInt(const util::JsonValue& object, const char* key, int fallback) {
 
 } // namespace
 
+long long parseChipAmount(std::string_view text) noexcept {
+    std::string cleaned;
+    cleaned.reserve(text.size());
+    for (char ch : text) {
+        if (ch == ',' || ch == ' ' || ch == '\t') continue;
+        cleaned.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+    }
+    if (cleaned.empty() || cleaned == "-" || cleaned == "—" || cleaned == "--") return -1;
+
+    double multiplier = 1.0;
+    if (!cleaned.empty() && (cleaned.back() == 'k' || cleaned.back() == 'm')) {
+        multiplier = cleaned.back() == 'm' ? 1'000'000.0 : 1'000.0;
+        cleaned.pop_back();
+    }
+    if (cleaned.empty()) return -1;
+
+    char* end = nullptr;
+    const double value = std::strtod(cleaned.c_str(), &end);
+    if (end == cleaned.c_str() || (end && *end != '\0') || value < 0) return -1;
+    const double scaled = value * multiplier;
+    if (scaled > static_cast<double>(LLONG_MAX)) return -1;
+    return static_cast<long long>(scaled + 0.5);
+}
+
+std::string formatChipAmount(long long value) {
+    if (value < 0) value = 0;
+    if (value >= 1'000'000 && value % 1'000'000 == 0) {
+        return std::to_string(value / 1'000'000) + "M";
+    }
+    if (value >= 1000 && value % 1000 == 0) {
+        return std::to_string(value / 1000) + "K";
+    }
+    if (value >= 1000 && value % 100 == 0) {
+        const long long whole = value / 1000;
+        const long long frac = (value % 1000) / 100;
+        return std::to_string(whole) + "." + std::to_string(frac) + "K";
+    }
+    return groupedInt(static_cast<int>(std::min<long long>(value, INT_MAX)));
+}
+
 std::string BlindLevel::blindsLabel() const {
     if (isBreak) return "Break";
-    return groupedInt(smallBlind) + " / " + groupedInt(bigBlind);
+    return smallBlind + " / " + bigBlind;
 }
 
 std::string BlindLevel::anteLabel() const {
-    return ante <= 0 ? "—" : groupedInt(ante);
+    return hasAnte() ? ante : "—";
+}
+
+bool BlindLevel::hasAnte() const noexcept {
+    if (ante.empty()) return false;
+    std::string trimmed;
+    for (char ch : ante) {
+        if (ch != ' ' && ch != '\t') trimmed.push_back(ch);
+    }
+    if (trimmed.empty() || trimmed == "-" || trimmed == "—" || trimmed == "--" || trimmed == "0") {
+        return false;
+    }
+    const long long value = parseChipAmount(trimmed);
+    return value != 0; // -1 (unparsed text like "BB") still counts as present
 }
 
 Money PrizeShare::amountFrom(Money pool) const noexcept {
@@ -269,11 +325,32 @@ Money PrizeShare::amountFrom(Money pool) const noexcept {
 TournamentConfig::TournamentConfig() : blinds(defaultBlinds()), prizes(defaultPrizes()) {}
 
 std::vector<BlindLevel> TournamentConfig::defaultBlinds() {
+    // PokerSoc ~5h structure (Assets/BlindStructures/PokerSoc_rounds_5h.json).
+    const auto ante = [](long long value) {
+        return value > 0 ? formatChipAmount(value) : std::string{};
+    };
     return {
-        {25, 50, 0, 15},      {50, 100, 0, 15},     {75, 150, 0, 15},
-        {100, 200, 25, 15},   {150, 300, 25, 15},   {200, 400, 50, 15},
-        {300, 600, 75, 15},   {400, 800, 100, 15},  {500, 1000, 100, 15},
-        {700, 1400, 200, 15}, {1000, 2000, 300, 15}, {2000, 4000, 500, 15},
+        {formatChipAmount(100), formatChipAmount(100), ante(0), 15},
+        {formatChipAmount(100), formatChipAmount(200), ante(0), 15},
+        {formatChipAmount(200), formatChipAmount(300), ante(0), 15},
+        {formatChipAmount(200), formatChipAmount(400), ante(0), 15},
+        {formatChipAmount(300), formatChipAmount(600), ante(600), 15},
+        {formatChipAmount(400), formatChipAmount(800), ante(800), 15},
+        {"", "", "", 15, true},
+        {formatChipAmount(500), formatChipAmount(1000), ante(1000), 15},
+        {formatChipAmount(500), formatChipAmount(1500), ante(1500), 15},
+        {formatChipAmount(1000), formatChipAmount(2000), ante(2000), 15},
+        {formatChipAmount(1500), formatChipAmount(3000), ante(3000), 15},
+        {formatChipAmount(2000), formatChipAmount(4000), ante(4000), 15},
+        {formatChipAmount(3000), formatChipAmount(6000), ante(6000), 15},
+        {formatChipAmount(5000), formatChipAmount(10000), ante(10000), 15},
+        {"", "", "", 15, true},
+        {formatChipAmount(10000), formatChipAmount(20000), ante(20000), 15},
+        {formatChipAmount(15000), formatChipAmount(30000), ante(30000), 15},
+        {formatChipAmount(20000), formatChipAmount(40000), ante(40000), 15},
+        {formatChipAmount(30000), formatChipAmount(60000), ante(60000), 15},
+        {formatChipAmount(50000), formatChipAmount(100000), ante(100000), 15},
+        {formatChipAmount(75000), formatChipAmount(150000), ante(150000), 15},
     };
 }
 
@@ -286,13 +363,43 @@ std::string TournamentConfig::blindsJson() const {
     for (std::size_t i = 0; i < blinds.size(); ++i) {
         if (i > 0) out += ',';
         const BlindLevel& level = blinds[i];
-        out += "{\"sb\":" + std::to_string(level.smallBlind) + ",\"bb\":" +
-               std::to_string(level.bigBlind) + ",\"ante\":" + std::to_string(level.ante) +
+        out += "{\"sb\":" + util::jsonString(level.smallBlind) + ",\"bb\":" +
+               util::jsonString(level.bigBlind) + ",\"ante\":" + util::jsonString(level.ante) +
                ",\"min\":" + std::to_string(level.durationMinutes);
         if (level.isBreak) out += ",\"break\":1";
         out += "}";
     }
     out += "]";
+    return out;
+}
+
+namespace {
+
+std::string jsonChipNumberOrString(const std::string& text) {
+    const long long value = parseChipAmount(text);
+    if (value >= 0) return std::to_string(value);
+    return util::jsonString(text);
+}
+
+} // namespace
+
+std::string TournamentConfig::blindsStructureJson() const {
+    std::string out = "{\n  \"rounds\": [\n";
+    for (std::size_t i = 0; i < blinds.size(); ++i) {
+        if (i > 0) out += ",\n";
+        const BlindLevel& level = blinds[i];
+        out += "    { \"minutes\": " + std::to_string(level.durationMinutes);
+        if (level.isBreak) {
+            out += ", \"break\": true }";
+            continue;
+        }
+        out += ", \"sb\": " + jsonChipNumberOrString(level.smallBlind);
+        out += ", \"bb\": " + jsonChipNumberOrString(level.bigBlind);
+        const long long ante = parseChipAmount(level.ante);
+        out += ", \"bb_ante\": " + std::to_string(ante > 0 ? ante : 0);
+        out += " }";
+    }
+    out += "\n  ]\n}\n";
     return out;
 }
 
@@ -308,28 +415,63 @@ std::string TournamentConfig::prizesJson() const {
     return out;
 }
 
+std::string TournamentConfig::boardChipsJson() const {
+    std::string out = "[";
+    for (std::size_t i = 0; i < boardChips.size(); ++i) {
+        if (i > 0) out += ',';
+        const BoardChip& chip = boardChips[i];
+        out += "{\"img\":" + util::jsonString(chip.imageFile) +
+               ",\"val\":" + util::jsonString(chip.value) + "}";
+    }
+    out += "]";
+    return out;
+}
+
 void TournamentConfig::setBlindsFromJson(const std::string& text) {
     if (text.empty()) return;
     try {
         const util::JsonValue root = util::parseJson(text);
-        if (!root.isArray() || root.items.empty()) return;
+        const util::JsonValue* rounds = nullptr;
+        if (root.isArray()) {
+            rounds = &root;
+        } else if (root.isObject()) {
+            if (const util::JsonValue* keyed = root.get("rounds"); keyed && keyed->isArray()) {
+                rounds = keyed;
+            } else if (const util::JsonValue* keyed = root.get("blinds"); keyed && keyed->isArray()) {
+                rounds = keyed;
+            }
+        }
+        if (!rounds || rounds->items.empty()) return;
+
         std::vector<BlindLevel> parsed;
-        parsed.reserve(root.items.size());
-        for (const util::JsonValue& item : root.items) {
+        parsed.reserve(rounds->items.size());
+        const auto jsonChip = [](const util::JsonValue& object, const char* key,
+                                 const std::string& fallback) {
+            const util::JsonValue* value = object.get(key);
+            if (!value) return fallback;
+            if (value->kind == util::JsonValue::Kind::String) return value->string;
+            if (value->kind == util::JsonValue::Kind::Number) {
+                const long long n = static_cast<long long>(value->number);
+                if (n <= 0) return std::string{};
+                return formatChipAmount(n);
+            }
+            return fallback;
+        };
+        for (const util::JsonValue& item : rounds->items) {
             if (!item.isObject()) continue;
             BlindLevel level;
-            level.smallBlind = jsonInt(item, "sb", level.smallBlind);
-            level.bigBlind = jsonInt(item, "bb", level.bigBlind);
-            level.ante = jsonInt(item, "ante", level.ante);
-            level.durationMinutes = jsonInt(item, "min", level.durationMinutes);
-            if (level.smallBlind < 0) level.smallBlind = 0;
-            if (level.bigBlind < 0) level.bigBlind = 0;
-            if (level.ante < 0) level.ante = 0;
-            if (level.durationMinutes < 1) level.durationMinutes = 15;
             if (const util::JsonValue* brk = item.get("break")) {
                 level.isBreak = brk->kind == util::JsonValue::Kind::Bool
                                     ? brk->boolean
                                     : brk->kind == util::JsonValue::Kind::Number && brk->number != 0;
+            }
+            level.durationMinutes = jsonInt(item, "minutes", jsonInt(item, "min", level.durationMinutes));
+            if (level.durationMinutes < 1) level.durationMinutes = 15;
+            if (!level.isBreak) {
+                level.smallBlind = jsonChip(item, "sb", level.smallBlind);
+                level.bigBlind = jsonChip(item, "bb", level.bigBlind);
+                // File format uses bb_ante; AppStore uses ante.
+                level.ante = jsonChip(item, "bb_ante", jsonChip(item, "ante", level.ante));
             }
             parsed.push_back(level);
         }
@@ -358,6 +500,39 @@ void TournamentConfig::setPrizesFromJson(const std::string& text) {
         if (!parsed.empty()) prizes = std::move(parsed);
     } catch (...) {
         // Keep the constructor defaults if the stored JSON is unreadable.
+    }
+}
+
+void TournamentConfig::setBoardChipsFromJson(const std::string& text) {
+    boardChips.clear();
+    if (text.empty()) return;
+    try {
+        const util::JsonValue root = util::parseJson(text);
+        if (!root.isArray()) return;
+        for (const util::JsonValue& item : root.items) {
+            if (!item.isObject()) continue;
+            BoardChip chip;
+            if (const util::JsonValue* img = item.get("img");
+                img && img->kind == util::JsonValue::Kind::String) {
+                chip.imageFile = img->string;
+            }
+            if (const util::JsonValue* val = item.get("val")) {
+                if (val->kind == util::JsonValue::Kind::String) {
+                    chip.value = val->string;
+                } else if (val->kind == util::JsonValue::Kind::Number) {
+                    chip.value = formatChipAmount(static_cast<long long>(val->number));
+                }
+            }
+            const long long numeric = parseChipAmount(chip.value);
+            if (chip.imageFile.empty() && numeric <= 0) continue;
+            boardChips.push_back(chip);
+            if (boardChips.size() >= 6) break;
+        }
+        std::sort(boardChips.begin(), boardChips.end(), [](const BoardChip& a, const BoardChip& b) {
+            return parseChipAmount(a.value) < parseChipAmount(b.value);
+        });
+    } catch (...) {
+        boardChips.clear();
     }
 }
 

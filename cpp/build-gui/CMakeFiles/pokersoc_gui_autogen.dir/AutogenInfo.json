@@ -322,6 +322,12 @@
 			null
 		],
 		[
+			"C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/SettingsChrome.h",
+			"Mu",
+			"WLEM7A2TAU/moc_SettingsChrome.cpp",
+			null
+		],
+		[
 			"C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/StartWindow.h",
 			"Mu",
 			"WLEM7A2TAU/moc_StartWindow.cpp",
@@ -468,6 +474,11 @@
 		],
 		[
 			"C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/SessionContext.cpp",
+			"Mu",
+			null
+		],
+		[
+			"C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/src/ui/qt/SettingsChrome.cpp",
 			"Mu",
 			null
 		],

@@ -32,19 +32,26 @@ enum class PrizeRounding {
 const char* prizeRoundingName(PrizeRounding rounding) noexcept;
 PrizeRounding prizeRoundingFromName(std::string_view name) noexcept;
 
+/// Parse free-text chip amounts ("25", "1.5K", "150k", "1,000"). Returns -1 if invalid.
+long long parseChipAmount(std::string_view text) noexcept;
+/// Compact display for a numeric chip amount (1500 -> "1.5K", 150000 -> "150K").
+std::string formatChipAmount(long long value);
+
 /// One blind level on the tournament clock (chip units, not cash).
 /// A break keeps the previous blinds and only runs the clock.
+/// Blind amounts are free text so values like "1.5K" / "150K" are allowed.
 struct BlindLevel {
-    int smallBlind = 25;
-    int bigBlind = 50;
-    int ante = 0;
+    std::string smallBlind = "25";
+    std::string bigBlind = "50";
+    std::string ante; // empty / "0" / "—" = no big blind ante
     int durationMinutes = 15;
     bool isBreak = false;
 
-    /// "100 / 200", or "Break".
+    /// "100 / 200", "1.5K / 3K", or "Break".
     std::string blindsLabel() const;
-    /// "—" when there is no big blind ante, otherwise a grouped number.
+    /// "—" when there is no big blind ante, otherwise the ante text as entered.
     std::string anteLabel() const;
+    bool hasAnte() const noexcept;
 };
 
 /// A finishing place's share of the live prize pool.
@@ -60,6 +67,14 @@ struct PrizePayout {
     int place = 1;
     int percent = 0;
     Money amount;
+};
+
+/// A chip denomination shown on the TV board.
+/// imageFile is either a filename under Assets/BoardChips/ or an absolute filepath.
+/// value is free text (25, 1.5K, 100K, 1M) — same parsing as blind amounts.
+struct BoardChip {
+    std::string imageFile;
+    std::string value;
 };
 
 /// Bounty and rake taken from one buy-in or rebuy.
@@ -120,6 +135,8 @@ struct TournamentConfig {
 
     std::vector<BlindLevel> blinds;
     std::vector<PrizeShare> prizes;
+    /// Up to 6 chips for the TV board (2 columns × 3 rows). Sorted by value ascending.
+    std::vector<BoardChip> boardChips;
 
     PrizeRounding prizeRounding = PrizeRounding::Exact;
     bool leftoverToFirst = true;
@@ -191,10 +208,16 @@ struct TournamentConfig {
     /// leftover from rounding can be given to 1st.
     std::vector<PrizePayout> prizePayouts(Money pool) const;
 
+    /// Compact array for AppStore persistence.
     std::string blindsJson() const;
+    /// File format: `{ "rounds": [ { "minutes", "sb", "bb", "bb_ante" } | { "minutes", "break": true } ] }`.
+    std::string blindsStructureJson() const;
     std::string prizesJson() const;
+    std::string boardChipsJson() const;
+    /// Accepts the AppStore array or a `{ "rounds": [...] }` structure file.
     void setBlindsFromJson(const std::string& text);
     void setPrizesFromJson(const std::string& text);
+    void setBoardChipsFromJson(const std::string& text);
 
     const BlindLevel* levelAt(int index) const noexcept;
     /// Blinds in force at `index`: the row itself, or the last playing level before a break.

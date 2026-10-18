@@ -874,7 +874,8 @@ template <> constexpr inline auto pokersoc::ui::qt::TournamentBoardControlScreen
         "",
         "closeBoardRequested",
         "sendBoardToTvRequested",
-        "toggleBoardFullscreenRequested"
+        "toggleBoardFullscreenRequested",
+        "boardDisplayChanged"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -886,6 +887,8 @@ template <> constexpr inline auto pokersoc::ui::qt::TournamentBoardControlScreen
         QtMocHelpers::SignalData<void()>(4, 2, QMC::AccessPublic, QMetaType::Void),
         // Signal 'toggleBoardFullscreenRequested'
         QtMocHelpers::SignalData<void()>(5, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'boardDisplayChanged'
+        QtMocHelpers::SignalData<void()>(6, 2, QMC::AccessPublic, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -913,6 +916,7 @@ void pokersoc::ui::qt::TournamentBoardControlScreen::qt_static_metacall(QObject 
         case 1: _t->closeBoardRequested(); break;
         case 2: _t->sendBoardToTvRequested(); break;
         case 3: _t->toggleBoardFullscreenRequested(); break;
+        case 4: _t->boardDisplayChanged(); break;
         default: ;
         }
     }
@@ -924,6 +928,8 @@ void pokersoc::ui::qt::TournamentBoardControlScreen::qt_static_metacall(QObject 
         if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::sendBoardToTvRequested, 2))
             return;
         if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::toggleBoardFullscreenRequested, 3))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (TournamentBoardControlScreen::*)()>(_a, &TournamentBoardControlScreen::boardDisplayChanged, 4))
             return;
     }
 }
@@ -947,14 +953,14 @@ int pokersoc::ui::qt::TournamentBoardControlScreen::qt_metacall(QMetaObject::Cal
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 4)
+        if (_id < 5)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 4;
+        _id -= 5;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 4)
+        if (_id < 5)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 4;
+        _id -= 5;
     }
     return _id;
 }
@@ -981,6 +987,12 @@ void pokersoc::ui::qt::TournamentBoardControlScreen::sendBoardToTvRequested()
 void pokersoc::ui::qt::TournamentBoardControlScreen::toggleBoardFullscreenRequested()
 {
     QMetaObject::activate(this, &staticMetaObject, 3, nullptr);
+}
+
+// SIGNAL 4
+void pokersoc::ui::qt::TournamentBoardControlScreen::boardDisplayChanged()
+{
+    QMetaObject::activate(this, &staticMetaObject, 4, nullptr);
 }
 namespace {
 struct qt_meta_tag_ZN8pokersoc2ui2qt15BreakdownScreenE_t {};
