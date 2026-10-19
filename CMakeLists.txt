@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(sqlite3 STATIC third_party/sqlite/sqlite3.c)
 target_include_directories(sqlite3 PUBLIC third_party/sqlite)
 if (MSVC)
-    target_compile_options(sqlite3 PRIVATE /w)             # silence C-library warnings
+    target_compile_options(sqlite3 PRIVATE /w)
     target_compile_definitions(sqlite3 PRIVATE _CRT_SECURE_NO_WARNINGS)
 else()
     target_compile_options(sqlite3 PRIVATE -w)
@@ -64,72 +64,54 @@ else()
     target_compile_options(pokersoc_core PRIVATE -Wall -Wextra)
 endif()
 
-# ---- Console front end ----
-add_executable(pokersoc
-    src/main.cpp
-    src/ui/console/ConsoleIO.cpp
-    src/ui/console/ConsoleApp.cpp
-    src/ui/console/ConsoleAdmin.cpp
-    src/ui/console/ConsoleCashbox.cpp
-    src/ui/console/ConsoleFood.cpp
-    src/ui/console/ConsolePlayers.cpp
+# ---- Qt Widgets front end ----
+# MinGW kit example:
+#   cmake -S . -B build-gui -G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.9.2/mingw_64 -DCMAKE_BUILD_TYPE=Release
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+add_executable(pokersoc_gui WIN32
+    src/ui/main.cpp
+    src/ui/SessionContext.cpp
+    src/ui/Style.cpp
+    src/ui/Widgets.cpp
+    src/ui/StartWindow.cpp
+    src/ui/MainWindow.cpp
+    src/ui/SettingsChrome.cpp
+    src/ui/screens/BuyInScreen.cpp
+    src/ui/screens/CashOutScreen.cpp
+    src/ui/screens/CashboxScreen.cpp
+    src/ui/screens/LostChipsScreen.cpp
+    src/ui/screens/FoodScreen.cpp
+    src/ui/screens/PlayersScreen.cpp
+    src/ui/screens/SettingsScreen.cpp
+    src/ui/screens/TournamentScreens.cpp
+    src/ui/screens/TournamentSettingsScreen.cpp
+    src/ui/screens/BreakdownScreen.cpp
+    src/ui/board/TournamentClock.cpp
+    src/ui/board/TournamentBoardWindow.cpp
+    src/ui/MainWindow.h
+    src/ui/SessionContext.h
+    src/ui/StartWindow.h
+    src/ui/Style.h
+    src/ui/Widgets.h
+    src/ui/SettingsChrome.h
+    src/ui/screens/Screens.h
+    src/ui/board/TournamentClock.h
+    src/ui/board/TournamentBoardWindow.h
 )
-target_link_libraries(pokersoc PRIVATE pokersoc_core)
-if (MSVC)
-    target_compile_options(pokersoc PRIVATE /W4)
-endif()
+set_target_properties(pokersoc_gui PROPERTIES AUTOMOC ON)
+target_link_libraries(pokersoc_gui PRIVATE pokersoc_core Qt6::Widgets)
 
-# ---- Qt Widgets front end (built only when Qt 6 is available) ----
-# Qt here is the MinGW kit, so configure this in a separate MinGW build dir:
-#   cmake -S . -B build-gui -G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.9.2/mingw_64
-find_package(Qt6 QUIET COMPONENTS Widgets)
-if (Qt6_FOUND)
-    add_executable(pokersoc_gui WIN32
-        src/ui/qt/main.cpp
-        src/ui/qt/SessionContext.cpp
-        src/ui/qt/Style.cpp
-        src/ui/qt/Widgets.cpp
-        src/ui/qt/StartWindow.cpp
-        src/ui/qt/MainWindow.cpp
-        src/ui/qt/BuyInScreen.cpp
-        src/ui/qt/CashOutScreen.cpp
-        src/ui/qt/CashboxScreen.cpp
-        src/ui/qt/LostChipsScreen.cpp
-        src/ui/qt/FoodScreen.cpp
-        src/ui/qt/PlayersScreen.cpp
-        src/ui/qt/SettingsScreen.cpp
-        src/ui/qt/TournamentScreens.cpp
-        src/ui/qt/TournamentSettingsScreen.cpp
-        src/ui/qt/SettingsChrome.cpp
-        src/ui/qt/TournamentClock.cpp
-        src/ui/qt/TournamentBoardWindow.cpp
-        src/ui/qt/BreakdownScreen.cpp
-        src/ui/qt/MainWindow.h
-        src/ui/qt/Screens.h
-        src/ui/qt/SessionContext.h
-        src/ui/qt/StartWindow.h
-        src/ui/qt/Style.h
-        src/ui/qt/Widgets.h
-        src/ui/qt/SettingsChrome.h
-        src/ui/qt/TournamentClock.h
-        src/ui/qt/TournamentBoardWindow.h
-    )
-    set_target_properties(pokersoc_gui PROPERTIES AUTOMOC ON)
-    target_link_libraries(pokersoc_gui PRIVATE pokersoc_core Qt6::Widgets)
+add_custom_command(TARGET pokersoc_gui POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/Assets $<TARGET_FILE_DIR:pokersoc_gui>/Assets)
 
-    # Images used by the denomination buttons.
+get_target_property(_qmake Qt6::qmake IMPORTED_LOCATION)
+get_filename_component(_qt_bin "${_qmake}" DIRECTORY)
+find_program(WINDEPLOYQT windeployqt HINTS "${_qt_bin}")
+if (WINDEPLOYQT)
     add_custom_command(TARGET pokersoc_gui POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CMAKE_CURRENT_SOURCE_DIR}/Assets $<TARGET_FILE_DIR:pokersoc_gui>/Assets)
-
-    # Copy the Qt (and MinGW runtime) DLLs next to the exe so it runs by double-click.
-    get_target_property(_qmake Qt6::qmake IMPORTED_LOCATION)
-    get_filename_component(_qt_bin "${_qmake}" DIRECTORY)
-    find_program(WINDEPLOYQT windeployqt HINTS "${_qt_bin}")
-    if (WINDEPLOYQT)
-        add_custom_command(TARGET pokersoc_gui POST_BUILD
-            COMMAND "${WINDEPLOYQT}" --no-translations --no-system-d3d-compiler
-                    --no-opengl-sw $<TARGET_FILE:pokersoc_gui>
-            COMMENT "Deploying Qt runtime")
-    endif()
+        COMMAND "${WINDEPLOYQT}" --no-translations --no-system-d3d-compiler
+                --no-opengl-sw $<TARGET_FILE:pokersoc_gui>
+        COMMENT "Deploying Qt runtime")
 endif()

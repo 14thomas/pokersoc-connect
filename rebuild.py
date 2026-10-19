@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild pokersoc (core, console, GUI) and refresh Assets.
+"""Rebuild pokersoc (core + Qt GUI) and refresh Assets.
 
 Usage:
   python rebuild.py           # configure if needed, build everything

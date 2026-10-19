@@ -6,7 +6,7 @@ Tournament and cash-game host app for PokerSoc (C++ / Qt).
 
 | Path | Purpose |
 |------|---------|
-| `src/` | Domain, services, console + Qt UI |
+| `src/` | Domain, services, Qt UI (`ui/screens`, `ui/board`) |
 | `Assets/` | Brand, chips, fonts, blind-structure JSON |
 | `third_party/` | Vendored SQLite |
 | `rebuild.py` | Configure, build, sync assets, optional launch |
