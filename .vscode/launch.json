@@ -2,15 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": ".NET Launch (WPF)",
-      "type": "coreclr",
+      "name": "pokersoc_gui",
+      "type": "cppdbg",
       "request": "launch",
-      "preLaunchTask": "build",
-      "program": "${workspaceFolder}/bin/Debug/net8.0-windows/pokersoc_connect.exe",
+      "preLaunchTask": "rebuild",
+      "program": "${workspaceFolder}/build-gui/pokersoc_gui.exe",
       "args": [],
-      "cwd": "${workspaceFolder}",
-      "console": "internalConsole",
-      "stopAtEntry": false
+      "cwd": "${workspaceFolder}/build-gui",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/Qt/Tools/mingw1310_64/bin/gdb.exe",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
     }
   ]
 }

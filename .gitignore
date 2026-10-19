@@ -1,20 +1,41 @@
-# Build output
-bin/
-obj/
-*.user
-*.suo
-publish/
-publish-standalone/
+# CMake build trees
+build/
+build-*/
+out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+.ninja_deps
+.ninja_log
+*.ninja
+*.o
+*.obj
+*.a
+*.lib
+*.exe
+*.dll
+*.pdb
 
-# VS Code
+# Qt / MOC
+*_autogen/
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# VS Code (keep launch/tasks/settings)
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json
+!.vscode/settings.json
 
-# NuGet
-*.nupkg
-packages/
-*.snupkg
+# IDE / OS
+*.user
+*.suo
+.vs/
+.idea/
+Thumbs.db
+Desktop.ini
 
 # Logs
 *.log

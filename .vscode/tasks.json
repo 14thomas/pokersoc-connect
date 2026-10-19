@@ -2,11 +2,29 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build",
-      "command": "dotnet",
-      "type": "process",
-      "args": [ "build", "${workspaceFolder}", "-c", "Debug" ],
-      "problemMatcher": "$msCompile"
+      "label": "rebuild",
+      "type": "shell",
+      "command": "python",
+      "args": ["rebuild.py"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "rebuild-gui-run",
+      "type": "shell",
+      "command": "python",
+      "args": ["rebuild.py", "--gui", "--run"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": ["$gcc"]
     }
   ]
 }

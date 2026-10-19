@@ -1,5 +1,0 @@
-C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-mingw-test/CMakeFiles/sqlite3.dir
-C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-mingw-test/CMakeFiles/pokersoc_core.dir
-C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-mingw-test/CMakeFiles/pokersoc.dir
-C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-mingw-test/CMakeFiles/edit_cache.dir
-C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-mingw-test/CMakeFiles/rebuild_cache.dir
