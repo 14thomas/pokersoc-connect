@@ -175,3 +175,15 @@
 12	154	8140461206604611	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/mocs_compilation.cpp	e34585201c0fd6d0
 154	2945	8140461208024077	CMakeFiles/pokersoc_gui.dir/src/ui/qt/TournamentBoardWindow.cpp.obj	df67cc919d7d5088
 2945	3395	8140461235933319	pokersoc_gui.exe	dd038eb4ecbaf814
+13	155	8140465750771770	pokersoc_gui_autogen/timestamp	e34585201c0fd6d0
+13	155	8140465750771770	pokersoc_gui_autogen/mocs_compilation.cpp	e34585201c0fd6d0
+13	155	8140465750771770	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/timestamp	e34585201c0fd6d0
+13	155	8140465750771770	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/mocs_compilation.cpp	e34585201c0fd6d0
+156	2889	8140465752200726	CMakeFiles/pokersoc_gui.dir/src/ui/qt/TournamentBoardWindow.cpp.obj	df67cc919d7d5088
+2889	3343	8140465779538412	pokersoc_gui.exe	dd038eb4ecbaf814
+12	149	8140470796839552	pokersoc_gui_autogen/timestamp	e34585201c0fd6d0
+12	149	8140470796839552	pokersoc_gui_autogen/mocs_compilation.cpp	e34585201c0fd6d0
+12	149	8140470796839552	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/timestamp	e34585201c0fd6d0
+12	149	8140470796839552	C:/pokersoc/pokersoc_cursor/pokersoc-connect/cpp/build-gui/pokersoc_gui_autogen/mocs_compilation.cpp	e34585201c0fd6d0
+150	2244	8140470798211194	CMakeFiles/pokersoc_gui.dir/src/ui/qt/SettingsScreen.cpp.obj	219be6ac6aa82bf4
+2244	2676	8140470819148904	pokersoc_gui.exe	dd038eb4ecbaf814

@@ -135,7 +135,6 @@
             <TextBlock Text="• Tournament buy-in and rebuy prices vary by membership type." Margin="20,0,0,2"/>
             <TextBlock Text="• Tournament info shows total buy-ins and rebuys, with per-tier breakdown." Margin="20,0,0,2"/>
             <TextBlock Text="• tom is definitely the coolest person in the world." Margin="20,0,0,2"/>     
-            <TextBlock Text="• suyee is decent too." Margin="20,0,0,2"/>        
           
           </StackPanel>
         </GroupBox>

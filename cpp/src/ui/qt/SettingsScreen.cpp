@@ -413,19 +413,12 @@ SettingsScreen::SettingsScreen(SessionContext& context, QWidget* parent) : Scree
         label->setContentsMargins(left, 0, 0, bottom);
         groupLayout(about)->addWidget(label);
     };
-    addAbout(makeLabel("pokersoc-connect v1.6.7", 12, true), 5);
-    addAbout(makeLabel("A poker society management application for PokerSoc UNSW, developed in house."),
+    addAbout(makeLabel("pokersoc-connect v2.0.0", 12, true), 5);
+    addAbout(makeLabel("A poker society management application for PokerSoc UNSW, developed by Thomas Petkovic and Cursor AI."),
              10);
     addAbout(makeLabel("Features:", 12, true), 5);
     const char* features[] = {
-        "Tournament room display: clock, blinds, next level, and live prize pool.",
-        "Activity log filters to the scanned or entered player ID.",
-        "Player logs track membership tier (Bronze, Silver, Gold, etc.).",
-        "New player signup prompts for membership type (tournament mode only).",
-        "Tournament buy-in and rebuy prices vary by membership type.",
-        "Tournament info shows total buy-ins and rebuys, with per-tier breakdown.",
-        "tom is definitely the coolest person in the world.",
-        "suyee is decent too.",
+        "Tournament display screen now added!",
     };
     for (const char* feature : features) addAbout(makeLabel(QStringLiteral("• ") + feature), 2, 20);
     sections->addWidget(about);
