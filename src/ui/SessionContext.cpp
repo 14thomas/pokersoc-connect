@@ -22,7 +22,7 @@ namespace pokersoc::ui {
 using namespace domain;
 
 SessionContext::SessionContext(std::string dbPath, const DenominationTable& table,
-                               SessionModeType newMode)
+                               SessionModeType newMode, std::optional<CashGameConfig> cashConfig)
     : dbPath_(std::move(dbPath)),
       table_(table),
       store_(std::make_unique<persistence::SqliteStore>(dbPath_)),
@@ -39,7 +39,7 @@ SessionContext::SessionContext(std::string dbPath, const DenominationTable& tabl
         if (newMode == SessionModeType::Tournament) {
             store_->saveTournamentConfig(TournamentConfig{});
         } else {
-            store_->saveCashGameConfig(CashGameConfig{});
+            store_->saveCashGameConfig(cashConfig.value_or(CashGameConfig{}));
         }
         saved = newMode;
     }

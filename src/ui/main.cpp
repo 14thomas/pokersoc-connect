@@ -46,7 +46,8 @@ public:
     explicit SessionLauncher(const domain::DenominationTable& table) : table_(table) {}
 
     bool open(const QString& path, std::optional<domain::SessionModeType> newMode,
-              const QString& importPath, QWidget* parent) {
+              const QString& importPath, QWidget* parent,
+              std::optional<domain::CashGameConfig> cashConfig = std::nullopt) {
         const QString absolute = QFileInfo(path).absoluteFilePath();
         if (window_ && QFileInfo(toQ(window_->context().path())).absoluteFilePath() == absolute) {
             QMessageBox::information(parent, "pokersoc-connect", "That session is already open.");
@@ -61,7 +62,8 @@ public:
         std::unique_ptr<SessionContext> context;
         try {
             context = std::make_unique<SessionContext>(
-                toStd(absolute), table_, newMode.value_or(domain::SessionModeType::CashGame));
+                toStd(absolute), table_, newMode.value_or(domain::SessionModeType::CashGame),
+                cashConfig);
         } catch (const std::exception& error) {
             QMessageBox::critical(parent, "pokersoc-connect",
                                   QStringLiteral("Could not open database:\n%1").arg(error.what()));
@@ -71,8 +73,6 @@ public:
         if (!importPath.isEmpty() && QFileInfo::exists(importPath)) {
             try {
                 context->files().importPlayers(toStd(importPath), true);
-                QMessageBox::information(parent, "Import Complete",
-                                         "Players imported successfully from:\n" + importPath);
             } catch (const std::exception& error) {
                 QMessageBox::warning(parent, "Import Warning",
                                      QStringLiteral("Could not import players:\n%1\n\nContinuing without "
@@ -129,7 +129,9 @@ int main(int argc, char* argv[]) {
     } else {
         StartWindow start;
         if (start.exec() != QDialog::Accepted || start.sessionPath().isEmpty()) return 0;
-        if (!launcher.open(start.sessionPath(), start.newMode(), start.importPath(), nullptr)) return 1;
+        if (!launcher.open(start.sessionPath(), start.newMode(), start.importPath(), nullptr,
+                           start.cashConfig()))
+            return 1;
     }
     app.setQuitOnLastWindowClosed(true);
     return app.exec();

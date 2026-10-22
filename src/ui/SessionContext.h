@@ -8,11 +8,11 @@
 #include "domain/food/ProductCatalog.h"
 #include "domain/player/Attendance.h"
 #include "domain/player/PlayerDirectory.h"
+#include "domain/session/CashGameMode.h"
 #include "domain/session/Session.h"
 #include "domain/transaction/TransactionLog.h"
 
 namespace pokersoc::domain {
-class CashGameMode;
 class DenominationTable;
 class TournamentMode;
 } // namespace pokersoc::domain
@@ -43,8 +43,10 @@ class SessionContext {
 public:
     /// Opens (or creates) `dbPath` and replays its history. A brand-new file
     /// takes `newMode`; an existing one keeps the mode it was created with.
+    /// `cashConfig` is stored when the new session is a cash game.
     SessionContext(std::string dbPath, const domain::DenominationTable& table,
-                   domain::SessionModeType newMode);
+                   domain::SessionModeType newMode,
+                   std::optional<domain::CashGameConfig> cashConfig = std::nullopt);
     ~SessionContext();
 
     SessionContext(const SessionContext&) = delete;
