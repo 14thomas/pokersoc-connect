@@ -173,10 +173,10 @@ QWidget* MainWindow::buildMainPage() {
     columns->setContentsMargins(0, 0, 0, 0);
     columns->setSpacing(18);
 
-    auto* left = new QVBoxLayout;
+    auto* leftPane = new QWidget;
+    auto* left = new QVBoxLayout(leftPane);
+    left->setContentsMargins(0, 0, 0, 0);
     left->setSpacing(0);
-    left->addWidget(buildPlayerPanel());
-    left->addSpacing(15);
     activityHeader_ = makeLabel("Activity Log", 18, true);
     activityHeader_->setContentsMargins(0, 0, 0, 10);
     left->addWidget(activityHeader_);
@@ -203,7 +203,10 @@ QWidget* MainWindow::buildMainPage() {
         showScreen(new BreakdownScreen(*ctx_, item->data(Qt::UserRole).toLongLong()));
     });
 
-    columns->addLayout(left, 2);
+    left->addSpacing(15);
+    left->addWidget(buildPlayerPanel());
+
+    columns->addWidget(leftPane, 2);
     columns->addWidget(buildTiles(), 3);
     root->addLayout(columns, 1);
     return page;
@@ -253,8 +256,7 @@ QFrame* MainWindow::buildPlayerPanel() {
     QFrame* panel = makePanel(color::LightBlue, color::Gray, 2, 0, 10);
     QVBoxLayout* layout = panelLayout(panel);
     QLabel* title = makeLabel("Current Player (Scan ID or Press Enter)", 14, true);
-    title->setContentsMargins(0, 0, 0, 5);
-    layout->addWidget(title);
+    title->setContentsMargins(0, 8, 0, 5);
 
     auto* row = new QHBoxLayout;
     row->setSpacing(5);
@@ -269,7 +271,6 @@ QFrame* MainWindow::buildPlayerPanel() {
     QPushButton* clear = boldButton(QStringLiteral("✕"), color::LightCoral, 16, "2px");
     clear->setFixedWidth(40);
     row->addWidget(clear);
-    layout->addLayout(row);
 
     connect(idBox_, &QLineEdit::returnPressed, this, [this] { scanEntered(); });
     connect(idBox_, &QLineEdit::textChanged, this, [this] {
@@ -355,6 +356,10 @@ QFrame* MainWindow::buildPlayerPanel() {
     infoPanel_ = makeInlinePanel("#E8F4FD", "#4A90D9", 8);
     infoLayout_ = panelLayout(infoPanel_);
     layout->addWidget(infoPanel_);
+
+    // Scan row stays pinned under the player details, at the bottom of the screen.
+    layout->addWidget(title);
+    layout->addLayout(row);
 
     for (QFrame* inline_ : {newPlayerPanel_, editPanel_, underagePanel_, infoPanel_}) {
         layout->setStretchFactor(inline_, 0);
@@ -505,7 +510,7 @@ void MainWindow::refreshTournamentTile() {
 }
 
 void MainWindow::refreshClockBar() {
-    if (!clockBar_ || !clock_) return;
+    if (!clockBar_ || !clock_ || !clockStart_ || !clockPause_) return;
     const int count = clock_->levelCount();
     clockLevel_->setText(count <= 0 ? QStringLiteral("No blind structure")
                                     : QStringLiteral("Level %1 / %2")
@@ -753,6 +758,7 @@ void MainWindow::clearPlayer() {
 }
 
 void MainWindow::updatePlayerButtons() {
+    if (!buyInTile_ || !cashOutTile_ || !editButton_) return;
     const bool hasVerified = !currentId_.empty() && verified_ && !underage_;
     bool canBuyIn = hasVerified;
     if (canBuyIn && ctx_->isTournament() && ctx_->tournament().config().usesMembershipPricing()) {
