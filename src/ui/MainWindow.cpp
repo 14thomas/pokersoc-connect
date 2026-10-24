@@ -630,7 +630,7 @@ void MainWindow::showPlayerInfo(const std::string& id) {
     const std::pair<QString, QString> fields[] = {
         {"Name", toQ(player->name())},
         {"Degree", toQ(player->degree())},
-        {"Year", player->studyYear() > 0 ? QString::number(player->studyYear()) : QString()},
+        {"Year", toQ(player->studyYear())},
         {"Student #", toQ(player->studentNumber())},
         {"Email", toQ(player->email())},
         {"ARC Member", arc},

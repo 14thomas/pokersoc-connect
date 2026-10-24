@@ -29,7 +29,8 @@ public:
     const std::string& email() const noexcept { return email_; }
     const std::string& studentNumber() const noexcept { return studentNumber_; }
     const std::string& degree() const noexcept { return degree_; }
-    int studyYear() const noexcept { return studyYear_; } // 0 = unspecified
+    /// Free text such as "First year". "None" means it was not given.
+    const std::string& studyYear() const noexcept { return studyYear_; }
     ArcStatus arcStatus() const noexcept { return arcStatus_; }
     MembershipType membership() const noexcept { return membership_; }
     bool isUnderage() const noexcept { return isUnderage_; }
@@ -40,7 +41,7 @@ public:
     void setEmail(std::string email) { email_ = std::move(email); }
     void setStudentNumber(std::string studentNumber) { studentNumber_ = std::move(studentNumber); }
     void setDegree(std::string degree) { degree_ = std::move(degree); }
-    void setStudyYear(int studyYear) noexcept { studyYear_ = studyYear; }
+    void setStudyYear(std::string studyYear);
     void setArcStatus(ArcStatus status) noexcept { arcStatus_ = status; }
     void setMembership(MembershipType membership) noexcept { membership_ = membership; }
     void setUnderage(bool underage) noexcept { isUnderage_ = underage; }
@@ -56,7 +57,7 @@ private:
     std::string email_;
     std::string studentNumber_;
     std::string degree_;
-    int studyYear_ = 0; // 0 = unspecified
+    std::string studyYear_ = "None";
     ArcStatus arcStatus_ = ArcStatus::Unknown;
     MembershipType membership_ = MembershipType::None;
     bool isUnderage_ = false;

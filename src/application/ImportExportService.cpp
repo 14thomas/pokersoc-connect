@@ -97,7 +97,7 @@ std::size_t ImportExportService::exportPlayers(const std::string& path) const {
             << util::csvEscape(orNone(player->email())) << ','
             << util::csvEscape(orNone(player->studentNumber())) << ','
             << util::csvEscape(orNone(player->degree())) << ','
-            << (player->studyYear() > 0 ? std::to_string(player->studyYear()) : "None") << ','
+            << util::csvEscape(orNone(player->studyYear())) << ','
             << arcMemberText(player->arcStatus()) << ','
             << (player->isUnderage() ? 1 : 0) << ','
             << domain::membershipTypeLabel(player->membership()) << ','
@@ -142,11 +142,7 @@ ImportExportService::ImportResult ImportExportService::importPlayers(const std::
         player.setEmail(fromNone(field(2)));
         player.setStudentNumber(fromNone(field(3)));
         player.setDegree(fromNone(field(4)));
-        try {
-            player.setStudyYear(std::stoi(field(5)));
-        } catch (...) {
-            player.setStudyYear(0);
-        }
+        player.setStudyYear(field(5));
         player.setArcStatus(arcStatusFromText(field(6)));
         const std::string underage = upper(field(7));
         player.setUnderage(underage == "1" || underage == "TRUE");

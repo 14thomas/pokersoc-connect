@@ -132,7 +132,7 @@ void PlayersScreen::refresh() {
             toQ(player->email()),
             toQ(player->studentNumber()),
             toQ(player->degree()),
-            player->studyYear() > 0 ? QString::number(player->studyYear()) : QString(),
+            toQ(player->studyYear()),
             arc,
             membershipTypeLabel(player->membership()),
             created,

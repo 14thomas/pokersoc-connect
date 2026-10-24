@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS player (
   email       TEXT NOT NULL DEFAULT '',
   student_no  TEXT NOT NULL DEFAULT '',
   degree      TEXT NOT NULL DEFAULT '',
-  study_year  INTEGER NOT NULL DEFAULT 0,
+  study_year  TEXT NOT NULL DEFAULT 'None',
   arc_status  TEXT NOT NULL DEFAULT 'UNKNOWN',
   membership  TEXT NOT NULL DEFAULT 'NONE',
   underage    INTEGER NOT NULL DEFAULT 0,
@@ -213,6 +213,12 @@ void SqliteStore::migrate() {
     if (!hasColumn("event_line", "label")) {
         exec("ALTER TABLE event_line ADD COLUMN label TEXT NOT NULL DEFAULT ''");
     }
+    if (!hasColumn("player", "study_year")) {
+        exec("ALTER TABLE player ADD COLUMN study_year TEXT NOT NULL DEFAULT 'None'");
+    }
+    // Earlier builds stored a missing year as the integer 0.
+    exec("UPDATE player SET study_year = 'None' "
+         "WHERE study_year IS NULL OR TRIM(CAST(study_year AS TEXT)) IN ('', '0')");
 }
 
 long long SqliteStore::insertEvent(const char* kind, const std::string& playerId,
@@ -505,7 +511,7 @@ void SqliteStore::recordPlayer(const Player& player) {
     bindText(guard.statement, 3, player.email());
     bindText(guard.statement, 4, player.studentNumber());
     bindText(guard.statement, 5, player.degree());
-    sqlite3_bind_int(guard.statement, 6, player.studyYear());
+    bindText(guard.statement, 6, player.studyYear());
     sqlite3_bind_text(guard.statement, 7, domain::arcStatusName(player.arcStatus()), -1,
                       SQLITE_TRANSIENT);
     sqlite3_bind_text(guard.statement, 8, domain::membershipTypeName(player.membership()), -1,
@@ -528,7 +534,7 @@ void SqliteStore::loadPlayers(PlayerDirectory& directory) {
         player.setEmail(columnText(row, 2));
         player.setStudentNumber(columnText(row, 3));
         player.setDegree(columnText(row, 4));
-        player.setStudyYear(sqlite3_column_int(row, 5));
+        player.setStudyYear(columnText(row, 5));
         player.setArcStatus(domain::arcStatusFromName(columnText(row, 6)));
         player.setMembership(domain::membershipTypeFromName(columnText(row, 7)));
         player.setUnderage(sqlite3_column_int(row, 8) != 0);
