@@ -901,8 +901,10 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     // ── Board chips ─────────────────────────────────────────────────────────
     tsui::Card chipsCard = tsui::card(
         "Board chips",
-        "Up to six denominations for the TV board (2 columns × 3 rows). "
-        "Choose an image from Assets/BoardChips, or Browse… to pick any filepath. "
+        "Any number of denominations. The TV board shows the six lowest values "
+        "(2 columns × 3 rows). "
+        "Choose an image from Assets/Chips, or Browse… to pick any filepath. "
+        "Use the × on a row to remove that chip. "
         "Values accept K/M (e.g. 1.5K, 100K). Highest value sits bottom-right.");
     auto* chipsList = new QVBoxLayout;
     chipsList->setSpacing(10);
@@ -911,10 +913,8 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     auto* chipActions = new QHBoxLayout;
     chipActions->setSpacing(8);
     QPushButton* addChip = tsui::button("Add chip", "secondary");
-    QPushButton* removeChip = tsui::button("Remove last", "ghost");
     chipActions->addWidget(addChip);
     chipActions->addStretch(1);
-    chipActions->addWidget(removeChip);
     chipsCard.body->addLayout(chipActions);
     cards->addWidget(chipsCard.frame);
 
@@ -928,7 +928,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
 
     const auto boardChipImages = [] {
         QStringList names;
-        const QDir dir(assetPath(QStringLiteral("BoardChips")));
+        const QDir dir(assetPath(QStringLiteral("Chips")));
         for (const QFileInfo& info : dir.entryInfoList(
                  {QStringLiteral("*.png"), QStringLiteral("*.PNG"), QStringLiteral("*.jpg"),
                   QStringLiteral("*.jpeg"), QStringLiteral("*.webp")},
@@ -1108,11 +1108,6 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     rebuildRego(initial.registrationEndsLevel);
     syncBlinds();
 
-    const auto syncChipButtons = [chipRows, addChip, removeChip] {
-        addChip->setEnabled(static_cast<int>(chipRows->size()) < 6);
-        removeChip->setEnabled(!chipRows->empty());
-    };
-
     const auto persist = [this, unlimited, cap, blindsTable, quiet, nameEdit, stack, regoBox, chipRows] {
         if (*quiet) return;
         std::vector<BlindLevel> blinds;
@@ -1147,9 +1142,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         emit structureChanged();
     };
 
-    const auto addChipRow = [this, chipsList, chipRows, fillImageCombo, quiet, persist,
-                             syncChipButtons](const BoardChip& chip) {
-        if (static_cast<int>(chipRows->size()) >= 6) return;
+    const auto addChipRow = [this, chipsList, chipRows, fillImageCombo, quiet, persist](const BoardChip& chip) {
         ChipRowWidgets widgets;
         widgets.row = new QWidget;
         auto* rowLayout = new QHBoxLayout(widgets.row);
@@ -1173,6 +1166,8 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         rowLayout->addWidget(widgets.browse, 0);
         rowLayout->addWidget(tsui::text("Value", "caption"), 0);
         rowLayout->addWidget(widgets.value, 0);
+        QToolButton* remove = tsui::iconButton(tsui::Glyph::Close, QStringLiteral("Remove chip"));
+        rowLayout->addWidget(remove, 0);
         chipsList->addWidget(widgets.row);
         chipRows->push_back(widgets);
         connect(widgets.image, qOverload<int>(&QComboBox::currentIndexChanged), this, [quiet, persist] {
@@ -1183,18 +1178,18 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
                 [this, image = widgets.image, quiet, persist] {
                     const QString chosen = QFileDialog::getOpenFileName(
                         this, QStringLiteral("Select chip image"),
-                        assetPath(QStringLiteral("BoardChips")),
+                        assetPath(QStringLiteral("Chips")),
                         QStringLiteral("Images (*.png *.jpg *.jpeg *.webp *.PNG *.JPG *.JPEG *.WEBP)"));
                     if (chosen.isEmpty()) return;
                     const QString path = QFileInfo(chosen).absoluteFilePath();
                     int idx = image->findData(path);
                     if (idx < 0) {
-                        // Prefer listing a BoardChips filename when the file lives there.
-                        const QDir boardDir(assetPath(QStringLiteral("BoardChips")));
-                        const QString relative = boardDir.relativeFilePath(path);
-                        const bool inBoardChips =
+                        // Prefer a Chips filename when the file lives in that folder.
+                        const QDir chipDir(assetPath(QStringLiteral("Chips")));
+                        const QString relative = chipDir.relativeFilePath(path);
+                        const bool inChips =
                             !relative.startsWith(QLatin1String("..")) && !QFileInfo(relative).isAbsolute();
-                        const QString data = inBoardChips ? QFileInfo(path).fileName() : path;
+                        const QString data = inChips ? QFileInfo(path).fileName() : path;
                         const QString label = QFileInfo(path).fileName();
                         idx = image->findData(data);
                         if (idx < 0) {
@@ -1211,26 +1206,22 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
             if (*quiet) return;
             persist();
         });
-        syncChipButtons();
+        connect(remove, &QToolButton::clicked, this, [chipRows, row = widgets.row, persist] {
+                    const auto it = std::find_if(chipRows->begin(), chipRows->end(),
+                                                 [row](const ChipRowWidgets& item) { return item.row == row; });
+                    if (it == chipRows->end()) return;
+                    chipRows->erase(it);
+                    row->setParent(nullptr);
+                    row->deleteLater();
+                    persist();
+                });
     };
 
     *quiet = true;
     for (const BoardChip& chip : initial.boardChips) addChipRow(chip);
     *quiet = false;
-    syncChipButtons();
     connect(addChip, &QPushButton::clicked, this, [addChipRow, persist] {
         addChipRow(BoardChip{});
-        persist();
-    });
-    connect(removeChip, &QPushButton::clicked, this, [chipRows, persist, syncChipButtons] {
-        if (chipRows->empty()) return;
-        ChipRowWidgets last = chipRows->back();
-        chipRows->pop_back();
-        if (last.row) {
-            last.row->setParent(nullptr);
-            last.row->deleteLater();
-        }
-        syncChipButtons();
         persist();
     });
     const auto relabel = [blindsTable, quiet] {

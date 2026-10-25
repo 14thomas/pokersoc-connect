@@ -697,7 +697,6 @@ void TournamentConfig::setBoardChipsFromJson(const std::string& text) {
             const long long numeric = parseChipAmount(chip.value);
             if (chip.imageFile.empty() && numeric <= 0) continue;
             boardChips.push_back(chip);
-            if (boardChips.size() >= 6) break;
         }
         std::sort(boardChips.begin(), boardChips.end(), [](const BoardChip& a, const BoardChip& b) {
             return parseChipAmount(a.value) < parseChipAmount(b.value);

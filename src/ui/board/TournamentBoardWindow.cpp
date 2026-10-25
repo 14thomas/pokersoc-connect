@@ -611,7 +611,7 @@ void TournamentBoardWindow::refreshChips() {
                 imageRef.contains(QLatin1Char('\\'))) {
                 pix = QPixmap(imageRef);
             } else {
-                pix = QPixmap(assetPath(QStringLiteral("BoardChips/") + imageRef));
+                pix = QPixmap(assetPath(QStringLiteral("Chips/") + imageRef));
             }
         }
         cell.image->setProperty("sourcePixmap", QVariant::fromValue(pix));

@@ -2,6 +2,7 @@ CHIP AND PLAQUE IMAGES
 ======================
 
 Place your chip/plaque PNG images in this folder.
+Tournament Settings → Board chips lists every image here.
 
 Expected files:
 - chip_5c.png     (5 cent chip)

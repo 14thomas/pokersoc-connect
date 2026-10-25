@@ -102,7 +102,7 @@ struct PrizePreset {
 };
 
 /// A chip denomination shown on the TV board.
-/// imageFile is either a filename under Assets/BoardChips/ or an absolute filepath.
+/// imageFile is either a filename under Assets/Chips/ or an absolute filepath.
 /// value is free text (25, 1.5K, 100K, 1M) — same parsing as blind amounts.
 struct BoardChip {
     std::string imageFile;
@@ -168,7 +168,7 @@ struct TournamentConfig {
     std::vector<BlindLevel> blinds;
     std::vector<PrizePreset> prizePresets;
     int activePrizePreset = 0;
-    /// Up to 6 chips for the TV board (2 columns × 3 rows). Sorted by value ascending.
+    /// Saved chip list. The TV board shows the six lowest values.
     std::vector<BoardChip> boardChips;
 
     PrizeRounding prizeRounding = PrizeRounding::Exact;
