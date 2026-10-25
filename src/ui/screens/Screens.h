@@ -17,12 +17,15 @@ class QGridLayout;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QSpinBox;
 class QStackedWidget;
 class QTableWidget;
 class QVBoxLayout;
 
 namespace pokersoc::domain {
 class Transaction;
+struct PrizeBand;
+struct PrizePreset;
 }
 
 namespace pokersoc::ui {
@@ -409,11 +412,27 @@ private:
     void refreshBountyPad();
     domain::Money bountyUnitForPlayer() const;
     QString idlePlayerText() const;
+    void reloadPresetList();
+    void showPreset(int index);
+    void showBand(int index);
+    bool writeTableToPreset(domain::PrizePreset& preset, QString& problem);
+    void onPresetChanged(int index);
+    void onBandChanged(int index);
+    void addBand();
+    void removeBand();
+    void newPreset(bool byFieldSize);
+    void deletePreset();
+    void loadPresetJson();
+    void savePresetJson();
+    QString bandLabel(const domain::PrizeBand& band) const;
 
     std::string playerId_;
     int bountyCount_ = 0;
     int bountyMaxCount_ = 0;
     QString bountyDigits_;
+    bool loadingPrizes_ = false;
+    int editingPreset_ = 0;
+    int editingBand_ = 0;
 
     QLineEdit* idBox_ = nullptr;
     QLabel* playerText_ = nullptr;
@@ -427,6 +446,16 @@ private:
     QComboBox* roundingBox_ = nullptr;
     QCheckBox* leftoverBox_ = nullptr;
     QLabel* payoutPreview_ = nullptr;
+    QComboBox* presetBox_ = nullptr;
+    QLineEdit* presetName_ = nullptr;
+    QPushButton* deletePreset_ = nullptr;
+    QWidget* variablePanel_ = nullptr;
+    QComboBox* bandBox_ = nullptr;
+    QSpinBox* minPlayers_ = nullptr;
+    QSpinBox* maxPlayers_ = nullptr;
+    QCheckBox* countBuyins_ = nullptr;
+    QCheckBox* countRebuys_ = nullptr;
+    QLabel* fieldHint_ = nullptr;
     QTableWidget* prizesTable_ = nullptr;
     Overlay* bountyOverlay_ = nullptr;
     QLabel* bountyCountLabel_ = nullptr;

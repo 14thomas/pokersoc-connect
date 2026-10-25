@@ -1,0 +1,487 @@
+R"PRIZE({
+  "prizeConfig": {
+    "variableByPlayers": true,
+    "prizeLevels": [
+      {
+        "minPlayers": 1,
+        "maxPlayers": 8,
+        "prizes": [
+          { "rank": 1, "percent": 100.00, "shareLeftover": true }
+        ]
+      },
+      {
+        "minPlayers": 9,
+        "maxPlayers": 16,
+        "prizes": [
+          { "rank": 1, "percent": 65.00, "shareLeftover": true },
+          { "rank": 2, "percent": 35.00 }
+        ]
+      },
+      {
+        "minPlayers": 17,
+        "maxPlayers": 24,
+        "prizes": [
+          { "rank": 1, "percent": 50.00, "shareLeftover": true },
+          { "rank": 2, "percent": 30.00 },
+          { "rank": 3, "percent": 20.00 }
+        ]
+      },
+      {
+        "minPlayers": 25,
+        "maxPlayers": 32,
+        "prizes": [
+          { "rank": 1, "percent": 45.00, "shareLeftover": true },
+          { "rank": 2, "percent": 27.00 },
+          { "rank": 3, "percent": 17.00 },
+          { "rank": 4, "percent": 11.00 }
+        ]
+      },
+      {
+        "minPlayers": 33,
+        "maxPlayers": 40,
+        "prizes": [
+          { "rank": 1, "percent": 41.00, "shareLeftover": true },
+          { "rank": 2, "percent": 25.00 },
+          { "rank": 3, "percent": 15.00 },
+          { "rank": 4, "percent": 11.00 },
+          { "rank": 5, "percent": 8.00 }
+        ]
+      },
+      {
+        "minPlayers": 41,
+        "maxPlayers": 48,
+        "prizes": [
+          { "rank": 1, "percent": 39.00, "shareLeftover": true },
+          { "rank": 2, "percent": 23.00 },
+          { "rank": 3, "percent": 14.00 },
+          { "rank": 4, "percent": 10.00 },
+          { "rank": 5, "percent": 8.00 },
+          { "rank": 6, "percent": 6.00 }
+        ]
+      },
+      {
+        "minPlayers": 49,
+        "maxPlayers": 56,
+        "prizes": [
+          { "rank": 1, "percent": 37.00, "shareLeftover": true },
+          { "rank": 2, "percent": 22.00 },
+          { "rank": 3, "percent": 13.50 },
+          { "rank": 4, "percent": 9.50 },
+          { "rank": 5, "percent": 7.50 },
+          { "rank": 6, "percent": 6.00 },
+          { "rank": 7, "percent": 4.50 }
+        ]
+      },
+      {
+        "minPlayers": 57,
+        "maxPlayers": 64,
+        "prizes": [
+          { "rank": 1, "percent": 36.00, "shareLeftover": true },
+          { "rank": 2, "percent": 21.15 },
+          { "rank": 3, "percent": 13.25 },
+          { "rank": 4, "percent": 9.00 },
+          { "rank": 5, "percent": 7.00 },
+          { "rank": 6, "percent": 5.50 },
+          { "rank": 7, "percent": 4.50 },
+          { "rank": 8, "percent": 3.60 }
+        ]
+      },
+      {
+        "minPlayers": 65,
+        "maxPlayers": 72,
+        "prizes": [
+          { "rank": 1, "percent": 35.00, "shareLeftover": true },
+          { "rank": 2, "percent": 20.00 },
+          { "rank": 3, "percent": 12.25 },
+          { "rank": 4, "percent": 8.75 },
+          { "rank": 5, "percent": 6.75 },
+          { "rank": 6, "percent": 5.25 },
+          { "rank": 7, "percent": 4.50 },
+          { "rank": 8, "percent": 4.00 },
+          { "rank": 9, "percent": 3.50 }
+        ]
+      },
+      {
+        "minPlayers": 73,
+        "maxPlayers": 80,
+        "prizes": [
+          { "rank": 1, "percent": 34.00, "shareLeftover": true },
+          { "rank": 2, "percent": 19.50 },
+          { "rank": 3, "percent": 12.20 },
+          { "rank": 4, "percent": 8.25 },
+          { "rank": 5, "percent": 6.25 },
+          { "rank": 6, "percent": 5.10 },
+          { "rank": 7, "percent": 4.40 },
+          { "rank": 8, "percent": 3.90 },
+          { "rank": 9, "percent": 3.40 },
+          { "rank": 10, "percent": 3.00 }
+        ]
+      },
+      {
+        "minPlayers": 81,
+        "maxPlayers": 88,
+        "prizes": [
+          { "rank": 1, "percent": 32.25, "shareLeftover": true },
+          { "rank": 2, "percent": 19.50 },
+          { "rank": 3, "percent": 12.12 },
+          { "rank": 4, "percent": 8.20 },
+          { "rank": 5, "percent": 6.25 },
+          { "rank": 6, "percent": 5.00 },
+          { "rank": 7, "percent": 4.15 },
+          { "rank": 8, "percent": 3.50 },
+          { "rank": 9, "percent": 3.23 },
+          { "rank": 10, "percent": 3.00 },
+          { "rank": 11, "percent": 2.80 }
+        ]
+      },
+      {
+        "minPlayers": 89,
+        "maxPlayers": 96,
+        "prizes": [
+          { "rank": 1, "percent": 31.73, "shareLeftover": true },
+          { "rank": 2, "percent": 19.00 },
+          { "rank": 3, "percent": 12.00 },
+          { "rank": 4, "percent": 7.75 },
+          { "rank": 5, "percent": 6.00 },
+          { "rank": 6, "percent": 4.75 },
+          { "rank": 7, "percent": 4.00 },
+          { "rank": 8, "percent": 3.50 },
+          { "rank": 9, "percent": 3.17 },
+          { "rank": 10, "percent": 2.90 },
+          { "rank": 11, "percent": 2.70 },
+          { "rank": 12, "percent": 2.50 }
+        ]
+      },
+      {
+        "minPlayers": 97,
+        "maxPlayers": 104,
+        "prizes": [
+          { "rank": 1, "percent": 30.50, "shareLeftover": true },
+          { "rank": 2, "percent": 18.75 },
+          { "rank": 3, "percent": 11.50 },
+          { "rank": 4, "percent": 7.50 },
+          { "rank": 5, "percent": 5.85 },
+          { "rank": 6, "percent": 4.67 },
+          { "rank": 7, "percent": 3.98 },
+          { "rank": 8, "percent": 3.45 },
+          { "rank": 9, "percent": 3.05 },
+          { "rank": 10, "percent": 2.75 },
+          { "rank": 11, "percent": 2.75 },
+          { "rank": 12, "percent": 2.75 },
+          { "rank": 13, "percent": 2.50 }
+        ]
+      },
+      {
+        "minPlayers": 105,
+        "maxPlayers": 112,
+        "prizes": [
+          { "rank": 1, "percent": 30.00, "shareLeftover": true },
+          { "rank": 2, "percent": 18.50 },
+          { "rank": 3, "percent": 11.10 },
+          { "rank": 4, "percent": 7.25 },
+          { "rank": 5, "percent": 5.60 },
+          { "rank": 6, "percent": 4.60 },
+          { "rank": 7, "percent": 3.90 },
+          { "rank": 8, "percent": 3.40 },
+          { "rank": 9, "percent": 3.00 },
+          { "rank": 10, "percent": 2.65 },
+          { "rank": 11, "percent": 2.65 },
+          { "rank": 12, "percent": 2.65 },
+          { "rank": 13, "percent": 2.35 },
+          { "rank": 14, "percent": 2.35 }
+        ]
+      },
+      {
+        "minPlayers": 113,
+        "maxPlayers": 120,
+        "prizes": [
+          { "rank": 1, "percent": 29.50, "shareLeftover": true },
+          { "rank": 2, "percent": 18.25 },
+          { "rank": 3, "percent": 10.90 },
+          { "rank": 4, "percent": 7.00 },
+          { "rank": 5, "percent": 5.30 },
+          { "rank": 6, "percent": 4.40 },
+          { "rank": 7, "percent": 3.80 },
+          { "rank": 8, "percent": 3.35 },
+          { "rank": 9, "percent": 2.95 },
+          { "rank": 10, "percent": 2.60 },
+          { "rank": 11, "percent": 2.60 },
+          { "rank": 12, "percent": 2.60 },
+          { "rank": 13, "percent": 2.25 },
+          { "rank": 14, "percent": 2.25 },
+          { "rank": 15, "percent": 2.25 }
+        ]
+      },
+      {
+        "minPlayers": 121,
+        "maxPlayers": 128,
+        "prizes": [
+          { "rank": 1, "percent": 29.00, "shareLeftover": true },
+          { "rank": 2, "percent": 18.00 },
+          { "rank": 3, "percent": 10.75 },
+          { "rank": 4, "percent": 6.75 },
+          { "rank": 5, "percent": 5.00 },
+          { "rank": 6, "percent": 4.30 },
+          { "rank": 7, "percent": 3.71 },
+          { "rank": 8, "percent": 3.30 },
+          { "rank": 9, "percent": 2.90 },
+          { "rank": 10, "percent": 2.55 },
+          { "rank": 11, "percent": 2.55 },
+          { "rank": 12, "percent": 2.55 },
+          { "rank": 13, "percent": 2.23 },
+          { "rank": 14, "percent": 2.23 },
+          { "rank": 15, "percent": 2.23 },
+          { "rank": 16, "percent": 1.95 }
+        ]
+      },
+      {
+        "minPlayers": 129,
+        "maxPlayers": 136,
+        "prizes": [
+          { "rank": 1, "percent": 28.25, "shareLeftover": true },
+          { "rank": 2, "percent": 17.88 },
+          { "rank": 3, "percent": 10.60 },
+          { "rank": 4, "percent": 6.50 },
+          { "rank": 5, "percent": 4.95 },
+          { "rank": 6, "percent": 4.20 },
+          { "rank": 7, "percent": 3.65 },
+          { "rank": 8, "percent": 3.20 },
+          { "rank": 9, "percent": 2.83 },
+          { "rank": 10, "percent": 2.50 },
+          { "rank": 11, "percent": 2.50 },
+          { "rank": 12, "percent": 2.50 },
+          { "rank": 13, "percent": 2.20 },
+          { "rank": 14, "percent": 2.20 },
+          { "rank": 15, "percent": 2.20 },
+          { "rank": 16, "percent": 1.92 },
+          { "rank": 17, "percent": 1.92 }
+        ]
+      },
+      {
+        "minPlayers": 137,
+        "maxPlayers": 144,
+        "prizes": [
+          { "rank": 1, "percent": 27.95, "shareLeftover": true },
+          { "rank": 2, "percent": 17.60 },
+          { "rank": 3, "percent": 10.45 },
+          { "rank": 4, "percent": 6.30 },
+          { "rank": 5, "percent": 4.90 },
+          { "rank": 6, "percent": 4.10 },
+          { "rank": 7, "percent": 3.55 },
+          { "rank": 8, "percent": 3.15 },
+          { "rank": 9, "percent": 2.80 },
+          { "rank": 10, "percent": 2.45 },
+          { "rank": 11, "percent": 2.45 },
+          { "rank": 12, "percent": 2.45 },
+          { "rank": 13, "percent": 2.13 },
+          { "rank": 14, "percent": 2.13 },
+          { "rank": 15, "percent": 2.13 },
+          { "rank": 16, "percent": 1.82 },
+          { "rank": 17, "percent": 1.82 },
+          { "rank": 18, "percent": 1.82 }
+        ]
+      },
+      {
+        "minPlayers": 145,
+        "maxPlayers": 152,
+        "prizes": [
+          { "rank": 1, "percent": 27.61, "shareLeftover": true },
+          { "rank": 2, "percent": 17.50 },
+          { "rank": 3, "percent": 10.30 },
+          { "rank": 4, "percent": 6.25 },
+          { "rank": 5, "percent": 4.85 },
+          { "rank": 6, "percent": 4.01 },
+          { "rank": 7, "percent": 3.50 },
+          { "rank": 8, "percent": 3.12 },
+          { "rank": 9, "percent": 2.76 },
+          { "rank": 10, "percent": 2.40 },
+          { "rank": 11, "percent": 2.40 },
+          { "rank": 12, "percent": 2.40 },
+          { "rank": 13, "percent": 2.05 },
+          { "rank": 14, "percent": 2.05 },
+          { "rank": 15, "percent": 2.05 },
+          { "rank": 16, "percent": 1.75 },
+          { "rank": 17, "percent": 1.75 },
+          { "rank": 18, "percent": 1.75 },
+          { "rank": 19, "percent": 1.50 }
+        ]
+      },
+      {
+        "minPlayers": 153,
+        "maxPlayers": 160,
+        "prizes": [
+          { "rank": 1, "percent": 26.88, "shareLeftover": true },
+          { "rank": 2, "percent": 17.44 },
+          { "rank": 3, "percent": 10.28 },
+          { "rank": 4, "percent": 6.25 },
+          { "rank": 5, "percent": 4.83 },
+          { "rank": 6, "percent": 4.00 },
+          { "rank": 7, "percent": 3.47 },
+          { "rank": 8, "percent": 3.12 },
+          { "rank": 9, "percent": 2.69 },
+          { "rank": 10, "percent": 2.35 },
+          { "rank": 11, "percent": 2.35 },
+          { "rank": 12, "percent": 2.35 },
+          { "rank": 13, "percent": 2.02 },
+          { "rank": 14, "percent": 2.02 },
+          { "rank": 15, "percent": 2.02 },
+          { "rank": 16, "percent": 1.71 },
+          { "rank": 17, "percent": 1.71 },
+          { "rank": 18, "percent": 1.71 },
+          { "rank": 19, "percent": 1.40 },
+          { "rank": 20, "percent": 1.40 }
+        ]
+      },
+      {
+        "minPlayers": 161,
+        "maxPlayers": 168,
+        "prizes": [
+          { "rank": 1, "percent": 26.58, "shareLeftover": true },
+          { "rank": 2, "percent": 17.41 },
+          { "rank": 3, "percent": 10.26 },
+          { "rank": 4, "percent": 6.25 },
+          { "rank": 5, "percent": 4.82 },
+          { "rank": 6, "percent": 4.00 },
+          { "rank": 7, "percent": 3.46 },
+          { "rank": 8, "percent": 3.05 },
+          { "rank": 9, "percent": 2.66 },
+          { "rank": 10, "percent": 2.30 },
+          { "rank": 11, "percent": 2.30 },
+          { "rank": 12, "percent": 2.30 },
+          { "rank": 13, "percent": 1.95 },
+          { "rank": 14, "percent": 1.95 },
+          { "rank": 15, "percent": 1.95 },
+          { "rank": 16, "percent": 1.62 },
+          { "rank": 17, "percent": 1.62 },
+          { "rank": 18, "percent": 1.62 },
+          { "rank": 19, "percent": 1.30 },
+          { "rank": 20, "percent": 1.30 },
+          { "rank": 21, "percent": 1.30 }
+        ]
+      },
+      {
+        "minPlayers": 169,
+        "maxPlayers": 176,
+        "prizes": [
+          { "rank": 1, "percent": 26.29, "shareLeftover": true },
+          { "rank": 2, "percent": 17.39 },
+          { "rank": 3, "percent": 10.26 },
+          { "rank": 4, "percent": 6.24 },
+          { "rank": 5, "percent": 4.82 },
+          { "rank": 6, "percent": 3.99 },
+          { "rank": 7, "percent": 3.45 },
+          { "rank": 8, "percent": 3.02 },
+          { "rank": 9, "percent": 2.63 },
+          { "rank": 10, "percent": 2.24 },
+          { "rank": 11, "percent": 2.24 },
+          { "rank": 12, "percent": 2.24 },
+          { "rank": 13, "percent": 1.90 },
+          { "rank": 14, "percent": 1.90 },
+          { "rank": 15, "percent": 1.90 },
+          { "rank": 16, "percent": 1.57 },
+          { "rank": 17, "percent": 1.57 },
+          { "rank": 18, "percent": 1.57 },
+          { "rank": 19, "percent": 1.27 },
+          { "rank": 20, "percent": 1.27 },
+          { "rank": 21, "percent": 1.27 },
+          { "rank": 22, "percent": 0.97 }
+        ]
+      },
+      {
+        "minPlayers": 177,
+        "maxPlayers": 184,
+        "prizes": [
+          { "rank": 1, "percent": 25.91, "shareLeftover": true },
+          { "rank": 2, "percent": 17.37 },
+          { "rank": 3, "percent": 10.25 },
+          { "rank": 4, "percent": 6.24 },
+          { "rank": 5, "percent": 4.81 },
+          { "rank": 6, "percent": 3.99 },
+          { "rank": 7, "percent": 3.40 },
+          { "rank": 8, "percent": 2.99 },
+          { "rank": 9, "percent": 2.59 },
+          { "rank": 10, "percent": 2.20 },
+          { "rank": 11, "percent": 2.20 },
+          { "rank": 12, "percent": 2.20 },
+          { "rank": 13, "percent": 1.85 },
+          { "rank": 14, "percent": 1.85 },
+          { "rank": 15, "percent": 1.85 },
+          { "rank": 16, "percent": 1.55 },
+          { "rank": 17, "percent": 1.55 },
+          { "rank": 18, "percent": 1.55 },
+          { "rank": 19, "percent": 1.25 },
+          { "rank": 20, "percent": 1.25 },
+          { "rank": 21, "percent": 1.25 },
+          { "rank": 22, "percent": 0.95 },
+          { "rank": 23, "percent": 0.95 }
+        ]
+      },
+      {
+        "minPlayers": 185,
+        "maxPlayers": 192,
+        "prizes": [
+          { "rank": 1, "percent": 25.34, "shareLeftover": true },
+          { "rank": 2, "percent": 17.29 },
+          { "rank": 3, "percent": 10.25 },
+          { "rank": 4, "percent": 6.24 },
+          { "rank": 5, "percent": 4.81 },
+          { "rank": 6, "percent": 3.99 },
+          { "rank": 7, "percent": 3.40 },
+          { "rank": 8, "percent": 2.97 },
+          { "rank": 9, "percent": 2.55 },
+          { "rank": 10, "percent": 2.19 },
+          { "rank": 11, "percent": 2.19 },
+          { "rank": 12, "percent": 2.19 },
+          { "rank": 13, "percent": 1.85 },
+          { "rank": 14, "percent": 1.85 },
+          { "rank": 15, "percent": 1.85 },
+          { "rank": 16, "percent": 1.53 },
+          { "rank": 17, "percent": 1.53 },
+          { "rank": 18, "percent": 1.53 },
+          { "rank": 19, "percent": 1.23 },
+          { "rank": 20, "percent": 1.23 },
+          { "rank": 21, "percent": 1.23 },
+          { "rank": 22, "percent": 0.92 },
+          { "rank": 23, "percent": 0.92 },
+          { "rank": 24, "percent": 0.92 }
+        ]
+      },
+      {
+        "minPlayers": 193,
+        "maxPlayers": 200,
+        "prizes": [
+          { "rank": 1, "percent": 24.89, "shareLeftover": true },
+          { "rank": 2, "percent": 17.14 },
+          { "rank": 3, "percent": 10.25 },
+          { "rank": 4, "percent": 6.24 },
+          { "rank": 5, "percent": 4.81 },
+          { "rank": 6, "percent": 3.99 },
+          { "rank": 7, "percent": 3.40 },
+          { "rank": 8, "percent": 2.94 },
+          { "rank": 9, "percent": 2.49 },
+          { "rank": 10, "percent": 2.17 },
+          { "rank": 11, "percent": 2.17 },
+          { "rank": 12, "percent": 2.17 },
+          { "rank": 13, "percent": 1.85 },
+          { "rank": 14, "percent": 1.85 },
+          { "rank": 15, "percent": 1.85 },
+          { "rank": 16, "percent": 1.53 },
+          { "rank": 17, "percent": 1.53 },
+          { "rank": 18, "percent": 1.53 },
+          { "rank": 19, "percent": 1.23 },
+          { "rank": 20, "percent": 1.23 },
+          { "rank": 21, "percent": 1.23 },
+          { "rank": 22, "percent": 0.92 },
+          { "rank": 23, "percent": 0.92 },
+          { "rank": 24, "percent": 0.92 },
+          { "rank": 25, "percent": 0.75 }
+        ]
+      }
+    ],
+    "levelSelection": {
+      "countBuyins": true,
+      "countRebuys": false
+    }
+  }
+}
+)PRIZE"

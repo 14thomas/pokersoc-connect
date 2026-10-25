@@ -3,12 +3,18 @@
 #include <algorithm>
 #include <cctype>
 #include <climits>
+#include <cmath>
+#include <cstdio>
 #include <cstdlib>
 
 #include "domain/player/Player.h"
 #include "util/Json.h"
 
 namespace pokersoc::domain {
+
+static const char kFieldSizePrizeJson[] =
+#include "default_prize_config.inc"
+;
 
 namespace {
 
@@ -207,14 +213,17 @@ Money TournamentConfig::bountyUnit(const Player& player) const {
     return Money::fromCents(cents < 0 ? 0 : cents);
 }
 
-std::vector<PrizePayout> TournamentConfig::prizePayouts(Money pool) const {
+std::vector<PrizePayout> TournamentConfig::prizePayouts(Money pool, int buyIns, int rebuys) const {
+    const PrizePreset& preset = prizePreset();
+    const std::vector<PrizeShare>& shares = preset.sharesFor(preset.fieldSize(buyIns, rebuys));
     std::vector<PrizePayout> result;
-    result.reserve(prizes.size());
+    result.reserve(shares.size());
     std::int64_t roundedSum = 0;
     std::int64_t allocated = 0;
     int firstIndex = -1;
     int firstPlace = 0;
-    for (const PrizeShare& prize : prizes) {
+    int leftoverIndex = -1;
+    for (const PrizeShare& prize : shares) {
         PrizePayout row;
         row.place = prize.place;
         row.percent = prize.percent;
@@ -226,12 +235,17 @@ std::vector<PrizePayout> TournamentConfig::prizePayouts(Money pool) const {
             firstPlace = row.place;
             firstIndex = static_cast<int>(result.size());
         }
+        if (prize.shareLeftover && leftoverIndex < 0) {
+            leftoverIndex = static_cast<int>(result.size());
+        }
         result.push_back(row);
     }
-    if (leftoverToFirst && firstIndex >= 0) {
+    if (leftoverIndex < 0 && leftoverToFirst) leftoverIndex = firstIndex;
+    if (leftoverIndex >= 0) {
         const std::int64_t leftover = allocated - roundedSum;
-        const std::int64_t first = result[static_cast<std::size_t>(firstIndex)].amount.cents() + leftover;
-        result[static_cast<std::size_t>(firstIndex)].amount = Money::fromCents(first < 0 ? 0 : first);
+        const std::size_t index = static_cast<std::size_t>(leftoverIndex);
+        const std::int64_t adjusted = result[index].amount.cents() + leftover;
+        result[index].amount = Money::fromCents(adjusted < 0 ? 0 : adjusted);
     }
     return result;
 }
@@ -318,11 +332,13 @@ bool BlindLevel::hasAnte() const noexcept {
 }
 
 Money PrizeShare::amountFrom(Money pool) const noexcept {
-    if (percent <= 0) return Money{};
-    return Money::fromCents(pool.cents() * percent / 100);
+    if (percent <= 0 || pool.cents() <= 0) return Money{};
+    const double cents = static_cast<double>(pool.cents()) * percent / 100.0;
+    return Money::fromCents(static_cast<std::int64_t>(std::llround(cents)));
 }
 
-TournamentConfig::TournamentConfig() : blinds(defaultBlinds()), prizes(defaultPrizes()) {}
+TournamentConfig::TournamentConfig()
+    : blinds(defaultBlinds()), prizePresets(defaultPrizePresets()) {}
 
 std::vector<BlindLevel> TournamentConfig::defaultBlinds() {
     // PokerSoc ~5h structure (Assets/BlindStructures/PokerSoc_rounds_5h.json).
@@ -355,7 +371,7 @@ std::vector<BlindLevel> TournamentConfig::defaultBlinds() {
 }
 
 std::vector<PrizeShare> TournamentConfig::defaultPrizes() {
-    return {{1, 50}, {2, 30}, {3, 20}};
+    return {{1, 50, true}, {2, 30, false}, {3, 20, false}};
 }
 
 std::string TournamentConfig::blindsJson() const {
@@ -403,15 +419,98 @@ std::string TournamentConfig::blindsStructureJson() const {
     return out;
 }
 
-std::string TournamentConfig::prizesJson() const {
-    std::string out = "[";
+namespace {
+
+std::string jsonPercent(double percent) {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%.2f", percent);
+    return buffer;
+}
+
+std::string jsonPrizeList(const std::vector<PrizeShare>& prizes, int indent) {
+    const std::string pad(static_cast<std::size_t>(indent), ' ');
+    const std::string inner(static_cast<std::size_t>(indent + 2), ' ');
+    std::string out = "[\n";
     for (std::size_t i = 0; i < prizes.size(); ++i) {
-        if (i > 0) out += ',';
+        if (i > 0) out += ",\n";
         const PrizeShare& prize = prizes[i];
-        out += "{\"place\":" + std::to_string(prize.place) + ",\"pct\":" +
-               std::to_string(prize.percent) + "}";
+        out += inner + "{ \"rank\": " + std::to_string(prize.place) +
+               ", \"percent\": " + jsonPercent(prize.percent);
+        if (prize.shareLeftover) out += ", \"shareLeftover\": true";
+        out += " }";
+    }
+    out += "\n" + pad + "]";
+    return out;
+}
+
+bool jsonBool(const util::JsonValue& object, const char* key, bool fallback) {
+    const util::JsonValue* value = object.get(key);
+    if (!value) return fallback;
+    if (value->kind == util::JsonValue::Kind::Bool) return value->boolean;
+    if (value->kind == util::JsonValue::Kind::Number) return value->number != 0;
+    return fallback;
+}
+
+double jsonNumber(const util::JsonValue& object, const char* key, double fallback) {
+    const util::JsonValue* value = object.get(key);
+    if (!value || value->kind != util::JsonValue::Kind::Number) return fallback;
+    return value->number;
+}
+
+std::string jsonText(const util::JsonValue& object, const char* key) {
+    const util::JsonValue* value = object.get(key);
+    if (!value || value->kind != util::JsonValue::Kind::String) return {};
+    return value->string;
+}
+
+std::vector<PrizeShare> readPrizeShares(const util::JsonValue& array) {
+    std::vector<PrizeShare> parsed;
+    if (!array.isArray()) return parsed;
+    for (const util::JsonValue& item : array.items) {
+        if (!item.isObject()) continue;
+        PrizeShare prize;
+        prize.place = static_cast<int>(jsonNumber(item, "rank", jsonNumber(item, "place", prize.place)));
+        prize.percent = jsonNumber(item, "percent", jsonNumber(item, "pct", prize.percent));
+        prize.shareLeftover = jsonBool(item, "shareLeftover", false);
+        if (prize.place < 1) prize.place = 1;
+        if (prize.percent < 0) prize.percent = 0;
+        if (prize.percent > 100) prize.percent = 100;
+        parsed.push_back(prize);
+    }
+    return parsed;
+}
+
+} // namespace
+
+std::string TournamentConfig::prizesJson() const {
+    const std::vector<PrizeShare>& shares = prizePreset().variableByPlayers
+                                                 ? prizePreset().sharesFor(0)
+                                                 : prizePreset().prizes;
+    std::string out = "[";
+    for (std::size_t i = 0; i < shares.size(); ++i) {
+        if (i > 0) out += ',';
+        const PrizeShare& prize = shares[i];
+        out += "{\"place\":" + std::to_string(prize.place) + ",\"pct\":" + jsonPercent(prize.percent) +
+               "}";
     }
     out += "]";
+    return out;
+}
+
+std::string TournamentConfig::prizePresetsJson() const {
+    std::string out = "{\n  \"active\": " + std::to_string(activePrizePreset) + ",\n  \"presets\": [\n";
+    for (std::size_t i = 0; i < prizePresets.size(); ++i) {
+        if (i > 0) out += ",\n";
+        const std::string body = prizePresets[i].toJson();
+        // Indent the preset document under the library list.
+        std::string indented = "    ";
+        for (char ch : body) {
+            indented.push_back(ch);
+            if (ch == '\n') indented += "    ";
+        }
+        out += indented;
+    }
+    out += "\n  ]\n}\n";
     return out;
 }
 
@@ -486,18 +585,90 @@ void TournamentConfig::setPrizesFromJson(const std::string& text) {
     try {
         const util::JsonValue root = util::parseJson(text);
         if (!root.isArray() || root.items.empty()) return;
-        std::vector<PrizeShare> parsed;
-        parsed.reserve(root.items.size());
-        for (const util::JsonValue& item : root.items) {
-            if (!item.isObject()) continue;
-            PrizeShare prize;
-            prize.place = jsonInt(item, "place", prize.place);
-            prize.percent = jsonInt(item, "pct", prize.percent);
-            if (prize.place < 1) prize.place = 1;
-            if (prize.percent < 0) prize.percent = 0;
-            parsed.push_back(prize);
+        const std::vector<PrizeShare> parsed = readPrizeShares(root);
+        if (parsed.empty()) return;
+        if (prizePresets.size() < 2) prizePresets = defaultPrizePresets();
+        PrizePreset& fixed = prizePresets[1];
+        fixed.name = "Fixed places";
+        fixed.variableByPlayers = false;
+        fixed.prizes = parsed;
+        if (!fixed.prizes.empty() && !fixed.prizes.front().shareLeftover) {
+            fixed.prizes.front().shareLeftover = true;
         }
-        if (!parsed.empty()) prizes = std::move(parsed);
+        activePrizePreset = 1;
+    } catch (...) {
+        // Keep the constructor defaults if the stored JSON is unreadable.
+    }
+}
+
+namespace {
+
+PrizePreset presetFromConfig(const util::JsonValue& source) {
+    const util::JsonValue* config = &source;
+    if (source.isObject()) {
+        if (const util::JsonValue* inner = source.get("prizeConfig"); inner && inner->isObject()) {
+            config = inner;
+        }
+    }
+    PrizePreset preset;
+    if (!config->isObject()) return preset;
+    preset.name = jsonText(*config, "name");
+    preset.variableByPlayers = jsonBool(*config, "variableByPlayers", false);
+    if (const util::JsonValue* selection = config->get("levelSelection");
+        selection && selection->isObject()) {
+        preset.countBuyins = jsonBool(*selection, "countBuyins", true);
+        preset.countRebuys = jsonBool(*selection, "countRebuys", false);
+    }
+    if (const util::JsonValue* levels = config->get("prizeLevels"); levels && levels->isArray()) {
+        for (const util::JsonValue& level : levels->items) {
+            if (!level.isObject()) continue;
+            PrizeBand band;
+            band.minPlayers = static_cast<int>(jsonNumber(level, "minPlayers", 1));
+            band.maxPlayers = static_cast<int>(jsonNumber(level, "maxPlayers", 0));
+            if (band.minPlayers < 0) band.minPlayers = 0;
+            if (const util::JsonValue* prizes = level.get("prizes")) {
+                band.prizes = readPrizeShares(*prizes);
+            }
+            if (!band.prizes.empty()) preset.levels.push_back(std::move(band));
+        }
+        if (!preset.levels.empty()) preset.variableByPlayers = true;
+    }
+    if (const util::JsonValue* prizes = config->get("prizes"); prizes && prizes->isArray()) {
+        preset.prizes = readPrizeShares(*prizes);
+    }
+    return preset;
+}
+
+} // namespace
+
+void TournamentConfig::setPrizePresetsFromJson(const std::string& text) {
+    if (text.empty()) return;
+    try {
+        const util::JsonValue root = util::parseJson(text);
+        const util::JsonValue* list = nullptr;
+        if (root.isObject()) {
+            if (const util::JsonValue* presets = root.get("presets"); presets && presets->isArray()) {
+                list = presets;
+            }
+        }
+        if (!list || list->items.empty()) return;
+        std::vector<PrizePreset> parsed;
+        for (const util::JsonValue& item : list->items) {
+            if (!item.isObject()) continue;
+            PrizePreset preset = presetFromConfig(item);
+            if (!preset.name.empty() || preset.variableByPlayers || !preset.prizes.empty() ||
+                !preset.levels.empty()) {
+                if (preset.name.empty()) preset.name = "Prize preset";
+                parsed.push_back(std::move(preset));
+            }
+        }
+        if (parsed.empty()) return;
+        prizePresets = std::move(parsed);
+        activePrizePreset = static_cast<int>(jsonNumber(root, "active", 0));
+        if (activePrizePreset < 0 ||
+            activePrizePreset >= static_cast<int>(prizePresets.size())) {
+            activePrizePreset = 0;
+        }
     } catch (...) {
         // Keep the constructor defaults if the stored JSON is unreadable.
     }
@@ -565,6 +736,139 @@ int TournamentConfig::playingLevelNumber(int index) const noexcept {
         if (!blinds[static_cast<std::size_t>(i)].isBreak) ++number;
     }
     return number;
+}
+
+int PrizePreset::fieldSize(int buyIns, int rebuys) const noexcept {
+    if (buyIns < 0) buyIns = 0;
+    if (rebuys < 0) rebuys = 0;
+    if (!countBuyins && !countRebuys) return buyIns;
+    return (countBuyins ? buyIns : 0) + (countRebuys ? rebuys : 0);
+}
+
+int PrizePreset::bandIndexFor(int players) const noexcept {
+    if (!variableByPlayers || levels.empty()) return -1;
+    if (players <= 0) return 0;
+    int chosen = 0;
+    for (int i = 0; i < static_cast<int>(levels.size()); ++i) {
+        const PrizeBand& band = levels[static_cast<std::size_t>(i)];
+        if (players < band.minPlayers) break;
+        chosen = i;
+        if (band.maxPlayers <= 0 || players <= band.maxPlayers) break;
+    }
+    return chosen;
+}
+
+const std::vector<PrizeShare>& PrizePreset::sharesFor(int players) const {
+    const int index = bandIndexFor(players);
+    if (index < 0 || index >= static_cast<int>(levels.size())) return prizes;
+    return levels[static_cast<std::size_t>(index)].prizes;
+}
+
+std::string PrizePreset::toJson() const {
+    std::string out = "{\n  \"prizeConfig\": {\n";
+    if (!name.empty()) out += "    \"name\": " + util::jsonString(name) + ",\n";
+    out += std::string("    \"variableByPlayers\": ") + (variableByPlayers ? "true" : "false") + ",\n";
+    if (variableByPlayers) {
+        out += "    \"prizeLevels\": [\n";
+        for (std::size_t i = 0; i < levels.size(); ++i) {
+            if (i > 0) out += ",\n";
+            const PrizeBand& band = levels[i];
+            out += "      {\n";
+            out += "        \"minPlayers\": " + std::to_string(band.minPlayers) + ",\n";
+            out += "        \"maxPlayers\": " + std::to_string(band.maxPlayers) + ",\n";
+            out += "        \"prizes\": " + jsonPrizeList(band.prizes, 8) + "\n";
+            out += "      }";
+        }
+        out += "\n    ],\n";
+    } else {
+        out += "    \"prizes\": " + jsonPrizeList(prizes, 4) + ",\n";
+    }
+    out += "    \"levelSelection\": {\n";
+    out += std::string("      \"countBuyins\": ") + (countBuyins ? "true" : "false") + ",\n";
+    out += std::string("      \"countRebuys\": ") + (countRebuys ? "true" : "false") + "\n";
+    out += "    }\n  }\n}\n";
+    return out;
+}
+
+PrizePreset PrizePreset::fromJson(const std::string& text) {
+    const std::vector<PrizePreset> list = listFromJson(text);
+    if (list.empty()) return {};
+    return list.front();
+}
+
+std::vector<PrizePreset> PrizePreset::listFromJson(const std::string& text) {
+    std::vector<PrizePreset> parsed;
+    if (text.empty()) return parsed;
+    try {
+        const util::JsonValue root = util::parseJson(text);
+        if (root.isObject()) {
+            if (const util::JsonValue* presets = root.get("presets");
+                presets && presets->isArray() && !presets->items.empty()) {
+                for (const util::JsonValue& item : presets->items) {
+                    if (!item.isObject()) continue;
+                    PrizePreset preset = presetFromConfig(item);
+                    if (!preset.variableByPlayers && preset.prizes.empty() && preset.levels.empty()) continue;
+                    if (preset.name.empty()) preset.name = "Prize preset";
+                    parsed.push_back(std::move(preset));
+                }
+                if (!parsed.empty()) return parsed;
+            }
+        }
+        if (root.isArray()) {
+            PrizePreset preset;
+            preset.name = "Fixed places";
+            preset.prizes = readPrizeShares(root);
+            if (!preset.prizes.empty()) parsed.push_back(std::move(preset));
+            return parsed;
+        }
+        PrizePreset preset = presetFromConfig(root);
+        if (preset.variableByPlayers || !preset.prizes.empty() || !preset.levels.empty()) {
+            if (preset.name.empty()) preset.name = "Prize preset";
+            parsed.push_back(std::move(preset));
+        }
+    } catch (...) {
+        parsed.clear();
+    }
+    return parsed;
+}
+
+std::vector<PrizePreset> TournamentConfig::defaultPrizePresets() {
+    std::vector<PrizePreset> presets;
+    PrizePreset field = PrizePreset::fromJson(kFieldSizePrizeJson);
+    field.name = "By field size";
+    if (field.levels.empty()) {
+        PrizeBand band;
+        band.minPlayers = 1;
+        band.maxPlayers = 8;
+        band.prizes = {{1, 100, true}};
+        field.levels.push_back(std::move(band));
+        field.variableByPlayers = true;
+        field.countBuyins = true;
+        field.countRebuys = false;
+    }
+    presets.push_back(std::move(field));
+
+    PrizePreset fixed;
+    fixed.name = "Fixed places";
+    fixed.prizes = defaultPrizes();
+    presets.push_back(std::move(fixed));
+    return presets;
+}
+
+const PrizePreset& TournamentConfig::prizePreset() const {
+    static const PrizePreset fallback;
+    if (prizePresets.empty()) return fallback;
+    int index = activePrizePreset;
+    if (index < 0 || index >= static_cast<int>(prizePresets.size())) index = 0;
+    return prizePresets[static_cast<std::size_t>(index)];
+}
+
+PrizePreset& TournamentConfig::prizePreset() {
+    if (prizePresets.empty()) prizePresets = defaultPrizePresets();
+    if (activePrizePreset < 0 || activePrizePreset >= static_cast<int>(prizePresets.size())) {
+        activePrizePreset = 0;
+    }
+    return prizePresets[static_cast<std::size_t>(activePrizePreset)];
 }
 
 int TournamentConfig::indexOfPlayingLevel(int number) const noexcept {

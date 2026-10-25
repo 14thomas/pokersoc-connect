@@ -642,7 +642,7 @@ void TournamentBoardWindow::refreshPrizes(bool regoClosed) {
 
     const TournamentConfig& config = ctx_.tournament().config();
     const auto stats = ctx_.reports().tournamentStats();
-    const auto payouts = config.prizePayouts(stats.prizePool);
+    const auto payouts = config.prizePayouts(stats.prizePool, stats.buyIns, stats.rebuys);
     QString fingerprint;
     std::vector<PrizePayout> unclaimed;
     for (const PrizePayout& prize : payouts) {

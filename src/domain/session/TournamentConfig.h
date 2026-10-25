@@ -57,16 +57,48 @@ struct BlindLevel {
 /// A finishing place's share of the live prize pool.
 struct PrizeShare {
     int place = 1;
-    int percent = 50;
+    double percent = 50;
+    /// Rounding leftover is added to this place. The field-size file sets it on 1st.
+    bool shareLeftover = false;
 
     Money amountFrom(Money pool) const noexcept;
 };
 
-/// A place after rounding (and leftover-to-first, if enabled).
+/// A place after rounding (and leftover, if enabled).
 struct PrizePayout {
     int place = 1;
-    int percent = 0;
+    double percent = 0;
     Money amount;
+};
+
+/// One field-size band: these percents apply when the entry count is in range.
+struct PrizeBand {
+    int minPlayers = 1;
+    int maxPlayers = 8;
+    std::vector<PrizeShare> prizes;
+};
+
+/// A named prize schedule. Constant schedules ignore the field size.
+/// Variable schedules pick a band from how many buy-ins and rebuys count.
+struct PrizePreset {
+    std::string name = "Prize preset";
+    bool variableByPlayers = false;
+    bool countBuyins = true;
+    bool countRebuys = false;
+    std::vector<PrizeShare> prizes;
+    std::vector<PrizeBand> levels;
+
+    int fieldSize(int buyIns, int rebuys) const noexcept;
+    /// Index of the band that applies at this field size, or -1 when this preset is constant.
+    int bandIndexFor(int players) const noexcept;
+    const std::vector<PrizeShare>& sharesFor(int players) const;
+
+    /// The file shape `{ "prizeConfig": { ... } }`.
+    std::string toJson() const;
+    /// Accepts that file, a bare prizeConfig object, or an old `[{place, pct}]` list.
+    static PrizePreset fromJson(const std::string& text);
+    /// One preset, or every entry of a `{ "presets": [ ... ] }` library.
+    static std::vector<PrizePreset> listFromJson(const std::string& text);
 };
 
 /// A chip denomination shown on the TV board.
@@ -134,7 +166,8 @@ struct TournamentConfig {
     BuyInFees diamondRebuyFees;
 
     std::vector<BlindLevel> blinds;
-    std::vector<PrizeShare> prizes;
+    std::vector<PrizePreset> prizePresets;
+    int activePrizePreset = 0;
     /// Up to 6 chips for the TV board (2 columns × 3 rows). Sorted by value ascending.
     std::vector<BoardChip> boardChips;
 
@@ -164,6 +197,11 @@ struct TournamentConfig {
 
     static std::vector<BlindLevel> defaultBlinds();
     static std::vector<PrizeShare> defaultPrizes();
+    /// "By field size" (the shipped schedule) and "Fixed places" (50 / 30 / 20).
+    static std::vector<PrizePreset> defaultPrizePresets();
+
+    const PrizePreset& prizePreset() const;
+    PrizePreset& prizePreset();
 
     bool usesMembershipPricing() const noexcept {
         return pricing == TournamentPricing::MembershipTiers;
@@ -204,19 +242,26 @@ struct TournamentConfig {
     /// bounty, else the typical bounty on this event.
     Money bountyUnit(const Player& player) const;
 
-    /// Place amounts after rounding. Unallocated percent stays in the pool;
-    /// leftover from rounding can be given to 1st.
-    std::vector<PrizePayout> prizePayouts(Money pool) const;
+    /// Place amounts after rounding for the active preset at this field size.
+    /// `buyIns` and `rebuys` are counted only when the preset says so.
+    /// Unallocated percent stays in the pool. Rounding leftover goes to a place
+    /// marked shareLeftover, or to 1st when leftoverToFirst is set.
+    std::vector<PrizePayout> prizePayouts(Money pool, int buyIns, int rebuys) const;
 
     /// Compact array for AppStore persistence.
     std::string blindsJson() const;
     /// File format: `{ "rounds": [ { "minutes", "sb", "bb", "bb_ante" } | { "minutes", "break": true } ] }`.
     std::string blindsStructureJson() const;
+    /// Library document: `{ "active": 0, "presets": [ { "prizeConfig": ... } ] }`.
+    std::string prizePresetsJson() const;
+    /// Old flat list, kept so a session saved before presets still opens.
     std::string prizesJson() const;
     std::string boardChipsJson() const;
     /// Accepts the AppStore array or a `{ "rounds": [...] }` structure file.
     void setBlindsFromJson(const std::string& text);
+    /// Flat `[{place, pct}]` list. Replaces the fixed preset and selects it.
     void setPrizesFromJson(const std::string& text);
+    void setPrizePresetsFromJson(const std::string& text);
     void setBoardChipsFromJson(const std::string& text);
 
     const BlindLevel* levelAt(int index) const noexcept;

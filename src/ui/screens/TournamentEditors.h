@@ -85,11 +85,17 @@ inline void addBlindRow(QTableWidget* table, const domain::BlindLevel& level) {
     }
 }
 
+inline QString formatPercent(double percent) {
+    QString text = QString::number(percent, 'f', 2);
+    while (text.contains('.') && (text.endsWith('0') || text.endsWith('.'))) text.chop(1);
+    return text;
+}
+
 inline void addPrizeRow(QTableWidget* table, const domain::PrizeShare& prize) {
     const int row = table->rowCount();
     table->insertRow(row);
     setIntCell(table, row, 0, prize.place);
-    setIntCell(table, row, 1, prize.percent);
+    setTextCell(table, row, 1, formatPercent(prize.percent));
 }
 
 inline bool readBlinds(QTableWidget* table, std::vector<domain::BlindLevel>& out, QString& error) {
@@ -133,12 +139,12 @@ inline bool readPrizes(QTableWidget* table, std::vector<domain::PrizeShare>& out
         error = "Add at least one prize place.";
         return false;
     }
-    int total = 0;
+    double total = 0;
     for (int row = 0; row < table->rowCount(); ++row) {
         bool okPlace = false, okPct = false;
         domain::PrizeShare prize;
         prize.place = cellInt(table, row, 0, &okPlace);
-        prize.percent = cellInt(table, row, 1, &okPct);
+        prize.percent = cellText(table, row, 1).toDouble(&okPct);
         if (!okPlace || !okPct || prize.place < 1 || prize.percent < 0 || prize.percent > 100) {
             error = QStringLiteral("Prize row %1 needs a place of 1 or more and a percent from 0 to 100.")
                         .arg(row + 1);
@@ -147,8 +153,9 @@ inline bool readPrizes(QTableWidget* table, std::vector<domain::PrizeShare>& out
         total += prize.percent;
         out.push_back(prize);
     }
-    if (total > 100) {
-        error = QStringLiteral("Prize percents add up to %1%. They cannot exceed 100%.").arg(total);
+    if (total > 100.02) {
+        error = QStringLiteral("Prize percents add up to %1%. They cannot exceed 100%.")
+                    .arg(formatPercent(total));
         return false;
     }
     return true;

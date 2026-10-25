@@ -7,6 +7,9 @@
 #include <QAbstractItemView>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -16,8 +19,10 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScrollArea>
 #include <QSizePolicy>
+#include <QSpinBox>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
@@ -449,10 +454,80 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
     sections->addWidget(rounding);
 
     QGroupBox* places = makeGroup("Placement Payouts");
-    prizesTable_ = makeEditorTable({"Place", "Percent of prize pool"});
-    for (const PrizeShare& prize : ctx_.tournament().config().prizes) {
-        addPrizeRow(prizesTable_, prize);
+    auto* presetRow = new QHBoxLayout;
+    presetRow->addWidget(makeLabel("Preset:"));
+    presetBox_ = new QComboBox;
+    presetBox_->setFont(uiFont(13));
+    presetBox_->setMinimumWidth(220);
+    presetBox_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    presetRow->addWidget(presetBox_, 1);
+    groupLayout(places)->addLayout(presetRow);
+
+    auto* nameRow = new QHBoxLayout;
+    nameRow->addWidget(makeLabel("Name:"));
+    presetName_ = new QLineEdit;
+    presetName_->setFont(uiFont(13));
+    nameRow->addWidget(presetName_, 1);
+    groupLayout(places)->addLayout(nameRow);
+
+    auto* fileRow = new QHBoxLayout;
+    fileRow->setSpacing(8);
+    QPushButton* loadJson = footerButton("Load JSON", 120, false);
+    QPushButton* saveJson = footerButton("Save JSON", 120, false);
+    QPushButton* newField = footerButton("New by field size", 170, false);
+    QPushButton* newFixed = footerButton("New fixed", 120, false);
+    deletePreset_ = footerButton("Delete", 100, false);
+    fileRow->addWidget(loadJson);
+    fileRow->addWidget(saveJson);
+    fileRow->addWidget(newField);
+    fileRow->addWidget(newFixed);
+    fileRow->addWidget(deletePreset_);
+    fileRow->addStretch(1);
+    groupLayout(places)->addSpacing(8);
+    groupLayout(places)->addLayout(fileRow);
+
+    variablePanel_ = new QWidget;
+    auto* variableLayout = new QVBoxLayout(variablePanel_);
+    variableLayout->setContentsMargins(0, 8, 0, 0);
+    variableLayout->setSpacing(8);
+    auto* bandRow = new QHBoxLayout;
+    bandRow->addWidget(makeLabel("Field size:"));
+    bandBox_ = new QComboBox;
+    bandBox_->setFont(uiFont(13));
+    bandBox_->setMinimumWidth(180);
+    bandRow->addWidget(bandBox_, 1);
+    QPushButton* addBandButton = footerButton("Add band", 110, false);
+    QPushButton* removeBandButton = footerButton("Remove band", 130, false);
+    bandRow->addWidget(addBandButton);
+    bandRow->addWidget(removeBandButton);
+    variableLayout->addLayout(bandRow);
+    auto* rangeRow = new QHBoxLayout;
+    rangeRow->addWidget(makeLabel("Players:"));
+    minPlayers_ = new QSpinBox;
+    maxPlayers_ = new QSpinBox;
+    for (QSpinBox* spin : {minPlayers_, maxPlayers_}) {
+        spin->setRange(0, 10000);
+        spin->setFont(uiFont(13));
+        spin->setMinimumWidth(80);
     }
+    rangeRow->addWidget(minPlayers_);
+    rangeRow->addWidget(makeLabel("to"));
+    rangeRow->addWidget(maxPlayers_);
+    rangeRow->addSpacing(12);
+    countBuyins_ = new QCheckBox("Count buy-ins");
+    countRebuys_ = new QCheckBox("Count rebuys");
+    countBuyins_->setFont(uiFont(13));
+    countRebuys_->setFont(uiFont(13));
+    rangeRow->addWidget(countBuyins_);
+    rangeRow->addWidget(countRebuys_);
+    rangeRow->addStretch(1);
+    variableLayout->addLayout(rangeRow);
+    fieldHint_ = hint(QString());
+    variableLayout->addWidget(fieldHint_);
+    groupLayout(places)->addWidget(variablePanel_);
+
+    prizesTable_ = makeEditorTable({"Place", "Percent of prize pool"});
+    prizesTable_->setMaximumHeight(360);
     groupLayout(places)->addWidget(prizesTable_);
     auto* prizeButtons = new QHBoxLayout;
     QPushButton* addPrize = footerButton("Add Place", 120, false);
@@ -463,12 +538,15 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
     groupLayout(places)->addSpacing(8);
     groupLayout(places)->addLayout(prizeButtons);
     groupLayout(places)->addWidget(
-        hint("Percents apply to the prize pool only (not bounty). Each place can be paid once."));
+        hint("Percents apply to the prize pool only (not bounty). A field-size preset picks the band "
+             "for the current entries. Each place can be paid once."));
     payoutPreview_ = makeLabel(QString(), 13, false, color::Gray);
     payoutPreview_->setWordWrap(true);
     payoutPreview_->setContentsMargins(0, 8, 0, 0);
     groupLayout(places)->addWidget(payoutPreview_);
     sections->addWidget(places);
+    reloadPresetList();
+    showPreset(ctx_.tournament().config().activePrizePreset);
     connect(addPrize, &QPushButton::clicked, this, [this] {
         addPrizeRow(prizesTable_, PrizeShare{prizesTable_->rowCount() + 1, 0});
         prizesTable_->scrollToBottom();
@@ -478,9 +556,39 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
         if (prizesTable_->rowCount() > 0) prizesTable_->removeRow(prizesTable_->rowCount() - 1);
         prizingChanged();
     });
-    connect(prizesTable_, &QTableWidget::itemChanged, this, &PrizingScreen::prizingChanged);
-    connect(roundingBox_, &QComboBox::currentIndexChanged, this, &PrizingScreen::prizingChanged);
-    connect(leftoverBox_, &QCheckBox::toggled, this, &PrizingScreen::prizingChanged);
+    connect(prizesTable_, &QTableWidget::itemChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(roundingBox_, &QComboBox::currentIndexChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(leftoverBox_, &QCheckBox::toggled, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(presetBox_, &QComboBox::currentIndexChanged, this, &PrizingScreen::onPresetChanged);
+    connect(presetName_, &QLineEdit::editingFinished, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(bandBox_, &QComboBox::currentIndexChanged, this, &PrizingScreen::onBandChanged);
+    connect(minPlayers_, &QSpinBox::valueChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(maxPlayers_, &QSpinBox::valueChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(countBuyins_, &QCheckBox::toggled, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(countRebuys_, &QCheckBox::toggled, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(loadJson, &QPushButton::clicked, this, &PrizingScreen::loadPresetJson);
+    connect(saveJson, &QPushButton::clicked, this, &PrizingScreen::savePresetJson);
+    connect(newField, &QPushButton::clicked, this, [this] { newPreset(true); });
+    connect(newFixed, &QPushButton::clicked, this, [this] { newPreset(false); });
+    connect(deletePreset_, &QPushButton::clicked, this, &PrizingScreen::deletePreset);
+    connect(addBandButton, &QPushButton::clicked, this, &PrizingScreen::addBand);
+    connect(removeBandButton, &QPushButton::clicked, this, &PrizingScreen::removeBand);
     sections->addStretch(1);
 
     layout->addWidget(makeScroll(content), 1);
@@ -537,6 +645,361 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
 
     clearPlayer();
     refresh();
+}
+
+QString PrizingScreen::bandLabel(const PrizeBand& band) const {
+    if (band.maxPlayers <= 0) return QStringLiteral("%1+ players").arg(band.minPlayers);
+    return QStringLiteral("%1–%2 players").arg(band.minPlayers).arg(band.maxPlayers);
+}
+
+void PrizingScreen::reloadPresetList() {
+    const TournamentConfig& config = ctx_.tournament().config();
+    const bool blocked = presetBox_->blockSignals(true);
+    presetBox_->clear();
+    for (const PrizePreset& preset : config.prizePresets) presetBox_->addItem(toQ(preset.name));
+    int index = config.activePrizePreset;
+    if (index < 0 || index >= presetBox_->count()) index = 0;
+    presetBox_->setCurrentIndex(index);
+    presetBox_->blockSignals(blocked);
+    if (deletePreset_) deletePreset_->setEnabled(config.prizePresets.size() > 1);
+}
+
+void PrizingScreen::showBand(int index) {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
+    if (!preset.variableByPlayers || preset.levels.empty()) return;
+    if (index < 0 || index >= static_cast<int>(preset.levels.size())) index = 0;
+    editingBand_ = index;
+    const PrizeBand& band = preset.levels[static_cast<std::size_t>(index)];
+    loadingPrizes_ = true;
+    minPlayers_->setValue(band.minPlayers);
+    maxPlayers_->setValue(band.maxPlayers);
+    prizesTable_->blockSignals(true);
+    prizesTable_->setRowCount(0);
+    for (const PrizeShare& prize : band.prizes) addPrizeRow(prizesTable_, prize);
+    if (prizesTable_->rowCount() == 0) addPrizeRow(prizesTable_, PrizeShare{1, 100, true});
+    prizesTable_->blockSignals(false);
+    if (bandBox_->currentIndex() != index) {
+        const bool blocked = bandBox_->blockSignals(true);
+        bandBox_->setCurrentIndex(index);
+        bandBox_->blockSignals(blocked);
+    }
+    loadingPrizes_ = false;
+}
+
+void PrizingScreen::showPreset(int index) {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (config.prizePresets.empty()) config.prizePresets = TournamentConfig::defaultPrizePresets();
+    if (index < 0 || index >= static_cast<int>(config.prizePresets.size())) index = 0;
+    editingPreset_ = index;
+    config.activePrizePreset = index;
+    const PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(index)];
+    loadingPrizes_ = true;
+    if (presetBox_->currentIndex() != index) {
+        const bool blocked = presetBox_->blockSignals(true);
+        presetBox_->setCurrentIndex(index);
+        presetBox_->blockSignals(blocked);
+    }
+    presetName_->setText(toQ(preset.name));
+    variablePanel_->setVisible(preset.variableByPlayers);
+    countBuyins_->setChecked(preset.countBuyins);
+    countRebuys_->setChecked(preset.countRebuys);
+    const std::vector<PrizeShare>* shares = &preset.prizes;
+    if (preset.variableByPlayers) {
+        const bool blocked = bandBox_->blockSignals(true);
+        bandBox_->clear();
+        for (const PrizeBand& band : preset.levels) bandBox_->addItem(bandLabel(band));
+        bandBox_->blockSignals(blocked);
+        const auto stats = ctx_.reports().tournamentStats();
+        int band = preset.bandIndexFor(preset.fieldSize(stats.buyIns, stats.rebuys));
+        if (band < 0) band = 0;
+        if (!preset.levels.empty()) {
+            showBand(band);
+            shares = nullptr;
+        }
+    }
+    if (shares) {
+        prizesTable_->blockSignals(true);
+        prizesTable_->setRowCount(0);
+        for (const PrizeShare& prize : *shares) addPrizeRow(prizesTable_, prize);
+        if (prizesTable_->rowCount() == 0) addPrizeRow(prizesTable_, PrizeShare{1, 100, true});
+        prizesTable_->blockSignals(false);
+    }
+    const std::vector<PrizeShare>& shown = preset.variableByPlayers && !preset.levels.empty()
+                                               ? preset.levels[static_cast<std::size_t>(editingBand_)].prizes
+                                               : preset.prizes;
+    loadingPrizes_ = true;
+    for (const PrizeShare& prize : shown) {
+        if (prize.shareLeftover) {
+            leftoverBox_->setChecked(true);
+            break;
+        }
+    }
+    loadingPrizes_ = false;
+    if (deletePreset_) deletePreset_->setEnabled(config.prizePresets.size() > 1);
+}
+
+bool PrizingScreen::writeTableToPreset(PrizePreset& preset, QString& problem) {
+    std::vector<PrizeShare> prizes;
+    if (!readPrizes(prizesTable_, prizes, problem)) return false;
+    const bool leftover = leftoverBox_->isChecked();
+    for (PrizeShare& prize : prizes) prize.shareLeftover = leftover && prize.place == 1;
+    const QString typed = presetName_->text().trimmed();
+    if (!typed.isEmpty()) preset.name = toStd(typed);
+    if (preset.name.empty()) preset.name = "Prize preset";
+    if (preset.variableByPlayers) {
+        preset.countBuyins = countBuyins_->isChecked();
+        preset.countRebuys = countRebuys_->isChecked();
+        if (preset.levels.empty()) preset.levels.push_back(PrizeBand{});
+        int index = editingBand_;
+        if (index < 0 || index >= static_cast<int>(preset.levels.size())) index = 0;
+        editingBand_ = index;
+        PrizeBand& band = preset.levels[static_cast<std::size_t>(index)];
+        band.minPlayers = minPlayers_->value();
+        band.maxPlayers = maxPlayers_->value();
+        if (band.maxPlayers > 0 && band.maxPlayers < band.minPlayers) band.maxPlayers = band.minPlayers;
+        band.prizes = std::move(prizes);
+    } else {
+        preset.prizes = std::move(prizes);
+    }
+    return true;
+}
+
+void PrizingScreen::onPresetChanged(int index) {
+    if (loadingPrizes_ || index < 0) return;
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ >= 0 && editingPreset_ < static_cast<int>(config.prizePresets.size()) &&
+        editingPreset_ != index) {
+        QString problem;
+        if (!writeTableToPreset(config.prizePresets[static_cast<std::size_t>(editingPreset_)], problem)) {
+            loadingPrizes_ = true;
+            presetBox_->setCurrentIndex(editingPreset_);
+            loadingPrizes_ = false;
+            QMessageBox::warning(this, "Prizing", problem);
+            return;
+        }
+    }
+    showPreset(index);
+    try {
+        ctx_.saveTournamentConfig();
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Error",
+                              QStringLiteral("Could not save prizing:\n%1").arg(error.what()));
+    }
+    refreshPayoutPreview();
+}
+
+void PrizingScreen::onBandChanged(int index) {
+    if (loadingPrizes_ || index < 0) return;
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
+    if (editingBand_ >= 0 && editingBand_ < static_cast<int>(preset.levels.size()) && editingBand_ != index) {
+        QString problem;
+        if (!writeTableToPreset(preset, problem)) {
+            loadingPrizes_ = true;
+            bandBox_->setCurrentIndex(editingBand_);
+            loadingPrizes_ = false;
+            QMessageBox::warning(this, "Prizing", problem);
+            return;
+        }
+    }
+    showBand(index);
+    refreshPayoutPreview();
+    try {
+        ctx_.saveTournamentConfig();
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Error",
+                              QStringLiteral("Could not save prizing:\n%1").arg(error.what()));
+    }
+}
+
+void PrizingScreen::addBand() {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
+    if (!preset.variableByPlayers) return;
+    QString problem;
+    if (!writeTableToPreset(preset, problem)) {
+        QMessageBox::warning(this, "Prizing", problem);
+        return;
+    }
+    PrizeBand band;
+    if (!preset.levels.empty()) {
+        const PrizeBand& last = preset.levels.back();
+        band.minPlayers = last.maxPlayers > 0 ? last.maxPlayers + 1 : last.minPlayers + 1;
+        band.maxPlayers = band.minPlayers + 7;
+        band.prizes = last.prizes;
+    } else {
+        band.minPlayers = 1;
+        band.maxPlayers = 8;
+        band.prizes = {{1, 100, true}};
+    }
+    preset.levels.push_back(std::move(band));
+    const bool blocked = bandBox_->blockSignals(true);
+    bandBox_->addItem(bandLabel(preset.levels.back()));
+    bandBox_->blockSignals(blocked);
+    showBand(static_cast<int>(preset.levels.size()) - 1);
+    persistPrizing();
+    refreshPayoutPreview();
+}
+
+void PrizingScreen::removeBand() {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
+    if (!preset.variableByPlayers || preset.levels.size() <= 1) return;
+    if (editingBand_ < 0 || editingBand_ >= static_cast<int>(preset.levels.size())) return;
+    preset.levels.erase(preset.levels.begin() + editingBand_);
+    int next = editingBand_;
+    if (next >= static_cast<int>(preset.levels.size())) next = static_cast<int>(preset.levels.size()) - 1;
+    const bool blocked = bandBox_->blockSignals(true);
+    bandBox_->clear();
+    for (const PrizeBand& band : preset.levels) bandBox_->addItem(bandLabel(band));
+    bandBox_->blockSignals(blocked);
+    showBand(next);
+    persistPrizing();
+    refreshPayoutPreview();
+}
+
+void PrizingScreen::newPreset(bool byFieldSize) {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ >= 0 && editingPreset_ < static_cast<int>(config.prizePresets.size())) {
+        QString problem;
+        if (!writeTableToPreset(config.prizePresets[static_cast<std::size_t>(editingPreset_)], problem)) {
+            QMessageBox::warning(this, "Prizing", problem);
+            return;
+        }
+    }
+    PrizePreset created;
+    if (byFieldSize) {
+        created.name = "By field size";
+        created.variableByPlayers = true;
+        created.countBuyins = true;
+        created.countRebuys = false;
+        PrizeBand band;
+        band.minPlayers = 1;
+        band.maxPlayers = 8;
+        band.prizes = {{1, 100, true}};
+        created.levels.push_back(std::move(band));
+    } else {
+        created.name = "Fixed places";
+        created.prizes = TournamentConfig::defaultPrizes();
+    }
+    int suffix = 2;
+    const std::string base = created.name;
+    auto taken = [&](const std::string& name) {
+        for (const PrizePreset& preset : config.prizePresets) {
+            if (preset.name == name) return true;
+        }
+        return false;
+    };
+    while (taken(created.name)) created.name = base + " " + std::to_string(suffix++);
+    config.prizePresets.push_back(std::move(created));
+    config.activePrizePreset = static_cast<int>(config.prizePresets.size()) - 1;
+    reloadPresetList();
+    showPreset(config.activePrizePreset);
+    persistPrizing();
+    refreshPayoutPreview();
+}
+
+void PrizingScreen::deletePreset() {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (config.prizePresets.size() <= 1) return;
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    const QString name = toQ(config.prizePresets[static_cast<std::size_t>(editingPreset_)].name);
+    if (QMessageBox::question(this, "Prizing", QStringLiteral("Delete preset \"%1\"?").arg(name)) !=
+        QMessageBox::Yes) {
+        return;
+    }
+    config.prizePresets.erase(config.prizePresets.begin() + editingPreset_);
+    if (config.activePrizePreset >= static_cast<int>(config.prizePresets.size())) {
+        config.activePrizePreset = static_cast<int>(config.prizePresets.size()) - 1;
+    }
+    reloadPresetList();
+    showPreset(config.activePrizePreset);
+    try {
+        ctx_.saveTournamentConfig();
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Error",
+                              QStringLiteral("Could not save prizing:\n%1").arg(error.what()));
+    }
+    refreshPayoutPreview();
+}
+
+void PrizingScreen::loadPresetJson() {
+    const QString path = QFileDialog::getOpenFileName(
+        this, QStringLiteral("Load prize preset"), assetPath(QStringLiteral("Prizes")),
+        QStringLiteral("Prize JSON (*.json);;All files (*.*)"));
+    if (path.isEmpty()) return;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, QStringLiteral("Load prizes"),
+                              QStringLiteral("Couldn't open:\n%1").arg(path));
+        return;
+    }
+    std::vector<PrizePreset> loaded = PrizePreset::listFromJson(toStd(QString::fromUtf8(file.readAll())));
+    if (loaded.empty()) {
+        QMessageBox::critical(
+            this, QStringLiteral("Load prizes"),
+            QStringLiteral("No prize schedule found. Expected a prizeConfig object, or a presets list."));
+        return;
+    }
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ >= 0 && editingPreset_ < static_cast<int>(config.prizePresets.size())) {
+        QString problem;
+        writeTableToPreset(config.prizePresets[static_cast<std::size_t>(editingPreset_)], problem);
+    }
+    const QString base = QFileInfo(path).completeBaseName();
+    bool leftover = false;
+    for (PrizePreset& preset : loaded) {
+        if (preset.name.empty() || preset.name == "Prize preset") preset.name = toStd(base);
+        const auto note = [&](const std::vector<PrizeShare>& prizes) {
+            for (const PrizeShare& prize : prizes) leftover = leftover || prize.shareLeftover;
+        };
+        note(preset.prizes);
+        for (const PrizeBand& band : preset.levels) note(band.prizes);
+        config.prizePresets.push_back(std::move(preset));
+    }
+    config.activePrizePreset = static_cast<int>(config.prizePresets.size()) - 1;
+    if (leftover) leftoverBox_->setChecked(true);
+    reloadPresetList();
+    showPreset(config.activePrizePreset);
+    persistPrizing();
+    refreshPayoutPreview();
+}
+
+void PrizingScreen::savePresetJson() {
+    TournamentConfig& config = ctx_.tournament().config();
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    QString problem;
+    if (!writeTableToPreset(config.prizePresets[static_cast<std::size_t>(editingPreset_)], problem)) {
+        QMessageBox::warning(this, QStringLiteral("Save prizes"), problem);
+        return;
+    }
+    const PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
+    QString suggested = toQ(preset.name);
+    suggested.replace(QRegularExpression(QStringLiteral("[\\\\/:*?\"<>|]")), QStringLiteral("-"));
+    if (suggested.trimmed().isEmpty()) suggested = QStringLiteral("prizes");
+    const QString path = QFileDialog::getSaveFileName(
+        this, QStringLiteral("Save prize preset"),
+        assetPath(QStringLiteral("Prizes")) + QStringLiteral("/") + suggested + QStringLiteral(".json"),
+        QStringLiteral("Prize JSON (*.json);;All files (*.*)"));
+    if (path.isEmpty()) return;
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        QMessageBox::critical(this, QStringLiteral("Save prizes"),
+                              QStringLiteral("Couldn't write:\n%1").arg(path));
+        return;
+    }
+    const std::string json = preset.toJson();
+    if (file.write(json.data(), static_cast<qint64>(json.size())) < 0) {
+        QMessageBox::critical(this, QStringLiteral("Save prizes"),
+                              QStringLiteral("Couldn't write:\n%1").arg(path));
+        return;
+    }
+    persistPrizing();
 }
 
 void PrizingScreen::scanPlayer() {
@@ -596,21 +1059,49 @@ void PrizingScreen::refresh() {
 
 void PrizingScreen::refreshPayoutPreview() {
     TournamentConfig sample = ctx_.tournament().config();
-    QString problem;
-    if (!readPrizes(prizesTable_, sample.prizes, problem)) {
-        payoutPreview_->setText(problem);
+    if (sample.prizePresets.empty()) {
+        payoutPreview_->setText(QStringLiteral("No places configured."));
         return;
     }
+    int index = editingPreset_;
+    if (index < 0 || index >= static_cast<int>(sample.prizePresets.size())) index = 0;
+    QString problem;
+    if (!writeTableToPreset(sample.prizePresets[static_cast<std::size_t>(index)], problem)) {
+        payoutPreview_->setText(problem);
+        if (fieldHint_) fieldHint_->setText(problem);
+        return;
+    }
+    sample.activePrizePreset = index;
     sample.prizeRounding = static_cast<PrizeRounding>(roundingBox_->currentData().toInt());
     sample.leftoverToFirst = leftoverBox_->isChecked();
+    const PrizePreset& preset = sample.prizePresets[static_cast<std::size_t>(index)];
     const auto stats = ctx_.reports().tournamentStats();
+    const int field = preset.fieldSize(stats.buyIns, stats.rebuys);
+    if (fieldHint_) {
+        if (!preset.variableByPlayers) {
+            fieldHint_->clear();
+        } else {
+            const int band = preset.bandIndexFor(field);
+            QString counted = preset.countBuyins ? QStringLiteral("buy-ins") : QString();
+            if (preset.countRebuys) {
+                counted += counted.isEmpty() ? QStringLiteral("rebuys") : QStringLiteral(" + rebuys");
+            }
+            if (counted.isEmpty()) counted = QStringLiteral("buy-ins");
+            if (band >= 0 && band < static_cast<int>(preset.levels.size())) {
+                const PrizeBand& level = preset.levels[static_cast<std::size_t>(band)];
+                fieldHint_->setText(QStringLiteral("%1 entries (%2). Paying the %3 band.")
+                                        .arg(field)
+                                        .arg(counted, bandLabel(level)));
+            } else {
+                fieldHint_->setText(QStringLiteral("%1 entries (%2).").arg(field).arg(counted));
+            }
+        }
+    }
     QStringList lines;
-    for (const PrizePayout& prize : sample.prizePayouts(stats.prizePool)) {
+    for (const PrizePayout& prize : sample.prizePayouts(stats.prizePool, stats.buyIns, stats.rebuys)) {
         const QString paid = stats.placePaid(prize.place) ? QStringLiteral("  (paid)") : QString();
         lines += QStringLiteral("%1  %2%  %3%4")
-                     .arg(placeOrdinal(prize.place))
-                     .arg(prize.percent)
-                     .arg(money(prize.amount), paid);
+                     .arg(placeOrdinal(prize.place), formatPercent(prize.percent), money(prize.amount), paid);
     }
     payoutPreview_->setText(lines.isEmpty() ? QStringLiteral("No places configured.")
                                             : lines.join('\n'));
@@ -633,13 +1124,33 @@ void PrizingScreen::prizingChanged() {
 }
 
 void PrizingScreen::persistPrizing() {
-    std::vector<PrizeShare> prizes;
-    QString problem;
-    if (!readPrizes(prizesTable_, prizes, problem)) return;
     TournamentConfig& config = ctx_.tournament().config();
-    config.prizes = std::move(prizes);
+    if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
+    QString problem;
+    if (!writeTableToPreset(config.prizePresets[static_cast<std::size_t>(editingPreset_)], problem)) return;
+    config.activePrizePreset = editingPreset_;
     config.prizeRounding = static_cast<PrizeRounding>(roundingBox_->currentData().toInt());
     config.leftoverToFirst = leftoverBox_->isChecked();
+    if (presetBox_ && presetBox_->currentIndex() == editingPreset_) {
+        const QString name = toQ(config.prizePresets[static_cast<std::size_t>(editingPreset_)].name);
+        if (presetBox_->itemText(editingPreset_) != name) {
+            const bool blocked = presetBox_->blockSignals(true);
+            presetBox_->setItemText(editingPreset_, name);
+            presetBox_->blockSignals(blocked);
+        }
+    }
+    if (bandBox_ && variablePanel_->isVisible() &&
+        editingBand_ >= 0 && editingBand_ < bandBox_->count()) {
+        const PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
+        if (editingBand_ < static_cast<int>(preset.levels.size())) {
+            const QString label = bandLabel(preset.levels[static_cast<std::size_t>(editingBand_)]);
+            if (bandBox_->itemText(editingBand_) != label) {
+                const bool blocked = bandBox_->blockSignals(true);
+                bandBox_->setItemText(editingBand_, label);
+                bandBox_->blockSignals(blocked);
+            }
+        }
+    }
     try {
         ctx_.saveTournamentConfig();
     } catch (const std::exception& error) {
@@ -709,13 +1220,13 @@ void PrizingScreen::openPlaceOverlay() {
     const auto stats = ctx_.reports().tournamentStats();
     const TournamentConfig& config = ctx_.tournament().config();
     bool any = false;
-    for (const PrizePayout& prize : config.prizePayouts(stats.prizePool)) {
+    for (const PrizePayout& prize :
+         config.prizePayouts(stats.prizePool, stats.buyIns, stats.rebuys)) {
         if (stats.placePaid(prize.place)) continue;
         any = true;
         auto* button = actionButton(QStringLiteral("%1   %2%   %3")
-                                        .arg(placeOrdinal(prize.place))
-                                        .arg(prize.percent)
-                                        .arg(money(prize.amount)),
+                                        .arg(placeOrdinal(prize.place), formatPercent(prize.percent),
+                                             money(prize.amount)),
                                     "#E8F4FD");
         const int place = prize.place;
         const Money amount = prize.amount;
