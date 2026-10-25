@@ -6,16 +6,19 @@ Usage:
   python rebuild.py --run     # same, then launch the GUI
   python rebuild.py --clean   # wipe build-gui first, then rebuild
   python rebuild.py --gui     # build only pokersoc_gui
+  python rebuild.py --export  # build, then write dist/pokersoc_connect_<version>.zip (one exe)
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -113,6 +116,79 @@ def launch() -> None:
     subprocess.Popen([str(exe)], cwd=str(BUILD))
 
 
+def app_version() -> str:
+    text = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+    match = re.search(r"set\(POKERSOC_VERSION\s+([0-9]+\.[0-9]+\.[0-9]+)\)", text)
+    if not match:
+        die("Set POKERSOC_VERSION in CMakeLists.txt, for example: set(POKERSOC_VERSION 2.0.0)")
+    return match.group(1)
+
+
+def export_package() -> None:
+    """One exe. Assets and the Qt libraries are packed inside it."""
+    version = app_version()
+    export_name = f"pokersoc_connect_{version}.exe"
+    gui = BUILD / "pokersoc_gui.exe"
+    launcher = BUILD / "pokersoc_launcher.exe"
+    if not gui.exists():
+        die(f"GUI binary not found: {gui}")
+    if not launcher.exists():
+        die(f"Launcher not found: {launcher}")
+
+    dist = ROOT / "dist"
+    stage = dist / "_stage"
+    if stage.exists():
+        shutil.rmtree(stage)
+    stage.mkdir(parents=True)
+    shutil.copy2(gui, stage / "pokersoc_gui.exe")
+    for dll in BUILD.glob("*.dll"):
+        shutil.copy2(dll, stage / dll.name)
+    for name in (
+        "generic",
+        "iconengines",
+        "imageformats",
+        "networkinformation",
+        "platforms",
+        "styles",
+        "tls",
+    ):
+        src = BUILD / name
+        if not src.is_dir():
+            die(f"deploy folder missing: {src}")
+        shutil.copytree(src, stage / name)
+
+    payload = dist / "_payload.zip"
+    if payload.exists():
+        payload.unlink()
+    shutil.make_archive(str(payload.with_suffix("")), "zip", stage)
+    payload_bytes = payload.read_bytes()
+    bundled = dist / export_name
+    bundled.write_bytes(launcher.read_bytes() + payload_bytes + b"POKERPK1" + len(payload_bytes).to_bytes(8, "little"))
+
+    for stale in dist.glob("pokersoc_connect_*.exe"):
+        if stale != bundled:
+            stale.unlink()
+    for stale in (dist / "pokersoc_gui.exe", dist / "PokerSoc.zip"):
+        if stale.exists():
+            stale.unlink()
+    old_folder = dist / "PokerSoc"
+    if old_folder.exists():
+        shutil.rmtree(old_folder)
+    shutil.rmtree(stage)
+    payload.unlink()
+
+    zip_path = dist / f"pokersoc_connect_{version}.zip"
+    for stale in dist.glob("pokersoc_connect_*.zip"):
+        if stale != zip_path:
+            stale.unlink()
+    if zip_path.exists():
+        zip_path.unlink()
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.write(bundled, export_name)
+    print(f"Export exe: {bundled}", flush=True)
+    print(f"Export zip: {zip_path} ({export_name} only)", flush=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Rebuild pokersoc GUI / console.")
     parser.add_argument("--run", action="store_true", help="launch pokersoc_gui after build")
@@ -121,6 +197,11 @@ def main() -> None:
         "--gui",
         action="store_true",
         help="build only pokersoc_gui (default: build all targets)",
+    )
+    parser.add_argument(
+        "--export",
+        action="store_true",
+        help="write dist/pokersoc_connect_<version>.zip containing only that exe",
     )
     args = parser.parse_args()
 
@@ -136,6 +217,9 @@ def main() -> None:
     sync_assets()
 
     print("Build OK.", flush=True)
+    if args.export:
+        build("pokersoc_launcher")
+        export_package()
     if args.run:
         launch()
 

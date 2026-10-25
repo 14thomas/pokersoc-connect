@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QStandardPaths>
 #include <QFileInfo>
 #include <QIODevice>
 #include <QDragEnterEvent>
@@ -903,7 +904,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         "Board chips",
         "Any number of denominations. The TV board shows the six lowest values "
         "(2 columns × 3 rows). "
-        "Choose an image from Assets/Chips, or Browse… to pick any filepath. "
+        "The image list is built into the program. Browse… picks any other file. "
         "Use the × on a row to remove that chip. "
         "Values accept K/M (e.g. 1.5K, 100K). Highest value sits bottom-right.");
     auto* chipsList = new QVBoxLayout;
@@ -1178,24 +1179,14 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
                 [this, image = widgets.image, quiet, persist] {
                     const QString chosen = QFileDialog::getOpenFileName(
                         this, QStringLiteral("Select chip image"),
-                        assetPath(QStringLiteral("Chips")),
+                        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
                         QStringLiteral("Images (*.png *.jpg *.jpeg *.webp *.PNG *.JPG *.JPEG *.WEBP)"));
                     if (chosen.isEmpty()) return;
                     const QString path = QFileInfo(chosen).absoluteFilePath();
                     int idx = image->findData(path);
                     if (idx < 0) {
-                        // Prefer a Chips filename when the file lives in that folder.
-                        const QDir chipDir(assetPath(QStringLiteral("Chips")));
-                        const QString relative = chipDir.relativeFilePath(path);
-                        const bool inChips =
-                            !relative.startsWith(QLatin1String("..")) && !QFileInfo(relative).isAbsolute();
-                        const QString data = inChips ? QFileInfo(path).fileName() : path;
-                        const QString label = QFileInfo(path).fileName();
-                        idx = image->findData(data);
-                        if (idx < 0) {
-                            image->addItem(label, data);
-                            idx = image->count() - 1;
-                        }
+                        image->addItem(QFileInfo(path).fileName(), path);
+                        idx = image->count() - 1;
                     }
                     *quiet = true;
                     image->setCurrentIndex(idx);
@@ -1318,7 +1309,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
                 tsui::commitPendingEdits(page);
                 const QString path = QFileDialog::getOpenFileName(
                     this, QStringLiteral("Import blind structure"),
-                    assetPath(QStringLiteral("BlindStructures")),
+                    QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
                     QStringLiteral("Blind structure JSON (*.json);;All files (*.*)"));
                 if (path.isEmpty()) return;
                 QFile file(path);
@@ -1356,7 +1347,8 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         }
         const QString path = QFileDialog::getSaveFileName(
             this, QStringLiteral("Save blind structure"),
-            assetPath(QStringLiteral("BlindStructures")) + QStringLiteral("/blinds.json"),
+            QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) +
+                QStringLiteral("/blinds.json"),
             QStringLiteral("Blind structure JSON (*.json);;All files (*.*)"));
         if (path.isEmpty()) return;
         TournamentConfig exportConfig;

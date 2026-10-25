@@ -1,8 +1,6 @@
 #include "ui/Style.h"
 
 #include <QApplication>
-#include <QCoreApplication>
-#include <QDir>
 #include <QLabel>
 
 #include "domain/money/DenominationCount.h"
@@ -46,7 +44,10 @@ QString denomLabel(std::int64_t cents) {
 }
 
 QString assetPath(const QString& relative) {
-    return QDir(QCoreApplication::applicationDirPath()).filePath("Assets/" + relative);
+    QString path = relative;
+    while (path.startsWith(QLatin1Char('/')) || path.startsWith(QLatin1Char('\\'))) path.remove(0, 1);
+    path.replace(QLatin1Char('\\'), QLatin1Char('/'));
+    return QStringLiteral(":/Assets/") + path;
 }
 
 QFont uiFont(int pixelSize, bool bold) {

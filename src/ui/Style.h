@@ -64,7 +64,7 @@ QString money(std::int64_t cents);
 /// "5c" for sub-dollar, "$5" otherwise.
 QString denomLabel(std::int64_t cents);
 
-/// Absolute path of a file under the deployed Assets folder.
+/// Resource path of a file compiled into the exe from the Assets folder (`:/Assets/...`).
 QString assetPath(const QString& relative);
 
 QFont uiFont(int pixelSize, bool bold = false);

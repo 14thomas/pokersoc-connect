@@ -9,6 +9,7 @@
 #include <QComboBox>
 #include <QFile>
 #include <QFileDialog>
+#include <QStandardPaths>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -930,7 +931,8 @@ void PrizingScreen::deletePreset() {
 
 void PrizingScreen::loadPresetJson() {
     const QString path = QFileDialog::getOpenFileName(
-        this, QStringLiteral("Load prize preset"), assetPath(QStringLiteral("Prizes")),
+        this, QStringLiteral("Load prize preset"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
         QStringLiteral("Prize JSON (*.json);;All files (*.*)"));
     if (path.isEmpty()) return;
     QFile file(path);
@@ -984,7 +986,8 @@ void PrizingScreen::savePresetJson() {
     if (suggested.trimmed().isEmpty()) suggested = QStringLiteral("prizes");
     const QString path = QFileDialog::getSaveFileName(
         this, QStringLiteral("Save prize preset"),
-        assetPath(QStringLiteral("Prizes")) + QStringLiteral("/") + suggested + QStringLiteral(".json"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) +
+            QStringLiteral("/") + suggested + QStringLiteral(".json"),
         QStringLiteral("Prize JSON (*.json);;All files (*.*)"));
     if (path.isEmpty()) return;
     QFile file(path);

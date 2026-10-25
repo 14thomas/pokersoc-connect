@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(pokersoc_cpp LANGUAGES C CXX)
+# Shipped exe is pokersoc_connect_<this>. Change it here.
+set(POKERSOC_VERSION 2.0.0)
+
+project(pokersoc_cpp VERSION ${POKERSOC_VERSION} LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -102,9 +105,14 @@ add_executable(pokersoc_gui WIN32
 set_target_properties(pokersoc_gui PROPERTIES AUTOMOC ON)
 target_link_libraries(pokersoc_gui PRIVATE pokersoc_core Qt6::Widgets)
 
-add_custom_command(TARGET pokersoc_gui POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_CURRENT_SOURCE_DIR}/Assets $<TARGET_FILE_DIR:pokersoc_gui>/Assets)
+file(GLOB_RECURSE POKERSOC_ASSET_FILES CONFIGURE_DEPENDS
+    LIST_DIRECTORIES false
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*")
+qt_add_resources(pokersoc_gui pokersoc_assets
+    PREFIX "/"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+    FILES ${POKERSOC_ASSET_FILES})
 
 get_target_property(_qmake Qt6::qmake IMPORTED_LOCATION)
 get_filename_component(_qt_bin "${_qmake}" DIRECTORY)
@@ -114,4 +122,11 @@ if (WINDEPLOYQT)
         COMMAND "${WINDEPLOYQT}" --no-translations --no-system-d3d-compiler
                 --no-opengl-sw $<TARGET_FILE:pokersoc_gui>
         COMMENT "Deploying Qt runtime")
+endif()
+
+# Export wraps this stub around pokersoc_gui.exe plus the Qt libraries.
+add_executable(pokersoc_launcher WIN32 src/pack/Launcher.cpp)
+target_compile_features(pokersoc_launcher PRIVATE cxx_std_17)
+if (MINGW)
+    target_link_options(pokersoc_launcher PRIVATE -static)
 endif()

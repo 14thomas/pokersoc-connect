@@ -40,7 +40,8 @@ Desktop.ini
 # Logs
 *.log
 
-# SQLite session files
+# Packaged app (exe, Qt/MinGW libraries, Assets)
+dist/
 *.sqlite
 *.db
 *.cgd

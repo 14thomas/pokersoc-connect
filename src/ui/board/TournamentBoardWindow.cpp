@@ -1,5 +1,6 @@
 #include "ui/board/TournamentBoardWindow.h"
 
+#include <QFile>
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFrame>
@@ -1010,7 +1011,9 @@ QFont TournamentBoardWindow::boardFont(int pixelSize, bool bold) const {
             QStringLiteral("Fonts/Campton/CamptonExtraBold.otf"),
         };
         for (const QString& relative : files) {
-            const int id = QFontDatabase::addApplicationFont(assetPath(relative));
+            QFile file(assetPath(relative));
+            if (!file.open(QIODevice::ReadOnly)) continue;
+            const int id = QFontDatabase::addApplicationFontFromData(file.readAll());
             if (id < 0) continue;
             const QStringList families = QFontDatabase::applicationFontFamilies(id);
             if (!families.isEmpty() && loaded.isEmpty()) loaded = families.first();
