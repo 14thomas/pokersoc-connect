@@ -962,9 +962,35 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     chip->setFixedHeight(22);  // QSS drops border-radius entirely if it exceeds half the height
     tsui::Card blindsCard = tsui::card(
         "Blind structure",
-        "Double-click a cell to edit (numbers or shorthand like 1.5K / 150K). Drag a row to reorder. "
-        "Import or save a JSON rounds file. A break keeps the blinds and only runs the clock.",
+        "Pick a preset, or double-click a cell to edit (numbers or shorthand like 1.5K / 150K). "
+        "Drag a row to reorder. A break keeps the blinds and only runs the clock.",
         chip);
+    struct BlindPreset {
+        QString name;
+        std::vector<BlindLevel> levels;
+    };
+    auto blindPresets = std::make_shared<std::vector<BlindPreset>>();
+    auto* presetBox = new tsui::CalmComboBox;
+    presetBox->setObjectName(QStringLiteral("combo"));
+    presetBox->setAccessibleName(QStringLiteral("Blind preset"));
+    presetBox->setMinimumWidth(148);
+    presetBox->addItem(QStringLiteral("Custom"), -1);
+    for (const QString& name : {QStringLiteral("4h"), QStringLiteral("4h_pizza"), QStringLiteral("5h")}) {
+        const QString path = assetPath(QStringLiteral("BlindStructures/") + name + QStringLiteral(".json"));
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
+        TournamentConfig probe;
+        probe.blinds.clear();
+        probe.setBlindsFromJson(toStd(QString::fromUtf8(file.readAll())));
+        if (probe.blinds.empty()) continue;
+        presetBox->addItem(name, static_cast<int>(blindPresets->size()));
+        blindPresets->push_back(BlindPreset{name, std::move(probe.blinds)});
+    }
+    blindsCard.body->addWidget(tsui::settingRow(
+        "Preset", "4h, 4h pizza, or 5h. Custom starts with no levels.", presetBox));
+    blindsCard.body->addSpacing(14);
+    blindsCard.body->addWidget(tsui::divider());
+    blindsCard.body->addSpacing(14);
     auto* blindsTable = new tsui::BlindTable;
     blindsTable->setColumnCount(5);
     for (const BlindLevel& level : initial.blinds) addBlindRow(blindsTable, level);
@@ -1028,7 +1054,27 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         regoBox->setCurrentIndex(idx);
         *quiet = false;
     };
-    const auto syncBlinds = [blindsTable, chip, empty, removeBlind, rebuildRego, regoBox] {
+    const auto blindsMatch = [blindsTable](const std::vector<BlindLevel>& levels) {
+        if (static_cast<int>(levels.size()) != blindsTable->rowCount()) return false;
+        const auto cell = [](const QString& text) {
+            const QString trimmed = text.trimmed();
+            if (trimmed == QStringLiteral("\u2014") || trimmed == QStringLiteral("-")) return QString();
+            return trimmed;
+        };
+        for (int row = 0; row < blindsTable->rowCount(); ++row) {
+            const BlindLevel& level = levels[static_cast<std::size_t>(row)];
+            if (level.isBreak != blindRowIsBreak(blindsTable, row)) return false;
+            bool ok = false;
+            if (cellInt(blindsTable, row, tsui::kMinutesCol, &ok) != level.durationMinutes || !ok) return false;
+            if (level.isBreak) continue;
+            if (cell(cellText(blindsTable, row, tsui::kSmallCol)) != toQ(level.smallBlind)) return false;
+            if (cell(cellText(blindsTable, row, tsui::kBigCol)) != toQ(level.bigBlind)) return false;
+            if (cell(cellText(blindsTable, row, tsui::kAnteCol)) != toQ(level.ante)) return false;
+        }
+        return true;
+    };
+    const auto syncBlinds = [blindsTable, chip, empty, removeBlind, rebuildRego, regoBox, presetBox,
+                             blindPresets, blindsMatch] {
         int minutes = 0;
         int levels = 0;
         int breaks = 0;
@@ -1046,6 +1092,18 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         empty->setVisible(blindsTable->rowCount() == 0);
         removeBlind->setEnabled(blindsTable->rowCount() > 0);
         rebuildRego(regoBox->currentData().toInt());
+        int match = 0;
+        for (int i = 0; i < static_cast<int>(blindPresets->size()); ++i) {
+            if (!blindsMatch((*blindPresets)[static_cast<std::size_t>(i)].levels)) continue;
+            const int index = presetBox->findData(i);
+            if (index >= 0) match = index;
+            break;
+        }
+        if (presetBox->currentIndex() != match) {
+            const bool blocked = presetBox->blockSignals(true);
+            presetBox->setCurrentIndex(match);
+            presetBox->blockSignals(blocked);
+        }
     };
     rebuildRego(initial.registrationEndsLevel);
     syncBlinds();
@@ -1247,6 +1305,23 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
         syncBlinds();
         persist();
     });
+    connect(presetBox, &QComboBox::currentIndexChanged, this,
+            [this, page, blindsTable, quiet, relabel, syncBlinds, persist, presetBox, blindPresets](int index) {
+                if (*quiet || index < 0) return;
+                const int presetIndex = presetBox->currentData().toInt();
+                tsui::commitPendingEdits(page);
+                *quiet = true;
+                blindsTable->setRowCount(0);
+                if (presetIndex >= 0 && presetIndex < static_cast<int>(blindPresets->size())) {
+                    for (const BlindLevel& level : (*blindPresets)[static_cast<std::size_t>(presetIndex)].levels) {
+                        addBlindRow(blindsTable, level);
+                    }
+                }
+                *quiet = false;
+                relabel();
+                syncBlinds();
+                persist();
+            });
     connect(importBlinds, &QPushButton::clicked, this,
             [this, page, blindsTable, quiet, relabel, syncBlinds, persist] {
                 tsui::commitPendingEdits(page);

@@ -14,4 +14,5 @@ Format:
 
 - sb / bb / bb_ante: chip amounts (numbers or strings like "1.5K")
 - break: true for a break row (keeps prior blinds)
-- PokerSoc_rounds_5h.json is the default structure for new tournaments
+- 4h.json, 4h_pizza.json, and 5h.json are the presets in the blind-structure menu
+- 5h.json is the default structure for new tournaments

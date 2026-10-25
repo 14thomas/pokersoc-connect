@@ -496,18 +496,23 @@ void TournamentBoardWindow::applyFonts() {
     time_->setFont(boardFont(qBound(140, 6 * h / 22, 280), true));
     const int labelPx = qBound(22, h / 20, 42);
     const int valuePx = qBound(30, h / 15, 54);
-    for (BoardRow* row : {&blindsRow_, &anteRow_, &nextRow_}) {
-        row->label->setFont(boardFont(labelPx, true));
-        row->value->setFont(boardFont(valuePx, true));
-    }
-    const int rowH = qMax(valuePx, labelPx) + 12;
-    anteRow_.widget->setFixedHeight(rowH);
-    blindsRow_.widget->setFixedHeight(rowH);
-    nextRow_.widget->setFixedHeight(rowH);
+    const int nextLabelPx = qBound(18, h / 24, 34);
+    const int nextValuePx = qBound(26, h / 19, 44);
+    blindsRow_.label->setFont(boardFont(labelPx, true));
+    anteRow_.label->setFont(boardFont(labelPx, true));
+    blindsRow_.value->setFont(boardFont(valuePx, true));
+    anteRow_.value->setFont(boardFont(valuePx, true));
+    nextRow_.label->setFont(boardFont(nextLabelPx, true));
+    nextRow_.value->setFont(boardFont(nextValuePx, true));
+    const int blindsRowH = qMax(valuePx, labelPx) + 12;
+    const int nextRowH = qMax(nextValuePx, nextLabelPx) + 12;
+    anteRow_.widget->setFixedHeight(blindsRowH);
+    blindsRow_.widget->setFixedHeight(blindsRowH);
+    nextRow_.widget->setFixedHeight(nextRowH);
     // Keep room for matching borders + padding on both boxes.
     constexpr int kBoxChrome = 26 * 2 + 6 * 2;
-    blindsBox_->setFixedHeight(rowH * 2 + 10 + kBoxChrome);
-    nextBox_->setFixedHeight(rowH + kBoxChrome);
+    blindsBox_->setFixedHeight(blindsRowH * 2 + 10 + kBoxChrome);
+    nextBox_->setFixedHeight(nextRowH + kBoxChrome);
     prizeTitle_->setFont(boardFont(qBound(22, h / 24, 40), true));
     rego_.caption->setFont(boardFont(qBound(20, h / 26, 34), true));
     rego_.value->setFont(boardFont(qBound(60, h / 8, 120), true));

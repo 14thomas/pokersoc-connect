@@ -341,7 +341,7 @@ TournamentConfig::TournamentConfig()
     : blinds(defaultBlinds()), prizePresets(defaultPrizePresets()) {}
 
 std::vector<BlindLevel> TournamentConfig::defaultBlinds() {
-    // PokerSoc ~5h structure (Assets/BlindStructures/PokerSoc_rounds_5h.json).
+    // PokerSoc ~5h structure (Assets/BlindStructures/5h.json).
     const auto ante = [](long long value) {
         return value > 0 ? formatChipAmount(value) : std::string{};
     };
