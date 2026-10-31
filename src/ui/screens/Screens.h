@@ -219,6 +219,7 @@ private:
     QLabel* floatAdded_ = nullptr;
     QLabel* tips_ = nullptr;
     QLabel* totalSales_ = nullptr;
+    QLabel* rake_ = nullptr;
 
     struct CountPage {
         Counts counts;
@@ -384,34 +385,12 @@ signals:
     void configurePricing();
     /// Rebuys or the blind structure were written.
     void structureChanged();
-};
-
-class TournamentPricingScreen : public Screen {
-    Q_OBJECT
-public:
-    explicit TournamentPricingScreen(SessionContext& context, QWidget* parent = nullptr);
-};
-
-class PrizingScreen : public Screen {
-    Q_OBJECT
-public:
-    explicit PrizingScreen(SessionContext& context, QWidget* parent = nullptr);
 
 private:
-    void scanPlayer();
-    void clearPlayer();
-    void refresh();
+    void buildPrizeEditors(QVBoxLayout* roundingBody, QVBoxLayout* placesBody);
     void prizingChanged();
     void persistPrizing();
-    void openBountyOverlay();
-    void openPlaceOverlay();
-    void payBounties();
-    void payPlace(int place, domain::Money amount);
     void refreshPayoutPreview();
-    void bountyKey(const QString& key);
-    void refreshBountyPad();
-    domain::Money bountyUnitForPlayer() const;
-    QString idlePlayerText() const;
     void reloadPresetList();
     void showPreset(int index);
     void showBand(int index);
@@ -426,23 +405,9 @@ private:
     void savePresetJson();
     QString bandLabel(const domain::PrizeBand& band) const;
 
-    std::string playerId_;
-    int bountyCount_ = 0;
-    int bountyMaxCount_ = 0;
-    QString bountyDigits_;
     bool loadingPrizes_ = false;
     int editingPreset_ = 0;
     int editingBand_ = 0;
-
-    QLineEdit* idBox_ = nullptr;
-    QLabel* playerText_ = nullptr;
-    QWidget* redeemPanel_ = nullptr;
-    QPushButton* bountyButton_ = nullptr;
-    QPushButton* placeButton_ = nullptr;
-    QLabel* prizePool_ = nullptr;
-    QLabel* bountyPool_ = nullptr;
-    QWidget* bountyPoolCard_ = nullptr;
-    QLabel* bountyHint_ = nullptr;
     QComboBox* roundingBox_ = nullptr;
     QCheckBox* leftoverBox_ = nullptr;
     QLabel* payoutPreview_ = nullptr;
@@ -457,6 +422,43 @@ private:
     QCheckBox* countRebuys_ = nullptr;
     QLabel* fieldHint_ = nullptr;
     QTableWidget* prizesTable_ = nullptr;
+};
+
+class TournamentPricingScreen : public Screen {
+    Q_OBJECT
+public:
+    explicit TournamentPricingScreen(SessionContext& context, QWidget* parent = nullptr);
+};
+
+class PrizingScreen : public Screen {
+    Q_OBJECT
+public:
+    explicit PrizingScreen(SessionContext& context, std::string playerId, QWidget* parent = nullptr);
+
+private:
+    void refresh();
+    void openBountyOverlay();
+    void openPlaceOverlay();
+    void payBounties();
+    void payPlace(int place, domain::Money amount);
+    void bountyKey(const QString& key);
+    void refreshBountyPad();
+    domain::Money bountyUnitForPlayer() const;
+    QString idlePlayerText() const;
+
+    std::string playerId_;
+    int bountyCount_ = 0;
+    int bountyMaxCount_ = 0;
+    QString bountyDigits_;
+
+    QLabel* playerText_ = nullptr;
+    QWidget* redeemPanel_ = nullptr;
+    QPushButton* bountyButton_ = nullptr;
+    QPushButton* placeButton_ = nullptr;
+    QLabel* prizePool_ = nullptr;
+    QLabel* bountyPool_ = nullptr;
+    QWidget* bountyPoolCard_ = nullptr;
+    QLabel* bountyHint_ = nullptr;
     Overlay* bountyOverlay_ = nullptr;
     QLabel* bountyCountLabel_ = nullptr;
     QLabel* bountyPayLabel_ = nullptr;

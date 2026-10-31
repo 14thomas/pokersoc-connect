@@ -106,10 +106,16 @@ QWidget* CashboxScreen::buildMainPage() {
     auto* addFloat = new TileButton(QStringLiteral("💰"), "Add Float", "Add starting cash");
     auto* addTip = new TileButton(QStringLiteral("💸"), "Add Tip", "Record cash tip received");
     auto* exchange = new TileButton(QStringLiteral("🔄"), "Exchange", "Swap denominations");
-    auto* soon = new TileButton(QStringLiteral("📈"), "Button 7", "Coming soon");
-    soon->setColors(color::ButtonFace, color::LightGray);
-    soon->setEnabled(false);
-    soon->setFaded(true);
+    QWidget* rakeTile = nullptr;
+    if (ctx_.isTournament()) {
+        rakeTile = makeInfoTile(QStringLiteral("📈"), "Rake", &rake_, "#E8F5E9", "#2E7D32", "2px");
+    } else {
+        auto* soon = new TileButton(QStringLiteral("📈"), "Button 7", "Coming soon");
+        soon->setColors(color::ButtonFace, color::LightGray);
+        soon->setEnabled(false);
+        soon->setFaded(true);
+        rakeTile = soon;
+    }
     auto* back = new TileButton(QStringLiteral("🏠"), "Back", "Return to main");
     back->setColors(color::LightCoral);
 
@@ -124,7 +130,7 @@ QWidget* CashboxScreen::buildMainPage() {
     grid->addWidget(makeInfoTile(QStringLiteral("💰"), "Total Sales", &totalSales_, color::LightYellow,
                                  color::Gold, "2px"),
                     2, 1);
-    grid->addWidget(soon, 3, 0);
+    grid->addWidget(rakeTile, 3, 0);
     grid->addWidget(back, 3, 1);
     makeUniform(grid, 4, 2);
     for (int i = 0; i < grid->count(); ++i) {
@@ -177,6 +183,7 @@ void CashboxScreen::refreshMain() {
     floatAdded_->setText(money(summary.floatTotal));
     tips_->setText(money(summary.tipsTotal));
     totalSales_->setText(money(summary.foodSalesTotal));
+    if (rake_) rake_->setText(money(ctx_.reports().tournamentStats().rakeCollected));
 }
 
 // ---------------------------------------------------------------------------

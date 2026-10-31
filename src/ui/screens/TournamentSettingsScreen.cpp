@@ -805,7 +805,7 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     auto* headings = new QVBoxLayout;
     headings->setSpacing(4);
     headings->addWidget(tsui::text("Tournament settings", "pageTitle"));
-    headings->addWidget(tsui::text("Pricing, rebuys and blind structure for this tournament.", "pageSubtitle", true));
+    headings->addWidget(tsui::text("Pricing, prizes, rebuys and blind structure for this tournament.", "pageSubtitle", true));
     headerRow->addLayout(headings, 1);
     QToolButton* close = tsui::iconButton(tsui::Glyph::Close, "Close");
     headerRow->addWidget(close, 0, Qt::AlignTop);
@@ -840,6 +840,16 @@ TournamentSettingsScreen::TournamentSettingsScreen(SessionContext& context, QWid
     pricingCard.body->addWidget(tile);
     cards->addWidget(pricingCard.frame);
     connect(configure, &QPushButton::clicked, this, [this] { emit configurePricing(); });
+
+    tsui::Card roundingCard = tsui::card(
+        "Payout rounding",
+        "How finishing-place amounts are rounded on the TV board and when they are paid.");
+    tsui::Card placesCard = tsui::card(
+        "Placement payouts",
+        "How the prize pool is split. A field-size preset uses the band for the current entries.");
+    buildPrizeEditors(roundingCard.body, placesCard.body);
+    cards->addWidget(roundingCard.frame);
+    cards->addWidget(placesCard.frame);
 
     // ── Rebuys ──────────────────────────────────────────────────────────────
     tsui::Card rebuysCard = tsui::card("Rebuys", "Control how many times a player can buy back in.");

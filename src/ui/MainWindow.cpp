@@ -451,7 +451,10 @@ QWidget* MainWindow::buildTiles() {
     connect(food, &QPushButton::clicked, this, [this] { openFood(); });
     connect(players, &QPushButton::clicked, this, [this] { showScreen(new PlayersScreen(*ctx_)); });
     connect(infoTile_, &QPushButton::clicked, this, [this] {
-        if (ctx_->isTournament()) showScreen(new PrizingScreen(*ctx_));
+        if (ctx_->isTournament()) {
+            const std::string id = (verified_ && !underage_) ? currentId_ : std::string();
+            showScreen(new PrizingScreen(*ctx_, id));
+        }
     });
     connect(lostChipsTile_, &QPushButton::clicked, this, [this] {
         if (ctx_->isTournament()) {
@@ -495,7 +498,7 @@ void MainWindow::applySessionModeUi() {
         setWindowTitle(QStringLiteral("pokersoc-connect — Tournament"));
         lostChipsTile_->setIconText(QStringLiteral("🏆"));
         lostChipsTile_->setTitle("Tournament Settings");
-        lostChipsTile_->setSubtitle("Buy-in amounts and blinds");
+        lostChipsTile_->setSubtitle("Buy-in, blinds and prizes");
         styleTile(cashOutTile_, "#E8EAF6", "#3949AB");
         cashOutTile_->setFaded(false);
         cashOutTile_->setIconText(QStringLiteral("⏱"));
@@ -505,6 +508,10 @@ void MainWindow::applySessionModeUi() {
         styleTile(infoTile_, "#F3E5F5", "#8E24AA");
         infoTile_->setFaded(false);
         infoTile_->setTitle("Prizing");
+        if (auto* grid = qobject_cast<QGridLayout*>(infoTile_->parentWidget()->layout())) {
+            grid->addWidget(cashOutTile_, 2, 1);
+            grid->addWidget(infoTile_, 3, 1);
+        }
         refreshTournamentTile();
         refreshClockBar();
     } else {
@@ -512,6 +519,10 @@ void MainWindow::applySessionModeUi() {
         infoTile_->setEnabled(false);
         styleTile(infoTile_, "#ECEFF1", color::LightGray);
         infoTile_->setFaded(true);
+        if (auto* grid = qobject_cast<QGridLayout*>(infoTile_->parentWidget()->layout())) {
+            grid->addWidget(infoTile_, 2, 1);
+            grid->addWidget(cashOutTile_, 3, 1);
+        }
     }
 }
 

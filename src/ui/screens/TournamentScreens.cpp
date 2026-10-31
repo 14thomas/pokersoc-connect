@@ -363,7 +363,8 @@ TournamentPricingScreen::TournamentPricingScreen(SessionContext& context, QWidge
 
 // ---------------------------------------------------------------------------
 
-PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(context, parent) {
+PrizingScreen::PrizingScreen(SessionContext& context, std::string playerId, QWidget* parent)
+    : Screen(context, parent) {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(16, 16, 16, 16);
     layout->setSpacing(0);
@@ -378,18 +379,9 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
     sections->setSpacing(16);
 
     QGroupBox* redeem = makeGroup("Redeem");
-    auto* scanRow = new QHBoxLayout;
-    scanRow->addWidget(makeLabel("Scan membership ID:"));
-    idBox_ = new QLineEdit;
-    idBox_->setFont(uiFont(16));
-    idBox_->setPlaceholderText("Scan or type player ID, then Enter");
-    scanRow->addWidget(idBox_, 1);
-    QPushButton* clearScan = footerButton("Clear", 80, false);
-    scanRow->addWidget(clearScan);
-    groupLayout(redeem)->addLayout(scanRow);
-    playerText_ = makeLabel(idlePlayerText(), 13, false, color::Gray);
+    playerText_ = makeLabel(idlePlayerText(), 16, true);
     playerText_->setWordWrap(true);
-    playerText_->setContentsMargins(0, 8, 0, 8);
+    playerText_->setContentsMargins(0, 4, 0, 8);
     groupLayout(redeem)->addWidget(playerText_);
     redeemPanel_ = new QWidget;
     auto* redeemRow = new QHBoxLayout(redeemPanel_);
@@ -401,8 +393,6 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
     redeemRow->addWidget(placeButton_, 1);
     groupLayout(redeem)->addWidget(redeemPanel_);
     sections->addWidget(redeem);
-    connect(idBox_, &QLineEdit::returnPressed, this, &PrizingScreen::scanPlayer);
-    connect(clearScan, &QPushButton::clicked, this, &PrizingScreen::clearPlayer);
     connect(bountyButton_, &QPushButton::clicked, this, &PrizingScreen::openBountyOverlay);
     connect(placeButton_, &QPushButton::clicked, this, &PrizingScreen::openPlaceOverlay);
 
@@ -425,171 +415,6 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
                        "amounts are set in Pricing Structure.");
     sections->addWidget(bountyHint_);
 
-    QGroupBox* rounding = makeGroup("Payout Rounding");
-    auto* roundingRow = new QHBoxLayout;
-    roundingRow->addWidget(makeLabel("Round place amounts:"));
-    roundingBox_ = new QComboBox;
-    roundingBox_->setFont(uiFont(13));
-    roundingBox_->setMinimumWidth(180);
-    roundingBox_->addItem("Exact", static_cast<int>(PrizeRounding::Exact));
-    roundingBox_->addItem("Nearest 5c", static_cast<int>(PrizeRounding::NearestFiveCents));
-    roundingBox_->addItem("Nearest $1", static_cast<int>(PrizeRounding::NearestDollar));
-    roundingBox_->addItem("Nearest $5", static_cast<int>(PrizeRounding::NearestFive));
-    roundingBox_->addItem("Nearest $10", static_cast<int>(PrizeRounding::NearestTen));
-    roundingBox_->addItem("Round down $1", static_cast<int>(PrizeRounding::DownDollar));
-    roundingBox_->addItem("Round down $5", static_cast<int>(PrizeRounding::DownFive));
-    const int roundingIndex =
-        roundingBox_->findData(static_cast<int>(ctx_.tournament().config().prizeRounding));
-    roundingBox_->setCurrentIndex(roundingIndex >= 0 ? roundingIndex : 0);
-    roundingRow->addWidget(roundingBox_);
-    roundingRow->addStretch(1);
-    groupLayout(rounding)->addLayout(roundingRow);
-    leftoverBox_ = new QCheckBox("Give leftover from rounding to 1st place");
-    leftoverBox_->setFont(uiFont(13));
-    leftoverBox_->setChecked(ctx_.tournament().config().leftoverToFirst);
-    groupLayout(rounding)->addSpacing(8);
-    groupLayout(rounding)->addWidget(leftoverBox_);
-    groupLayout(rounding)->addWidget(
-        hint("Percents apply to the prize pool only. Rounding is used on the room display and when "
-             "paying a place. Unallocated percent stays in the prize pool."));
-    sections->addWidget(rounding);
-
-    QGroupBox* places = makeGroup("Placement Payouts");
-    auto* presetRow = new QHBoxLayout;
-    presetRow->addWidget(makeLabel("Preset:"));
-    presetBox_ = new QComboBox;
-    presetBox_->setFont(uiFont(13));
-    presetBox_->setMinimumWidth(220);
-    presetBox_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    presetRow->addWidget(presetBox_, 1);
-    groupLayout(places)->addLayout(presetRow);
-
-    auto* nameRow = new QHBoxLayout;
-    nameRow->addWidget(makeLabel("Name:"));
-    presetName_ = new QLineEdit;
-    presetName_->setFont(uiFont(13));
-    nameRow->addWidget(presetName_, 1);
-    groupLayout(places)->addLayout(nameRow);
-
-    auto* fileRow = new QHBoxLayout;
-    fileRow->setSpacing(8);
-    QPushButton* loadJson = footerButton("Load JSON", 120, false);
-    QPushButton* saveJson = footerButton("Save JSON", 120, false);
-    QPushButton* newField = footerButton("New by field size", 170, false);
-    QPushButton* newFixed = footerButton("New fixed", 120, false);
-    deletePreset_ = footerButton("Delete", 100, false);
-    fileRow->addWidget(loadJson);
-    fileRow->addWidget(saveJson);
-    fileRow->addWidget(newField);
-    fileRow->addWidget(newFixed);
-    fileRow->addWidget(deletePreset_);
-    fileRow->addStretch(1);
-    groupLayout(places)->addSpacing(8);
-    groupLayout(places)->addLayout(fileRow);
-
-    variablePanel_ = new QWidget;
-    auto* variableLayout = new QVBoxLayout(variablePanel_);
-    variableLayout->setContentsMargins(0, 8, 0, 0);
-    variableLayout->setSpacing(8);
-    auto* bandRow = new QHBoxLayout;
-    bandRow->addWidget(makeLabel("Field size:"));
-    bandBox_ = new QComboBox;
-    bandBox_->setFont(uiFont(13));
-    bandBox_->setMinimumWidth(180);
-    bandRow->addWidget(bandBox_, 1);
-    QPushButton* addBandButton = footerButton("Add band", 110, false);
-    QPushButton* removeBandButton = footerButton("Remove band", 130, false);
-    bandRow->addWidget(addBandButton);
-    bandRow->addWidget(removeBandButton);
-    variableLayout->addLayout(bandRow);
-    auto* rangeRow = new QHBoxLayout;
-    rangeRow->addWidget(makeLabel("Players:"));
-    minPlayers_ = new QSpinBox;
-    maxPlayers_ = new QSpinBox;
-    for (QSpinBox* spin : {minPlayers_, maxPlayers_}) {
-        spin->setRange(0, 10000);
-        spin->setFont(uiFont(13));
-        spin->setMinimumWidth(80);
-    }
-    rangeRow->addWidget(minPlayers_);
-    rangeRow->addWidget(makeLabel("to"));
-    rangeRow->addWidget(maxPlayers_);
-    rangeRow->addSpacing(12);
-    countBuyins_ = new QCheckBox("Count buy-ins");
-    countRebuys_ = new QCheckBox("Count rebuys");
-    countBuyins_->setFont(uiFont(13));
-    countRebuys_->setFont(uiFont(13));
-    rangeRow->addWidget(countBuyins_);
-    rangeRow->addWidget(countRebuys_);
-    rangeRow->addStretch(1);
-    variableLayout->addLayout(rangeRow);
-    fieldHint_ = hint(QString());
-    variableLayout->addWidget(fieldHint_);
-    groupLayout(places)->addWidget(variablePanel_);
-
-    prizesTable_ = makeEditorTable({"Place", "Percent of prize pool"});
-    prizesTable_->setMaximumHeight(360);
-    groupLayout(places)->addWidget(prizesTable_);
-    auto* prizeButtons = new QHBoxLayout;
-    QPushButton* addPrize = footerButton("Add Place", 120, false);
-    QPushButton* removePrize = footerButton("Remove Last", 120, false);
-    prizeButtons->addWidget(addPrize);
-    prizeButtons->addWidget(removePrize);
-    prizeButtons->addStretch(1);
-    groupLayout(places)->addSpacing(8);
-    groupLayout(places)->addLayout(prizeButtons);
-    groupLayout(places)->addWidget(
-        hint("Percents apply to the prize pool only (not bounty). A field-size preset picks the band "
-             "for the current entries. Each place can be paid once."));
-    payoutPreview_ = makeLabel(QString(), 13, false, color::Gray);
-    payoutPreview_->setWordWrap(true);
-    payoutPreview_->setContentsMargins(0, 8, 0, 0);
-    groupLayout(places)->addWidget(payoutPreview_);
-    sections->addWidget(places);
-    reloadPresetList();
-    showPreset(ctx_.tournament().config().activePrizePreset);
-    connect(addPrize, &QPushButton::clicked, this, [this] {
-        addPrizeRow(prizesTable_, PrizeShare{prizesTable_->rowCount() + 1, 0});
-        prizesTable_->scrollToBottom();
-        prizingChanged();
-    });
-    connect(removePrize, &QPushButton::clicked, this, [this] {
-        if (prizesTable_->rowCount() > 0) prizesTable_->removeRow(prizesTable_->rowCount() - 1);
-        prizingChanged();
-    });
-    connect(prizesTable_, &QTableWidget::itemChanged, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(roundingBox_, &QComboBox::currentIndexChanged, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(leftoverBox_, &QCheckBox::toggled, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(presetBox_, &QComboBox::currentIndexChanged, this, &PrizingScreen::onPresetChanged);
-    connect(presetName_, &QLineEdit::editingFinished, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(bandBox_, &QComboBox::currentIndexChanged, this, &PrizingScreen::onBandChanged);
-    connect(minPlayers_, &QSpinBox::valueChanged, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(maxPlayers_, &QSpinBox::valueChanged, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(countBuyins_, &QCheckBox::toggled, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(countRebuys_, &QCheckBox::toggled, this, [this] {
-        if (!loadingPrizes_) prizingChanged();
-    });
-    connect(loadJson, &QPushButton::clicked, this, &PrizingScreen::loadPresetJson);
-    connect(saveJson, &QPushButton::clicked, this, &PrizingScreen::savePresetJson);
-    connect(newField, &QPushButton::clicked, this, [this] { newPreset(true); });
-    connect(newFixed, &QPushButton::clicked, this, [this] { newPreset(false); });
-    connect(deletePreset_, &QPushButton::clicked, this, &PrizingScreen::deletePreset);
-    connect(addBandButton, &QPushButton::clicked, this, &PrizingScreen::addBand);
-    connect(removeBandButton, &QPushButton::clicked, this, &PrizingScreen::removeBand);
     sections->addStretch(1);
 
     layout->addWidget(makeScroll(content), 1);
@@ -644,16 +469,204 @@ PrizingScreen::PrizingScreen(SessionContext& context, QWidget* parent) : Screen(
     placeCard->addWidget(cancelPlace);
     connect(cancelPlace, &QPushButton::clicked, placeOverlay_, &QWidget::hide);
 
-    clearPlayer();
+    const Player* player = playerId.empty() ? nullptr : ctx_.players().find(playerId);
+    if (!player || player->isUnderage()) {
+        playerId_.clear();
+        playerText_->setText(player && player->isUnderage()
+                                 ? QStringLiteral("This player is underage and cannot be paid out.")
+                                 : idlePlayerText());
+        playerText_->setStyleSheet(QStringLiteral("color:%1;").arg(color::Gray));
+    } else {
+        playerId_ = std::move(playerId);
+        const QString name = toQ(player->name());
+        const QString shown = name.isEmpty() || name == QStringLiteral("New Player") ? toQ(playerId_) : name;
+        const QString category = ctx_.tournament().config().usesMembershipPricing()
+                                     ? QString(membershipTypeLabel(player->membership()))
+                                     : player->arcStatus() == ArcStatus::Arc      ? QStringLiteral("ARC")
+                                     : player->arcStatus() == ArcStatus::NonArc ? QStringLiteral("Non-ARC")
+                                                                                : QStringLiteral("ARC not set");
+        playerText_->setText(QStringLiteral("Paying  %1    ·    %2").arg(shown, category));
+        playerText_->setStyleSheet("color:black;");
+    }
     refresh();
 }
 
-QString PrizingScreen::bandLabel(const PrizeBand& band) const {
+void TournamentSettingsScreen::buildPrizeEditors(QVBoxLayout* roundingBody, QVBoxLayout* placesBody) {
+    roundingBody->setSpacing(8);
+    placesBody->setSpacing(10);
+    auto* roundingRow = new QHBoxLayout;
+    roundingRow->addWidget(makeLabel("Round place amounts:"));
+    roundingBox_ = new QComboBox;
+    roundingBox_->setObjectName(QStringLiteral("combo"));
+    roundingBox_->setFont(uiFont(13));
+    roundingBox_->setMinimumWidth(180);
+    roundingBox_->addItem("Exact", static_cast<int>(PrizeRounding::Exact));
+    roundingBox_->addItem("Nearest 5c", static_cast<int>(PrizeRounding::NearestFiveCents));
+    roundingBox_->addItem("Nearest $1", static_cast<int>(PrizeRounding::NearestDollar));
+    roundingBox_->addItem("Nearest $5", static_cast<int>(PrizeRounding::NearestFive));
+    roundingBox_->addItem("Nearest $10", static_cast<int>(PrizeRounding::NearestTen));
+    roundingBox_->addItem("Round down $1", static_cast<int>(PrizeRounding::DownDollar));
+    roundingBox_->addItem("Round down $5", static_cast<int>(PrizeRounding::DownFive));
+    const int roundingIndex =
+        roundingBox_->findData(static_cast<int>(ctx_.tournament().config().prizeRounding));
+    roundingBox_->setCurrentIndex(roundingIndex >= 0 ? roundingIndex : 0);
+    roundingRow->addWidget(roundingBox_);
+    roundingRow->addStretch(1);
+    roundingBody->addLayout(roundingRow);
+    leftoverBox_ = new QCheckBox("Give leftover from rounding to 1st place");
+    leftoverBox_->setFont(uiFont(13));
+    leftoverBox_->setChecked(ctx_.tournament().config().leftoverToFirst);
+    roundingBody->addSpacing(8);
+    roundingBody->addWidget(leftoverBox_);
+    roundingBody->addWidget(
+        hint("Percents apply to the prize pool only. Rounding is used on the room display and when "
+             "paying a place. Unallocated percent stays in the prize pool."));
+        auto* presetRow = new QHBoxLayout;
+    presetRow->addWidget(makeLabel("Preset:"));
+    presetBox_ = new QComboBox;
+    presetBox_->setObjectName(QStringLiteral("combo"));
+    presetBox_->setFont(uiFont(13));
+    presetBox_->setMinimumWidth(220);
+    presetBox_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    presetRow->addWidget(presetBox_, 1);
+    placesBody->addLayout(presetRow);
+
+    auto* nameRow = new QHBoxLayout;
+    nameRow->addWidget(makeLabel("Name:"));
+    presetName_ = new QLineEdit;
+    presetName_->setObjectName(QStringLiteral("textField"));
+    presetName_->setFont(uiFont(13));
+    nameRow->addWidget(presetName_, 1);
+    placesBody->addLayout(nameRow);
+
+    auto* fileRow = new QHBoxLayout;
+    fileRow->setSpacing(8);
+    QPushButton* loadJson = footerButton("Load JSON", 120, false);
+    QPushButton* saveJson = footerButton("Save JSON", 120, false);
+    QPushButton* newField = footerButton("New by field size", 170, false);
+    QPushButton* newFixed = footerButton("New fixed", 120, false);
+    deletePreset_ = footerButton("Delete", 100, false);
+    fileRow->addWidget(loadJson);
+    fileRow->addWidget(saveJson);
+    fileRow->addWidget(newField);
+    fileRow->addWidget(newFixed);
+    fileRow->addWidget(deletePreset_);
+    fileRow->addStretch(1);
+    placesBody->addSpacing(8);
+    placesBody->addLayout(fileRow);
+
+    variablePanel_ = new QWidget;
+    auto* variableLayout = new QVBoxLayout(variablePanel_);
+    variableLayout->setContentsMargins(0, 8, 0, 0);
+    variableLayout->setSpacing(8);
+    auto* bandRow = new QHBoxLayout;
+    bandRow->addWidget(makeLabel("Field size:"));
+    bandBox_ = new QComboBox;
+    bandBox_->setObjectName(QStringLiteral("combo"));
+    bandBox_->setFont(uiFont(13));
+    bandBox_->setMinimumWidth(180);
+    bandRow->addWidget(bandBox_, 1);
+    QPushButton* addBandButton = footerButton("Add band", 110, false);
+    QPushButton* removeBandButton = footerButton("Remove band", 130, false);
+    bandRow->addWidget(addBandButton);
+    bandRow->addWidget(removeBandButton);
+    variableLayout->addLayout(bandRow);
+    auto* rangeRow = new QHBoxLayout;
+    rangeRow->addWidget(makeLabel("Players:"));
+    minPlayers_ = new QSpinBox;
+    maxPlayers_ = new QSpinBox;
+    for (QSpinBox* spin : {minPlayers_, maxPlayers_}) {
+        spin->setRange(0, 10000);
+        spin->setFont(uiFont(13));
+        spin->setMinimumWidth(80);
+    }
+    rangeRow->addWidget(minPlayers_);
+    rangeRow->addWidget(makeLabel("to"));
+    rangeRow->addWidget(maxPlayers_);
+    rangeRow->addSpacing(12);
+    countBuyins_ = new QCheckBox("Count buy-ins");
+    countRebuys_ = new QCheckBox("Count rebuys");
+    countBuyins_->setFont(uiFont(13));
+    countRebuys_->setFont(uiFont(13));
+    rangeRow->addWidget(countBuyins_);
+    rangeRow->addWidget(countRebuys_);
+    rangeRow->addStretch(1);
+    variableLayout->addLayout(rangeRow);
+    fieldHint_ = hint(QString());
+    variableLayout->addWidget(fieldHint_);
+    placesBody->addWidget(variablePanel_);
+
+    prizesTable_ = makeEditorTable({"Place", "Percent of prize pool"});
+    prizesTable_->setMaximumHeight(360);
+    placesBody->addWidget(prizesTable_);
+    auto* prizeButtons = new QHBoxLayout;
+    QPushButton* addPrize = footerButton("Add Place", 120, false);
+    QPushButton* removePrize = footerButton("Remove Last", 120, false);
+    prizeButtons->addWidget(addPrize);
+    prizeButtons->addWidget(removePrize);
+    prizeButtons->addStretch(1);
+    placesBody->addSpacing(8);
+    placesBody->addLayout(prizeButtons);
+    placesBody->addWidget(
+        hint("Percents apply to the prize pool only (not bounty). A field-size preset picks the band "
+             "for the current entries. Each place can be paid once."));
+    payoutPreview_ = makeLabel(QString(), 13, false, color::Gray);
+    payoutPreview_->setWordWrap(true);
+    payoutPreview_->setContentsMargins(0, 8, 0, 0);
+    placesBody->addWidget(payoutPreview_);
+    reloadPresetList();
+    showPreset(ctx_.tournament().config().activePrizePreset);
+    refreshPayoutPreview();
+    connect(addPrize, &QPushButton::clicked, this, [this] {
+        addPrizeRow(prizesTable_, PrizeShare{prizesTable_->rowCount() + 1, 0});
+        prizesTable_->scrollToBottom();
+        prizingChanged();
+    });
+    connect(removePrize, &QPushButton::clicked, this, [this] {
+        if (prizesTable_->rowCount() > 0) prizesTable_->removeRow(prizesTable_->rowCount() - 1);
+        prizingChanged();
+    });
+    connect(prizesTable_, &QTableWidget::itemChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(roundingBox_, &QComboBox::currentIndexChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(leftoverBox_, &QCheckBox::toggled, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(presetBox_, &QComboBox::currentIndexChanged, this, &TournamentSettingsScreen::onPresetChanged);
+    connect(presetName_, &QLineEdit::editingFinished, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(bandBox_, &QComboBox::currentIndexChanged, this, &TournamentSettingsScreen::onBandChanged);
+    connect(minPlayers_, &QSpinBox::valueChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(maxPlayers_, &QSpinBox::valueChanged, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(countBuyins_, &QCheckBox::toggled, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(countRebuys_, &QCheckBox::toggled, this, [this] {
+        if (!loadingPrizes_) prizingChanged();
+    });
+    connect(loadJson, &QPushButton::clicked, this, &TournamentSettingsScreen::loadPresetJson);
+    connect(saveJson, &QPushButton::clicked, this, &TournamentSettingsScreen::savePresetJson);
+    connect(newField, &QPushButton::clicked, this, [this] { newPreset(true); });
+    connect(newFixed, &QPushButton::clicked, this, [this] { newPreset(false); });
+    connect(deletePreset_, &QPushButton::clicked, this, &TournamentSettingsScreen::deletePreset);
+    connect(addBandButton, &QPushButton::clicked, this, &TournamentSettingsScreen::addBand);
+    connect(removeBandButton, &QPushButton::clicked, this, &TournamentSettingsScreen::removeBand);
+}
+
+QString TournamentSettingsScreen::bandLabel(const PrizeBand& band) const {
     if (band.maxPlayers <= 0) return QStringLiteral("%1+ players").arg(band.minPlayers);
     return QStringLiteral("%1–%2 players").arg(band.minPlayers).arg(band.maxPlayers);
 }
 
-void PrizingScreen::reloadPresetList() {
+void TournamentSettingsScreen::reloadPresetList() {
     const TournamentConfig& config = ctx_.tournament().config();
     const bool blocked = presetBox_->blockSignals(true);
     presetBox_->clear();
@@ -665,7 +678,7 @@ void PrizingScreen::reloadPresetList() {
     if (deletePreset_) deletePreset_->setEnabled(config.prizePresets.size() > 1);
 }
 
-void PrizingScreen::showBand(int index) {
+void TournamentSettingsScreen::showBand(int index) {
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
     PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
@@ -689,7 +702,7 @@ void PrizingScreen::showBand(int index) {
     loadingPrizes_ = false;
 }
 
-void PrizingScreen::showPreset(int index) {
+void TournamentSettingsScreen::showPreset(int index) {
     TournamentConfig& config = ctx_.tournament().config();
     if (config.prizePresets.empty()) config.prizePresets = TournamentConfig::defaultPrizePresets();
     if (index < 0 || index >= static_cast<int>(config.prizePresets.size())) index = 0;
@@ -741,7 +754,7 @@ void PrizingScreen::showPreset(int index) {
     if (deletePreset_) deletePreset_->setEnabled(config.prizePresets.size() > 1);
 }
 
-bool PrizingScreen::writeTableToPreset(PrizePreset& preset, QString& problem) {
+bool TournamentSettingsScreen::writeTableToPreset(PrizePreset& preset, QString& problem) {
     std::vector<PrizeShare> prizes;
     if (!readPrizes(prizesTable_, prizes, problem)) return false;
     const bool leftover = leftoverBox_->isChecked();
@@ -767,7 +780,7 @@ bool PrizingScreen::writeTableToPreset(PrizePreset& preset, QString& problem) {
     return true;
 }
 
-void PrizingScreen::onPresetChanged(int index) {
+void TournamentSettingsScreen::onPresetChanged(int index) {
     if (loadingPrizes_ || index < 0) return;
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ >= 0 && editingPreset_ < static_cast<int>(config.prizePresets.size()) &&
@@ -777,7 +790,7 @@ void PrizingScreen::onPresetChanged(int index) {
             loadingPrizes_ = true;
             presetBox_->setCurrentIndex(editingPreset_);
             loadingPrizes_ = false;
-            QMessageBox::warning(this, "Prizing", problem);
+            QMessageBox::warning(this, "Tournament settings", problem);
             return;
         }
     }
@@ -791,7 +804,7 @@ void PrizingScreen::onPresetChanged(int index) {
     refreshPayoutPreview();
 }
 
-void PrizingScreen::onBandChanged(int index) {
+void TournamentSettingsScreen::onBandChanged(int index) {
     if (loadingPrizes_ || index < 0) return;
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
@@ -802,7 +815,7 @@ void PrizingScreen::onBandChanged(int index) {
             loadingPrizes_ = true;
             bandBox_->setCurrentIndex(editingBand_);
             loadingPrizes_ = false;
-            QMessageBox::warning(this, "Prizing", problem);
+            QMessageBox::warning(this, "Tournament settings", problem);
             return;
         }
     }
@@ -816,14 +829,14 @@ void PrizingScreen::onBandChanged(int index) {
     }
 }
 
-void PrizingScreen::addBand() {
+void TournamentSettingsScreen::addBand() {
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
     PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
     if (!preset.variableByPlayers) return;
     QString problem;
     if (!writeTableToPreset(preset, problem)) {
-        QMessageBox::warning(this, "Prizing", problem);
+        QMessageBox::warning(this, "Tournament settings", problem);
         return;
     }
     PrizeBand band;
@@ -846,7 +859,7 @@ void PrizingScreen::addBand() {
     refreshPayoutPreview();
 }
 
-void PrizingScreen::removeBand() {
+void TournamentSettingsScreen::removeBand() {
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
     PrizePreset& preset = config.prizePresets[static_cast<std::size_t>(editingPreset_)];
@@ -864,12 +877,12 @@ void PrizingScreen::removeBand() {
     refreshPayoutPreview();
 }
 
-void PrizingScreen::newPreset(bool byFieldSize) {
+void TournamentSettingsScreen::newPreset(bool byFieldSize) {
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ >= 0 && editingPreset_ < static_cast<int>(config.prizePresets.size())) {
         QString problem;
         if (!writeTableToPreset(config.prizePresets[static_cast<std::size_t>(editingPreset_)], problem)) {
-            QMessageBox::warning(this, "Prizing", problem);
+            QMessageBox::warning(this, "Tournament settings", problem);
             return;
         }
     }
@@ -905,12 +918,12 @@ void PrizingScreen::newPreset(bool byFieldSize) {
     refreshPayoutPreview();
 }
 
-void PrizingScreen::deletePreset() {
+void TournamentSettingsScreen::deletePreset() {
     TournamentConfig& config = ctx_.tournament().config();
     if (config.prizePresets.size() <= 1) return;
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
     const QString name = toQ(config.prizePresets[static_cast<std::size_t>(editingPreset_)].name);
-    if (QMessageBox::question(this, "Prizing", QStringLiteral("Delete preset \"%1\"?").arg(name)) !=
+    if (QMessageBox::question(this, "Tournament settings", QStringLiteral("Delete preset \"%1\"?").arg(name)) !=
         QMessageBox::Yes) {
         return;
     }
@@ -929,7 +942,7 @@ void PrizingScreen::deletePreset() {
     refreshPayoutPreview();
 }
 
-void PrizingScreen::loadPresetJson() {
+void TournamentSettingsScreen::loadPresetJson() {
     const QString path = QFileDialog::getOpenFileName(
         this, QStringLiteral("Load prize preset"),
         QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
@@ -972,7 +985,7 @@ void PrizingScreen::loadPresetJson() {
     refreshPayoutPreview();
 }
 
-void PrizingScreen::savePresetJson() {
+void TournamentSettingsScreen::savePresetJson() {
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
     QString problem;
@@ -1005,39 +1018,8 @@ void PrizingScreen::savePresetJson() {
     persistPrizing();
 }
 
-void PrizingScreen::scanPlayer() {
-    const std::string id = toStd(idBox_->text().trimmed());
-    if (id.empty()) return;
-    const Player* player = ctx_.players().find(id);
-    if (!player) {
-        QMessageBox::information(this, "Prizing",
-                                 "No player with that ID. Register them on the main screen first.");
-        return;
-    }
-    if (player->isUnderage()) {
-        QMessageBox::warning(this, "Prizing", "This player is underage and cannot be paid out.");
-        return;
-    }
-    playerId_ = id;
-    const QString name = toQ(player->name());
-    playerText_->setText(QStringLiteral("Paying  %1  (%2)")
-                             .arg(name.isEmpty() || name == "New Player" ? toQ(id) : name, toQ(id)));
-    playerText_->setStyleSheet("color:black;");
-    refresh();
-}
-
-void PrizingScreen::clearPlayer() {
-    playerId_.clear();
-    idBox_->clear();
-    playerText_->setText(idlePlayerText());
-    playerText_->setStyleSheet(QStringLiteral("color:%1;").arg(color::Gray));
-    refresh();
-}
-
 QString PrizingScreen::idlePlayerText() const {
-    return ctx_.tournament().config().hasBounties()
-               ? QStringLiteral("Scan a player to pay a bounty or a finishing place.")
-               : QStringLiteral("Scan a player to pay a finishing place.");
+    return QStringLiteral("Scan a player on the main screen, then open Prizing.");
 }
 
 void PrizingScreen::refresh() {
@@ -1056,11 +1038,9 @@ void PrizingScreen::refresh() {
     const bool hasPlayer = !playerId_.empty();
     bountyButton_->setEnabled(hasPlayer && bountiesOn && stats.bountyRemaining() > Money{});
     placeButton_->setEnabled(hasPlayer);
-    refreshPayoutPreview();
-    idBox_->setFocus();
 }
 
-void PrizingScreen::refreshPayoutPreview() {
+void TournamentSettingsScreen::refreshPayoutPreview() {
     TournamentConfig sample = ctx_.tournament().config();
     if (sample.prizePresets.empty()) {
         payoutPreview_->setText(QStringLiteral("No places configured."));
@@ -1121,12 +1101,12 @@ Money PrizingScreen::bountyUnitForPlayer() const {
     return ctx_.reports().tournamentStats().bountyRemaining();
 }
 
-void PrizingScreen::prizingChanged() {
+void TournamentSettingsScreen::prizingChanged() {
     refreshPayoutPreview();
     persistPrizing();
 }
 
-void PrizingScreen::persistPrizing() {
+void TournamentSettingsScreen::persistPrizing() {
     TournamentConfig& config = ctx_.tournament().config();
     if (editingPreset_ < 0 || editingPreset_ >= static_cast<int>(config.prizePresets.size())) return;
     QString problem;
@@ -1156,6 +1136,7 @@ void PrizingScreen::persistPrizing() {
     }
     try {
         ctx_.saveTournamentConfig();
+        emit structureChanged();
     } catch (const std::exception& error) {
         QMessageBox::critical(this, "Error",
                               QStringLiteral("Could not save prizing:\n%1").arg(error.what()));
@@ -1165,7 +1146,7 @@ void PrizingScreen::persistPrizing() {
 void PrizingScreen::openBountyOverlay() {
     if (!ctx_.tournament().config().hasBounties()) return;
     if (playerId_.empty()) {
-        QMessageBox::information(this, "Prizing", "Scan a player first.");
+        QMessageBox::information(this, "Prizing", "Scan a player on the main screen first.");
         return;
     }
     const Money per = bountyUnitForPlayer();
@@ -1216,7 +1197,7 @@ void PrizingScreen::refreshBountyPad() {
 
 void PrizingScreen::openPlaceOverlay() {
     if (playerId_.empty()) {
-        QMessageBox::information(this, "Prizing", "Scan a player first.");
+        QMessageBox::information(this, "Prizing", "Scan a player on the main screen first.");
         return;
     }
     clearLayout(placeList_);

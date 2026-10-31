@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Shipped exe is pokersoc_connect_<this>. Change it here.
-set(POKERSOC_VERSION 2.0.0)
+set(POKERSOC_VERSION 2.1.0)
 
 project(pokersoc_cpp VERSION ${POKERSOC_VERSION} LANGUAGES C CXX)
 
