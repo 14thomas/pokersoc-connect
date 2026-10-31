@@ -51,6 +51,8 @@ public:
 
     void focusScanner();
     void refresh();
+    /// Load `playerId` the same way a barcode scan on this page would.
+    void acceptScan(const QString& playerId);
     /// Call after a buy-in, rebuy, or cash-out has been saved.
     void afterMoneyTransaction();
     const std::string& loadedId() const { return playerId_; }

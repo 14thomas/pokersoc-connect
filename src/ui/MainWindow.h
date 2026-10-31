@@ -83,6 +83,7 @@ private:
 
     // ---- activity / screens ----
     void refreshActivity();
+    void openPlayers();
     void showScreen(Screen* screen);
     void showMain(bool changed);
     void openBuyIn();
@@ -143,6 +144,7 @@ private:
     QPushButton* clockPause_ = nullptr;
     QPushButton* boardButton_ = nullptr;
     QLabel* wallClock_ = nullptr;
+    QString pendingLoad_;
 };
 
 } // namespace pokersoc::ui

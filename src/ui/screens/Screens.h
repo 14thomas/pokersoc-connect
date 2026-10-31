@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <QStringList>
+#include <QVector>
 #include <QWidget>
 
 #include "domain/food/SaleLine.h"
@@ -14,13 +16,22 @@
 class QAbstractButton;
 class QCheckBox;
 class QComboBox;
+class QFrame;
 class QGridLayout;
+class QHBoxLayout;
+class QEvent;
+class QHideEvent;
 class QLabel;
 class QLineEdit;
+class QListView;
 class QPushButton;
+class QResizeEvent;
+class QScrollArea;
+class QShowEvent;
 class QSpinBox;
 class QStackedWidget;
 class QTableWidget;
+class QTimer;
 class QVBoxLayout;
 
 namespace pokersoc::domain {
@@ -41,6 +52,7 @@ class PasswordOverlay;
 class SessionContext;
 class TileButton;
 class TournamentClock;
+class TapFrame;
 
 /// Common shape of a full-window screen hosted by the main window.
 class Screen : public QWidget {
@@ -331,19 +343,104 @@ private:
 
 // ---------------------------------------------------------------------------
 
+class PlayerListModel;
+
 class PlayersScreen : public Screen {
     Q_OBJECT
 public:
     explicit PlayersScreen(SessionContext& context, QWidget* parent = nullptr);
 
-private:
-    void refresh();
-    void importPlayers();
-    void exportPlayers();
+signals:
+    /// Load this card on the main page the same way a scan would, then go back.
+    void loadOnMain(const QString& playerId);
 
-    QLabel* subtitle_ = nullptr;
-    QTableWidget* grid_ = nullptr;
+protected:
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+private:
+    void buildUi();
+    void refresh();
+    void updateChrome();
+    void rebuildHeader();
+    void rebuildList();
+    void rebuildDetails();
+    void selectPlayer(const std::string& id);
+    void clearSelection();
+    void setSessionView(bool session);
+    void setFilter(int filter);
+    void applyListFilter();
+    void primeNights();
+    void onScan(const QString& raw);
+    void focusScanner();
+    void showToast(const QString& title, const QString& detail);
+    void exportSessionList();
+    void exportAllMembers();
+    void exportBoth();
+    void beginImport();
+    void showImportReview(const QString& path);
+    void paintImportReview();
+    void applyImport();
+    void chooseMembership();
+    void editPlayer();
+    void checkIdAgain();
+    void loadSelected();
+    void closeOverlay();
+    QDate sessionDate() const;
+
+    bool sessionView_ = true;
+    bool nightsReady_ = false;
+    int filter_ = 0;
+    std::string selected_;
     bool changed_ = false;
+    bool overlay_ = false;
+    bool fillBlanks_ = true;
+
+    QLineEdit* search_ = nullptr;
+    QLineEdit* scanner_ = nullptr;
+    QWidget* scanHint_ = nullptr;
+    QPushButton* clearSearch_ = nullptr;
+    QLabel* clockTime_ = nullptr;
+    QLabel* clockPeriod_ = nullptr;
+    QTimer* clockTimer_ = nullptr;
+    TapFrame* sessionSeg_ = nullptr;
+    TapFrame* allSeg_ = nullptr;
+    QLabel* sessionLab_ = nullptr;
+    QLabel* allLab_ = nullptr;
+    QLabel* sessionNum_ = nullptr;
+    QLabel* allNum_ = nullptr;
+    QWidget* filterRow_ = nullptr;
+    TapFrame* filterChip_[4] = {};
+    QLabel* filterLab_[4] = {};
+    QLabel* filterNum_[4] = {};
+    QLabel* caption_ = nullptr;
+    QWidget* sessionTools_ = nullptr;
+    QWidget* memberTools_ = nullptr;
+    QHBoxLayout* headerRow_ = nullptr;
+    QListView* listView_ = nullptr;
+    PlayerListModel* listModel_ = nullptr;
+    QWidget* emptyList_ = nullptr;
+    QFrame* detailPanel_ = nullptr;
+    QStackedWidget* detailStack_ = nullptr;
+    QVBoxLayout* detailLayout_ = nullptr;
+    QWidget* toastWrap_ = nullptr;
+    QLabel* toastTitle_ = nullptr;
+    QLabel* toastDetail_ = nullptr;
+    QTimer* toastTimer_ = nullptr;
+    QWidget* dim_ = nullptr;
+    QFrame* dialog_ = nullptr;
+    QLabel* importNew_ = nullptr;
+    QLabel* importUpdated_ = nullptr;
+    QLabel* importSame_ = nullptr;
+    QLabel* importSkipped_ = nullptr;
+    QLabel* importChangeCaption_ = nullptr;
+    QVBoxLayout* importChanges_ = nullptr;
+    QPushButton* importApply_ = nullptr;
+    QLabel* importPolicyNote_ = nullptr;
+    QString importPath_;
+    QVector<QStringList> importRows_;
 };
 
 // ---------------------------------------------------------------------------

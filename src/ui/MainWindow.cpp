@@ -127,7 +127,7 @@ MainWindow::MainWindow(std::unique_ptr<SessionContext> context, QWidget* parent)
     } else {
         cashPage_ = new CashMainPage(*ctx_);
         mainPage_ = cashPage_;
-        connect(cashPage_, &CashMainPage::openPlayers, this, [this] { showScreen(new PlayersScreen(*ctx_)); });
+        connect(cashPage_, &CashMainPage::openPlayers, this, [this] { openPlayers(); });
         connect(cashPage_, &CashMainPage::openLostChips, this, [this] { showScreen(new LostChipsScreen(*ctx_)); });
         connect(cashPage_, &CashMainPage::openShop, this, [this] { openFood(); });
         connect(cashPage_, &CashMainPage::openCashbox, this, [this] { showScreen(new CashboxScreen(*ctx_)); });
@@ -502,7 +502,7 @@ QWidget* MainWindow::buildTiles() {
     connect(cashOutTile_, &QPushButton::clicked, this, [this] { openCashOut(); });
     connect(cashbox, &QPushButton::clicked, this, [this] { showScreen(new CashboxScreen(*ctx_)); });
     connect(food, &QPushButton::clicked, this, [this] { openFood(); });
-    connect(players, &QPushButton::clicked, this, [this] { showScreen(new PlayersScreen(*ctx_)); });
+    connect(players, &QPushButton::clicked, this, [this] { openPlayers(); });
     connect(infoTile_, &QPushButton::clicked, this, [this] {
         if (ctx_->isTournament()) {
             const std::string id = (verified_ && !underage_) ? currentId_ : std::string();
@@ -891,6 +891,13 @@ void MainWindow::refreshActivity() {
     refreshTournamentTile();
 }
 
+void MainWindow::openPlayers() {
+    auto* screen = new PlayersScreen(*ctx_);
+    connect(screen, &PlayersScreen::loadOnMain, this, [this](const QString& id) { pendingLoad_ = id; });
+    showScreen(screen);
+    if (chrome_) chrome_->hide();
+}
+
 void MainWindow::showScreen(Screen* screen) {
     if (chrome_) chrome_->show();
     if (clockBar_) clockBar_->setVisible(false);
@@ -910,8 +917,20 @@ void MainWindow::showMain(bool changed) {
     if (cashPage_) {
         if (chrome_) chrome_->hide();
         cashPage_->refresh();
-        cashPage_->focusScanner();
+        if (!pendingLoad_.isEmpty()) {
+            const QString id = pendingLoad_;
+            pendingLoad_.clear();
+            cashPage_->acceptScan(id);
+        } else {
+            cashPage_->focusScanner();
+        }
         return;
+    }
+    if (!pendingLoad_.isEmpty()) {
+        const QString id = pendingLoad_;
+        pendingLoad_.clear();
+        idBox_->setText(id);
+        scanEntered();
     }
     if (clockBar_) {
         if (chrome_) chrome_->show();

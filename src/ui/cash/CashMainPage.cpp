@@ -978,6 +978,10 @@ void CashMainPage::refresh() {
     updateActions();
 }
 
+void CashMainPage::acceptScan(const QString& playerId) {
+    lookup(playerId);
+}
+
 void CashMainPage::lookup(const QString& rawId) {
     if (overlayOpen_) return;
     const QString id = rawId.trimmed();

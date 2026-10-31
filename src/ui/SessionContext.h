@@ -1,8 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "domain/cashbox/Cashbox.h"
 #include "domain/food/ProductCatalog.h"
@@ -80,6 +82,15 @@ public:
     void saveTournamentConfig();
     void saveCashGameConfig();
 
+    /// Card numbers loaded onto the main page from Players, newest first.
+    /// Lives for this app session only.
+    void noteLoadedPlayer(const std::string& id) {
+        loadedPlayers_.erase(std::remove(loadedPlayers_.begin(), loadedPlayers_.end(), id),
+                             loadedPlayers_.end());
+        loadedPlayers_.insert(loadedPlayers_.begin(), id);
+    }
+    const std::vector<std::string>& loadedPlayers() const noexcept { return loadedPlayers_; }
+
 private:
     std::string dbPath_;
     const domain::DenominationTable& table_;
@@ -103,6 +114,7 @@ private:
     std::unique_ptr<application::PrizeService> prizes_;
     std::unique_ptr<application::AdminService> admin_;
     std::unique_ptr<application::ImportExportService> files_;
+    std::vector<std::string> loadedPlayers_;
 };
 
 } // namespace pokersoc::ui
