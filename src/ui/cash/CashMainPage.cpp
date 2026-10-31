@@ -86,15 +86,15 @@ using namespace domain;
 
 namespace {
 
-constexpr const char* kBg = "#0D1013";
-constexpr const char* kPanel = "#151A1F";
+constexpr const char* kBg = "#020509";
+constexpr const char* kPanel = "#040b13";
 constexpr const char* kRaised = "#1D232A";
-constexpr const char* kBorder = "#232A32";
+constexpr const char* kBorder = "#1e262f";
 constexpr const char* kText = "#EEF2F5";
 constexpr const char* kMuted = "#A3AEB9";
 constexpr const char* kFaint = "#7D8894";
-constexpr const char* kCashIn = "#9FA2E5";
-constexpr const char* kCashOut = "#E5E29F";
+constexpr const char* kCashIn = "#9FA2E5"; // tom purple
+constexpr const char* kCashOut = "#E5E29F"; // yellow
 
 QString loadFace(const char* path) {
     QFile file(assetPath(QString::fromUtf8(path)));
