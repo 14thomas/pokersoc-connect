@@ -947,7 +947,11 @@ void MainWindow::openBuyIn() {
             return;
         }
     }
-    showScreen(new BuyInScreen(*ctx_, currentId_));
+    auto* screen = new BuyInScreen(*ctx_, currentId_);
+    showScreen(screen);
+    connect(screen, &Screen::closed, this, [this](bool boughtIn) {
+        if (boughtIn) clearPlayer();
+    });
 }
 
 void MainWindow::openCashOut() {

@@ -456,9 +456,10 @@ private:
     QPushButton* bountyButton_ = nullptr;
     QPushButton* placeButton_ = nullptr;
     QLabel* prizePool_ = nullptr;
+    QLabel* prizePaid_ = nullptr;
     QLabel* bountyPool_ = nullptr;
+    QLabel* bountyPaid_ = nullptr;
     QWidget* bountyPoolCard_ = nullptr;
-    QLabel* bountyHint_ = nullptr;
     Overlay* bountyOverlay_ = nullptr;
     QLabel* bountyCountLabel_ = nullptr;
     QLabel* bountyPayLabel_ = nullptr;

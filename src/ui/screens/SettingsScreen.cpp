@@ -419,7 +419,8 @@ SettingsScreen::SettingsScreen(SessionContext& context, QWidget* parent) : Scree
     addAbout(makeLabel("Features:", 12, true), 5);
     const char* features[] = {
         "Added swipe to clear player",
-        "Moved prizing to bottom right to be consistent with cashing out."
+        "Moved prizing to bottom right to be consistent with cashing out.",
+        "When a player buys in, auto clears for next player"
     };
     for (const char* feature : features) addAbout(makeLabel(QStringLiteral("• ") + feature), 2, 20);
     sections->addWidget(about);

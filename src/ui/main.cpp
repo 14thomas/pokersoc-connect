@@ -6,7 +6,10 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QPointer>
 #include <QScreen>
 
@@ -21,6 +24,19 @@ using namespace pokersoc;
 using namespace pokersoc::ui;
 
 namespace {
+
+/// Windows draws the window icon in a square. Pad the mark instead of stretching it.
+QIcon appIcon() {
+    const QPixmap mark(assetPath(QStringLiteral("Brand/pokersoc_black_icon.png")));
+    if (mark.isNull()) return {};
+    const int side = qMax(mark.width(), mark.height());
+    QPixmap square(side, side);
+    square.fill(Qt::transparent);
+    const QPixmap fitted = mark.scaled(side, side, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPainter painter(&square);
+    painter.drawPixmap((side - fitted.width()) / 2, (side - fitted.height()) / 2, fitted);
+    return QIcon(square);
+}
 
 /// Shows anything thrown out of an event handler instead of terminating
 /// (the WPF app's DispatcherUnhandledException handler).
@@ -107,6 +123,7 @@ private:
 int main(int argc, char* argv[]) {
     Application app(argc, argv);
     app.setApplicationName("pokersoc-connect");
+    app.setWindowIcon(appIcon());
     applyApplicationStyle(app);
 
     const domain::DenominationTable table = domain::DenominationTable::standardAustralian();

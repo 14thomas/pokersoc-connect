@@ -373,55 +373,61 @@ PrizingScreen::PrizingScreen(SessionContext& context, std::string playerId, QWid
     layout->addSpacing(16);
     connect(close, &QPushButton::clicked, this, [this] { emit closed(false); });
 
-    auto* content = new QWidget;
-    auto* sections = new QVBoxLayout(content);
-    sections->setContentsMargins(0, 0, 8, 0);
-    sections->setSpacing(16);
-
-    QGroupBox* redeem = makeGroup("Redeem");
-    playerText_ = makeLabel(idlePlayerText(), 16, true);
+    QFrame* playerCard = makePanel("#F4F7FB", "#C5D0DE", 1, 16, 28);
+    playerText_ = makeLabel(idlePlayerText(), 26, true, QString(), Qt::AlignCenter);
     playerText_->setWordWrap(true);
-    playerText_->setContentsMargins(0, 4, 0, 8);
-    groupLayout(redeem)->addWidget(playerText_);
-    redeemPanel_ = new QWidget;
-    auto* redeemRow = new QHBoxLayout(redeemPanel_);
-    redeemRow->setContentsMargins(0, 0, 0, 0);
-    redeemRow->setSpacing(8);
-    bountyButton_ = actionButton("Redeem bounty", "#FFF8E8");
-    placeButton_ = actionButton("Redeem placement", "#E8F4FD");
-    redeemRow->addWidget(bountyButton_, 1);
-    redeemRow->addWidget(placeButton_, 1);
-    groupLayout(redeem)->addWidget(redeemPanel_);
-    sections->addWidget(redeem);
-    connect(bountyButton_, &QPushButton::clicked, this, &PrizingScreen::openBountyOverlay);
-    connect(placeButton_, &QPushButton::clicked, this, &PrizingScreen::openPlaceOverlay);
+    panelLayout(playerCard)->addWidget(playerText_);
+    layout->addWidget(playerCard);
 
+    layout->addSpacing(16);
     auto* pools = new QHBoxLayout;
-    pools->setSpacing(10);
+    pools->setSpacing(16);
     auto addPool = [&](const QString& title, const QString& background, const QString& border,
-                       QLabel** value) -> QFrame* {
-        QFrame* card = makePanel(background, border, 2, 6, 12);
-        panelLayout(card)->addWidget(makeLabel(title, 12, true, QString(), Qt::AlignCenter));
-        *value = makeLabel("$0.00", 22, true, QString(), Qt::AlignCenter);
+                       QLabel** value, QLabel** paid) -> QFrame* {
+        QFrame* card = makePanel(background, border, 2, 18, 28);
+        card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        QVBoxLayout* cardLayout = panelLayout(card);
+        cardLayout->setSpacing(8);
+        cardLayout->addStretch(1);
+        cardLayout->addWidget(makeLabel(title, 18, true, QString(), Qt::AlignCenter));
+        *value = makeLabel("$0.00", 48, true, QString(), Qt::AlignCenter);
         (*value)->setWordWrap(true);
-        panelLayout(card)->addWidget(*value);
+        cardLayout->addWidget(*value);
+        *paid = makeLabel("Paid $0.00", 16, false, color::Gray, Qt::AlignCenter);
+        cardLayout->addWidget(*paid);
+        cardLayout->addStretch(1);
         pools->addWidget(card, 1);
         return card;
     };
-    addPool("Prize pool", "#E8F4FD", "#2E6DA4", &prizePool_);
-    bountyPoolCard_ = addPool("Bounty pool", "#FFF8E8", "#B8860B", &bountyPool_);
-    sections->addLayout(pools);
-    bountyHint_ = hint("These pools are prize and bounty money only. Rake and per-membership bounty "
-                       "amounts are set in Pricing Structure.");
-    sections->addWidget(bountyHint_);
+    addPool("Prize pool", "#E8F4FD", "#2E6DA4", &prizePool_, &prizePaid_);
+    bountyPoolCard_ = addPool("Bounty pool", "#FFF8E8", "#C4A35A", &bountyPool_, &bountyPaid_);
+    layout->addLayout(pools, 3);
 
-    sections->addStretch(1);
-
-    layout->addWidget(makeScroll(content), 1);
     layout->addSpacing(16);
-    QPushButton* back = makeButton("Back to Main", QString(), 14);
-    back->setStyleSheet("QPushButton { padding:10px 16px; }");
-    layout->addWidget(back, 0, Qt::AlignLeft);
+    auto makePayButton = [](const QString& text, const QString& background) {
+        QPushButton* button = makeButton(text, background, 22, true);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        button->setMinimumHeight(120);
+        button->setStyleSheet(buttonStyle(background, "#707070", "1px", "border-radius:16px; padding:18px;"));
+        return button;
+    };
+    bountyButton_ = makePayButton("Redeem bounty", "#FFF8E8");
+    placeButton_ = makePayButton("Redeem placement", "#E8F4FD");
+    redeemPanel_ = new QWidget;
+    auto* redeemRow = new QHBoxLayout(redeemPanel_);
+    redeemRow->setContentsMargins(0, 0, 0, 0);
+    redeemRow->setSpacing(16);
+    redeemRow->addWidget(placeButton_, 1);
+    redeemRow->addWidget(bountyButton_, 1);
+    layout->addWidget(redeemPanel_, 2);
+    connect(bountyButton_, &QPushButton::clicked, this, &PrizingScreen::openBountyOverlay);
+    connect(placeButton_, &QPushButton::clicked, this, &PrizingScreen::openPlaceOverlay);
+
+    layout->addSpacing(16);
+    QPushButton* back = makeButton("Back to Main", QString(), 16);
+    back->setMinimumHeight(52);
+    back->setStyleSheet(buttonStyle(color::ButtonFace, "#707070", "1px", "border-radius:12px; padding:12px 18px;"));
+    layout->addWidget(back);
     connect(back, &QPushButton::clicked, this, [this] { emit closed(false); });
 
     bountyOverlay_ = new Overlay(this, QColor(0, 0, 0, 0x80));
@@ -1025,16 +1031,12 @@ QString PrizingScreen::idlePlayerText() const {
 void PrizingScreen::refresh() {
     const auto stats = ctx_.reports().tournamentStats();
     const bool bountiesOn = ctx_.tournament().config().hasBounties();
-    prizePool_->setText(QStringLiteral("%1\npaid %2")
-                            .arg(money(stats.prizeRemaining()), money(stats.prizePaid)));
-    bountyPool_->setText(QStringLiteral("%1\npaid %2")
-                             .arg(money(stats.bountyRemaining()), money(stats.bountyPaid)));
+    prizePool_->setText(money(stats.prizeRemaining()));
+    prizePaid_->setText(QStringLiteral("Paid  %1").arg(money(stats.prizePaid)));
+    bountyPool_->setText(money(stats.bountyRemaining()));
+    bountyPaid_->setText(QStringLiteral("Paid  %1").arg(money(stats.bountyPaid)));
     bountyPoolCard_->setVisible(bountiesOn);
     bountyButton_->setVisible(bountiesOn);
-    bountyHint_->setText(bountiesOn
-                             ? QStringLiteral("These pools are prize and bounty money only. Rake and "
-                                              "per-membership bounty amounts are set in Pricing Structure.")
-                             : QStringLiteral("This pool is prize money only. Rake is set in Pricing Structure."));
     const bool hasPlayer = !playerId_.empty();
     bountyButton_->setEnabled(hasPlayer && bountiesOn && stats.bountyRemaining() > Money{});
     placeButton_->setEnabled(hasPlayer);
