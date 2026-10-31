@@ -105,6 +105,7 @@ private:
     void updateClock();
     void showUndo(const class QString& html);
     void tickUndo();
+    void askUndoPassword();
     void undoLast();
 
     bool knownPlayer() const;
@@ -116,6 +117,7 @@ private:
     int filter_ = 0;
     long long undoId_ = 0;
     int undoLeft_ = 0;
+    bool holdUndo_ = false;
     bool overlayOpen_ = false;
     bool idCheck_ = false;
 

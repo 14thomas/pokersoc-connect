@@ -37,10 +37,13 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include "application/AdminService.h"
+#include "application/BuyInService.h"
 #include "application/Ledger.h"
 #include "application/PlayerService.h"
 #include "application/ReportService.h"
 #include "domain/player/Player.h"
+#include "domain/transaction/CashOut.h"
 #include "domain/transaction/FoodSale.h"
 #include "domain/transaction/Transaction.h"
 #include "domain/transaction/TransactionLog.h"
@@ -743,7 +746,7 @@ void CashMainPage::buildActivity(QWidget* host) {
     undoButton_ = iconTextButton(QStringLiteral("undoButton"), QStringLiteral("undo-2"), 18, QColor("#0D1013"),
                                  QStringLiteral("Undo  8s"), ui(18, QFont::Bold), 48,
                                  QStringLiteral("background:#EEF2F5; color:#0D1013; border-radius:12px; padding:0 16px;"));
-    connect(undoButton_, &QPushButton::clicked, this, &CashMainPage::undoLast);
+    connect(undoButton_, &QPushButton::clicked, this, &CashMainPage::askUndoPassword);
     toastRow->addWidget(undoButton_);
     toastOuter->addWidget(toast);
     toastWrap_->hide();
@@ -907,6 +910,7 @@ void CashMainPage::buildActions(QVBoxLayout* column) {
     cash_ = makeAction(QStringLiteral("arrow-up-from-line"));
     connect(buy_.button, &TapFrame::clicked, this, [this] {
         if (playerId_.empty() || loadedMinor()) return;
+        if (!ctx_.cashGame().config().hasRoom(ctx_.buyIns().history(playerId_))) return;
         ensureRecord();
         emit openBuyIn(QString::fromStdString(playerId_));
     });
@@ -956,6 +960,7 @@ void CashMainPage::resizeEvent(QResizeEvent* event) {
 void CashMainPage::hideEvent(QHideEvent* event) {
     QWidget::hideEvent(event);
     if (!overlayOpen_) return;
+    holdUndo_ = false;
     pendingId_.clear();
     closeOverlay();
 }
@@ -1076,7 +1081,11 @@ void CashMainPage::updateSummary() {
             bought += transaction->amount();
         } else if (type == TransactionType::CashOut) {
             ++cashOuts;
-            cashed += transaction->amount();
+            if (const auto* cashOut = dynamic_cast<const CashOut*>(transaction.get())) {
+                cashed += cashOut->chipValue();
+            } else {
+                cashed += transaction->amount();
+            }
         } else {
             continue;
         }
@@ -1227,13 +1236,18 @@ void CashMainPage::rebuildList() {
             middleLay->addStretch(1);
             line->addWidget(middle, 1);
 
-            QString amount = money(transaction->amount());
+            Money shown = transaction->amount();
+            if (const auto* cashOut = dynamic_cast<const CashOut*>(transaction)) shown = cashOut->chipValue();
+            QString amount = money(shown);
             QString amountColor = QStringLiteral("#C9D1D9");
-            if (tone == AmountTone::In) {
-                amount = QStringLiteral("+") + amount;
+            const bool plain = isBuy(transaction->type()) || transaction->type() == TransactionType::CashOut;
+            if (transaction->type() == TransactionType::CashOut) {
+                amountColor = kCashOut;
+            } else if (isBuy(transaction->type()) || tone == AmountTone::In) {
+                if (!plain) amount.prepend(QLatin1Char('+'));
                 amountColor = kCashIn;
             } else if (tone == AmountTone::Out) {
-                amount = QStringLiteral("−") + money(std::llabs(transaction->amount().cents()));
+                amount = QStringLiteral("−") + money(std::llabs(shown.cents()));
                 amountColor = kCashOut;
             }
             auto* amountLabel = txt(amount, mono(19, QFont::DemiBold), amountColor, Qt::AlignRight | Qt::AlignVCenter);
@@ -1534,14 +1548,15 @@ void CashMainPage::updateActions() {
     }
     const bool rebuy = buyIns + rebuys > 0;
 
-    const auto paint = [&](Action& action, bool in, const QString& label, const QString& sub,
+    const bool capped = active && !ctx_.cashGame().config().hasRoom(ctx_.buyIns().history(playerId_));
+    const auto paint = [&](Action& action, bool in, bool enabled, const QString& label, const QString& sub,
                            const QString& iconName) {
-        const QString bg = !active ? (in ? "#1C1F28" : "#232521") : (in ? "#9FA2E5" : "#E5E29F");
-        const QString border = !active ? (in ? "#393C52" : "#4E4F3D") : (in ? "#B4B6EE" : "#F0EDB9");
-        const QString ink = !active ? (in ? "#9FA2E5" : "#E5E29F") : (in ? "#14152B" : "#1F1D08");
-        const QString subColor = !active ? (in ? "#8D90C9" : "#B9B78A") : (in ? "#2A2C52" : "#3B3916");
-        const QString iconBg = !active ? (in ? "rgba(159,162,229,0.14)" : "rgba(229,226,159,0.12)")
-                                       : (in ? "rgba(20,21,43,0.10)" : "rgba(31,29,8,0.08)");
+        const QString bg = !enabled ? (in ? "#1C1F28" : "#232521") : (in ? "#9FA2E5" : "#E5E29F");
+        const QString border = !enabled ? (in ? "#393C52" : "#4E4F3D") : (in ? "#B4B6EE" : "#F0EDB9");
+        const QString ink = !enabled ? (in ? "#9FA2E5" : "#E5E29F") : (in ? "#14152B" : "#1F1D08");
+        const QString subColor = !enabled ? (in ? "#8D90C9" : "#B9B78A") : (in ? "#2A2C52" : "#3B3916");
+        const QString iconBg = !enabled ? (in ? "rgba(159,162,229,0.14)" : "rgba(229,226,159,0.12)")
+                                        : (in ? "rgba(20,21,43,0.10)" : "rgba(31,29,8,0.08)");
         const QString id = action.button->objectName();
         action.button->setStyleSheet(QStringLiteral(
             "#%1 { background:%2; border:2px solid %3; border-radius:22px; }"
@@ -1551,9 +1566,10 @@ void CashMainPage::updateActions() {
         action.title->setText(label);
         action.title->setStyleSheet(QStringLiteral("color:%1; background:transparent; border:none;").arg(ink));
         action.sub->setText(sub);
+        action.sub->setVisible(!sub.isEmpty());
         action.sub->setStyleSheet(QStringLiteral("color:%1; background:transparent; border:none;").arg(subColor));
         action.button->setGraphicsEffect(nullptr);
-        if (active) {
+        if (enabled) {
             auto* shadow = new QGraphicsDropShadowEffect(action.button);
             shadow->setBlurRadius(40);
             shadow->setOffset(0, 18);
@@ -1564,21 +1580,22 @@ void CashMainPage::updateActions() {
         }
     };
 
-    QString buySub = QStringLiteral("Cash in, chips out");
-    if (active && rebuy && last) {
+    QString buySub;
+    if (minor) {
+        buySub = QStringLiteral("Locked for this player");
+    } else if (capped) {
+        buySub = QStringLiteral("Daily maximum reached");
+    } else if (active && rebuy && last) {
         const QString kind = last->type() == TransactionType::Rebuy ? QStringLiteral("rebuy")
                                                                     : QStringLiteral("buy-in");
         buySub = QStringLiteral("Last %1 %2 at %3")
                      .arg(kind, money(last->amount()), clock12(localFromUtc(last->time())));
     }
-    const QString locked = QStringLiteral("Locked for this player");
-    paint(buy_, true, active && rebuy ? QStringLiteral("Rebuy") : QStringLiteral("Buy-in"),
-          minor ? locked : (active ? buySub : QStringLiteral("Cash in, chips out")),
-          QStringLiteral("arrow-down-to-line"));
-    paint(cash_, false, QStringLiteral("Cash-out"),
-          minor ? locked : (active ? QStringLiteral("In for %1 tonight").arg(money(bought))
-                                   : QStringLiteral("Chips in, cash out")),
-          QStringLiteral("arrow-up-from-line"));
+    const QString cashSub = minor ? QStringLiteral("Locked for this player")
+                                  : (active ? QStringLiteral("In for %1 tonight").arg(money(bought)) : QString());
+    paint(buy_, true, active && !capped, active && rebuy ? QStringLiteral("Rebuy") : QStringLiteral("Buy-in"),
+          buySub, QStringLiteral("arrow-down-to-line"));
+    paint(cash_, false, active, QStringLiteral("Cash-out"), cashSub, QStringLiteral("arrow-up-from-line"));
 }
 
 bool CashMainPage::loadedMinor() const {
@@ -1914,10 +1931,13 @@ void CashMainPage::closeOverlay() {
     overlayOpen_ = false;
     idCheck_ = false;
     idDialog_ = nullptr;
-    if (!dim_) return;
-    dim_->hide();
-    dim_->deleteLater();
-    dim_ = nullptr;
+    if (dim_) {
+        dim_->hide();
+        dim_->deleteLater();
+        dim_ = nullptr;
+    }
+    if (holdUndo_) return;
+    if (undoId_ != 0 && undoLeft_ > 0 && undoTimer_ && !undoTimer_->isActive()) undoTimer_->start(1000);
 }
 
 void CashMainPage::afterMoneyTransaction() {
@@ -1958,6 +1978,126 @@ void CashMainPage::tickUndo() {
         toastWrap_->hide();
         undoId_ = 0;
     }
+}
+
+void CashMainPage::askUndoPassword() {
+    if (undoId_ == 0) return;
+    closeOverlay();
+    holdUndo_ = true;
+    if (undoTimer_) undoTimer_->stop();
+    overlayOpen_ = true;
+
+    QWidget* host = this;
+    if (auto* main = qobject_cast<QMainWindow*>(window())) {
+        if (main->centralWidget()) host = main->centralWidget();
+    }
+    auto* scrim = new Scrim(host);
+    dim_ = scrim;
+    dim_->setObjectName(QStringLiteral("idScrim"));
+    dim_->setStyleSheet(QStringLiteral("#idScrim { background:rgba(5,7,9,0.72); }"));
+    dim_->setGeometry(host->rect());
+
+    auto* card = new QFrame(dim_);
+    idDialog_ = card;
+    card->setObjectName(QStringLiteral("passwordDialog"));
+    card->setFixedWidth(460);
+    card->setStyleSheet(QStringLiteral(
+        "#passwordDialog { background:%1; border:1px solid %2; border-radius:18px; }").arg(kPanel, kBorder));
+    auto* column = new QVBoxLayout(card);
+    column->setContentsMargins(24, 24, 24, 24);
+    column->setSpacing(12);
+
+    auto* heading = new QHBoxLayout;
+    heading->setSpacing(12);
+    auto* lock = new QLabel;
+    lock->setObjectName(QStringLiteral("undoLock"));
+    lock->setAttribute(Qt::WA_StyledBackground);
+    lock->setFixedSize(48, 48);
+    lock->setAlignment(Qt::AlignCenter);
+    lock->setPixmap(iconPx(QStringLiteral("lock"), 24, QColor("#DCE3EA")));
+    lock->setStyleSheet(QStringLiteral("#undoLock { background:%1; border-radius:14px; }").arg(kRaised));
+    heading->addWidget(lock);
+    auto* titles = new QVBoxLayout;
+    titles->setSpacing(2);
+    titles->addWidget(txt(QStringLiteral("Admin password"), ui(28, QFont::Bold), kText));
+    titles->addWidget(txt(QStringLiteral("Required to undo this transaction."), ui(16, QFont::Normal), kMuted));
+    heading->addLayout(titles, 1);
+    column->addLayout(heading);
+
+    auto* entry = new QLineEdit;
+    entry->setEchoMode(QLineEdit::Password);
+    entry->setFont(mono(32, QFont::DemiBold));
+    entry->setAlignment(Qt::AlignCenter);
+    entry->setFixedHeight(64);
+    entry->setStyleSheet(QStringLiteral(
+        "QLineEdit { background:%1; color:%2; border:1px solid #2F3843; border-radius:14px; padding:0 16px; }")
+                             .arg(kRaised, kText));
+    column->addWidget(entry);
+
+    auto* error = txt(QStringLiteral("Incorrect password"), ui(16, QFont::DemiBold), "#F28B82", Qt::AlignCenter);
+    error->hide();
+    column->addWidget(error);
+
+    const auto confirm = [this, entry, error] {
+        if (ctx_.admin().checkPassword(toStd(entry->text()))) {
+            holdUndo_ = false;
+            undoLast();
+            closeOverlay();
+            focusScanner();
+            return;
+        }
+        entry->clear();
+        error->show();
+        entry->setFocus();
+    };
+
+    auto* grid = new QGridLayout;
+    grid->setSpacing(10);
+    const char* keys[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "OK"};
+    for (int i = 0; i < 12; ++i) {
+        auto* key = bareButton();
+        key->setFixedHeight(72);
+        key->setText(QString::fromUtf8(keys[i]));
+        key->setFont(ui(24, QFont::Bold));
+        key->setStyleSheet(QStringLiteral(
+            "QPushButton { background:%1; color:%2; border:1px solid #2F3843; border-radius:14px; }")
+                               .arg(kRaised, kText));
+        const QString label = key->text();
+        connect(key, &QPushButton::clicked, this, [entry, error, label, confirm] {
+            if (label == QLatin1String("⌫")) {
+                entry->backspace();
+            } else if (label == QLatin1String("OK")) {
+                confirm();
+                return;
+            } else {
+                entry->insert(label);
+            }
+            error->hide();
+            entry->setFocus();
+        });
+        grid->addWidget(key, i / 3, i % 3);
+    }
+    column->addLayout(grid);
+    connect(entry, &QLineEdit::returnPressed, this, confirm);
+
+    auto* cancel = bareButton();
+    cancel->setFixedHeight(52);
+    cancel->setText(QStringLiteral("Cancel"));
+    cancel->setFont(ui(18, QFont::DemiBold));
+    cancel->setStyleSheet(QStringLiteral(
+        "QPushButton { background:transparent; color:%1; border:1px solid #2F3843; border-radius:14px; }")
+                              .arg(kMuted));
+    connect(cancel, &QPushButton::clicked, this, [this] {
+        holdUndo_ = false;
+        closeOverlay();
+        focusScanner();
+    });
+    column->addWidget(cancel);
+    card->adjustSize();
+    card->move((dim_->width() - card->width()) / 2, (dim_->height() - card->height()) / 2);
+    dim_->show();
+    dim_->raise();
+    entry->setFocus();
 }
 
 void CashMainPage::undoLast() {
