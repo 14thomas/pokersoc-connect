@@ -97,48 +97,61 @@ constexpr const char* kFaint = "#7D8894";
 constexpr const char* kCashIn = "#9FA2E5";
 constexpr const char* kCashOut = "#E5E29F";
 
-QString loadFamily(const QStringList& files, const QString& fallback) {
-    QString family;
-    for (const QString& relative : files) {
-        QFile file(assetPath(relative));
-        if (!file.open(QIODevice::ReadOnly)) continue;
-        const int id = QFontDatabase::addApplicationFontFromData(file.readAll());
-        if (family.isEmpty() && id >= 0) {
-            const QStringList names = QFontDatabase::applicationFontFamilies(id);
-            if (!names.isEmpty()) family = names.first();
+QString loadFace(const char* path) {
+    QFile file(assetPath(QString::fromUtf8(path)));
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    const int id = QFontDatabase::addApplicationFontFromData(file.readAll());
+    if (id < 0) return {};
+    const QStringList names = QFontDatabase::applicationFontFamilies(id);
+    return names.isEmpty() ? QString() : names.first();
+}
+
+struct BarlowFonts {
+    QString regular;
+    QString medium;
+    QString semibold;
+    QString bold;
+    bool oneFamily = false;
+};
+
+const BarlowFonts& barlowFonts() {
+    static const BarlowFonts fonts = [] {
+        BarlowFonts loaded;
+        loaded.regular = loadFace("Fonts/BarlowSemiCondensed/BarlowSemiCondensed-Regular.ttf");
+        loaded.medium = loadFace("Fonts/BarlowSemiCondensed/BarlowSemiCondensed-Medium.ttf");
+        loaded.semibold = loadFace("Fonts/BarlowSemiCondensed/BarlowSemiCondensed-SemiBold.ttf");
+        loaded.bold = loadFace("Fonts/BarlowSemiCondensed/BarlowSemiCondensed-Bold.ttf");
+        loaded.oneFamily = !loaded.regular.isEmpty() && loaded.regular == loaded.medium &&
+                           loaded.medium == loaded.semibold && loaded.semibold == loaded.bold;
+        return loaded;
+    }();
+    return fonts;
+}
+
+QFont barlow(int px, int weight) {
+    const BarlowFonts& fonts = barlowFonts();
+    QString family = fonts.regular;
+    int applied = weight;
+    if (!fonts.oneFamily) {
+        applied = QFont::Normal;
+        if (weight >= QFont::Bold && !fonts.bold.isEmpty()) {
+            family = fonts.bold;
+            if (fonts.bold == fonts.regular) applied = QFont::Bold;
+        } else if (weight >= QFont::DemiBold && !fonts.semibold.isEmpty()) {
+            family = fonts.semibold;
+        } else if (weight >= QFont::Medium && !fonts.medium.isEmpty()) {
+            family = fonts.medium;
         }
     }
-    return family.isEmpty() ? fallback : family;
-}
-
-QString uiFamily() {
-    static const QString family = loadFamily(
-        {"Fonts/BarlowSemiCondensed/BarlowSemiCondensed-Regular.ttf",
-         "Fonts/BarlowSemiCondensed/BarlowSemiCondensed-Medium.ttf",
-         "Fonts/BarlowSemiCondensed/BarlowSemiCondensed-SemiBold.ttf",
-         "Fonts/BarlowSemiCondensed/BarlowSemiCondensed-Bold.ttf"},
-        QStringLiteral("Arial Narrow"));
-    return family;
-}
-
-QString monoFamily() {
-    static const QString family = loadFamily(
-        {"Fonts/JetBrainsMono/JetBrainsMono-Regular.ttf",
-         "Fonts/JetBrainsMono/JetBrainsMono-Medium.ttf",
-         "Fonts/JetBrainsMono/JetBrainsMono-SemiBold.ttf"},
-        QStringLiteral("Consolas"));
-    return family;
-}
-
-QFont face(const QString& family, int px, int weight) {
+    if (family.isEmpty()) family = QStringLiteral("Arial Narrow");
     QFont font(family);
     font.setPixelSize(px);
-    font.setWeight(static_cast<QFont::Weight>(weight));
+    font.setWeight(static_cast<QFont::Weight>(applied));
     return font;
 }
 
-QFont ui(int px, int weight) { return face(uiFamily(), px, weight); }
-QFont mono(int px, int weight) { return face(monoFamily(), px, weight); }
+QFont ui(int px, int weight) { return barlow(px, weight); }
+QFont mono(int px, int weight) { return barlow(px, weight); }
 
 QPixmap brandIcon(int px) {
     const qreal dpr = qApp->devicePixelRatio();
@@ -467,6 +480,7 @@ CashMainPage::CashMainPage(SessionContext& context, QWidget* parent)
     : QWidget(parent), ctx_(context) {
     setObjectName(QStringLiteral("cashMain"));
     setAttribute(Qt::WA_StyledBackground);
+    setFont(ui(18, QFont::Normal));
     setStyleSheet(QStringLiteral(
         "QWidget#cashMain { background:%1; }"
         "QLabel { background: transparent; border: none; }"
@@ -773,9 +787,6 @@ void CashMainPage::buildPlayerCard(QWidget* host) {
     auto* headline = txt(QStringLiteral("Scan a member card"), ui(42, QFont::Bold), kText);
     headline->setWordWrap(true);
     copy->addWidget(headline);
-    auto* hint = txt(QStringLiteral("Their details and activity will show here."), ui(20, QFont::Normal), kMuted);
-    hint->setWordWrap(true);
-    copy->addWidget(hint);
     auto* typeId = new TapFrame;
     typeId->setObjectName(QStringLiteral("typeIdButton"));
     typeId->setFixedHeight(60);
@@ -1240,7 +1251,9 @@ void CashMainPage::rebuildList() {
             if (const auto* cashOut = dynamic_cast<const CashOut*>(transaction)) shown = cashOut->chipValue();
             QString amount = money(shown);
             QString amountColor = QStringLiteral("#C9D1D9");
-            const bool plain = isBuy(transaction->type()) || transaction->type() == TransactionType::CashOut;
+            const bool plain = isBuy(transaction->type()) ||
+                               transaction->type() == TransactionType::CashOut ||
+                               transaction->type() == TransactionType::FoodSale;
             if (transaction->type() == TransactionType::CashOut) {
                 amountColor = kCashOut;
             } else if (isBuy(transaction->type()) || tone == AmountTone::In) {
@@ -1690,9 +1703,8 @@ void CashMainPage::showIdCheck(const std::string& id) {
     sub->setWordWrap(true);
     sub->setFont(ui(20, QFont::Normal));
     sub->setStyleSheet(QStringLiteral("color:%1; background:transparent; border:none;").arg(kMuted));
-    sub->setText(QStringLiteral("Card <span style=\"font-family:'%1'; font-size:18px;\">%2</span>"
-                                " · first time here, they'll be added as a new player")
-                     .arg(monoFamily(), QString::fromStdString(id).toHtmlEscaped()));
+    sub->setText(QStringLiteral("Card %1 · first time here, they'll be added as a new player")
+                     .arg(QString::fromStdString(id).toHtmlEscaped()));
     text->addWidget(sub);
     header->addLayout(text, 1);
     column->addLayout(header);
