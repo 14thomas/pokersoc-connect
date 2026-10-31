@@ -48,6 +48,7 @@ signals:
 protected:
     void closeEvent(QCloseEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     QWidget* buildMainPage();
@@ -73,6 +74,8 @@ private:
     void setMembership(domain::MembershipType membership);
     void cancelEdit();
     void clearPlayer();
+    void beginPlayerSwipe();
+    void finishPlayerSwipe(bool dismiss);
     void hidePlayerPanels();
     void setIdBoxState(const QString& background, bool readOnly);
     void updatePlayerButtons();
@@ -101,6 +104,13 @@ private:
 
     QStackedWidget* stack_ = nullptr;
     QWidget* mainPage_ = nullptr;
+
+    QFrame* playerPanel_ = nullptr;
+    QLabel* swipeGhost_ = nullptr;
+    bool swipeTracking_ = false;
+    bool swipeDragging_ = false;
+    QPoint swipeStart_;
+    QPoint swipeOrigin_;
 
     QLineEdit* idBox_ = nullptr;
     QPushButton* editButton_ = nullptr;
