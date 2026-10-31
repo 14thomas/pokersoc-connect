@@ -128,7 +128,6 @@ private:
     QTimer* clockTimer_ = nullptr;
     QTimer* undoTimer_ = nullptr;
 
-    QLabel* activityCount_ = nullptr;
     QWidget* filterRow_ = nullptr;
     QPushButton* filterButtons_[5] = {};
     TapFrame* playerChip_ = nullptr;

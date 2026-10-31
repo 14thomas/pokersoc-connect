@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <set>
 
 #include <QApplication>
 #include <QDate>
@@ -609,12 +608,7 @@ void CashMainPage::buildActivity(QWidget* host) {
     auto* headerRow = new QHBoxLayout(header);
     headerRow->setContentsMargins(24, 0, 16, 0);
     headerRow->setSpacing(12);
-    auto* titles = new QVBoxLayout;
-    titles->setSpacing(0);
-    titles->addWidget(txt(QStringLiteral("Activity"), ui(26, QFont::Bold), kText));
-    auto* leftCount = txt(QString(), ui(16, QFont::Normal), kMuted);
-    titles->addWidget(leftCount);
-    headerRow->addLayout(titles);
+    headerRow->addWidget(txt(QStringLiteral("Activity"), ui(26, QFont::Bold), kText));
 
     playerChip_ = new TapFrame;
     playerChip_->setObjectName(QStringLiteral("playerChip"));
@@ -660,11 +654,7 @@ void CashMainPage::buildActivity(QWidget* host) {
         filterButtons_[i] = chip;
     }
     headerRow->addWidget(filterRow_);
-    activityCount_ = txt(QString(), ui(16, QFont::Normal), kMuted, Qt::AlignRight | Qt::AlignVCenter);
-    headerRow->addWidget(activityCount_);
     column->addWidget(header);
-    // The subtitle under "Activity" is only shown when no player is loaded.
-    leftCount->setObjectName(QStringLiteral("idleCount"));
 
     summary_ = new QFrame;
     summary_->setObjectName(QStringLiteral("summaryStrip"));
@@ -994,6 +984,12 @@ void CashMainPage::lookup(const QString& rawId) {
         return;
     }
     playerId_ = id.toStdString();
+    try {
+        ctx_.players().logAttendance(playerId_);
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, QStringLiteral("Error"),
+                              QStringLiteral("Error recording attendance: %1").arg(error.what()));
+    }
     refresh();
     focusScanner();
 }
@@ -1035,13 +1031,8 @@ const QString CashMainPage::displayName() const {
 }
 
 void CashMainPage::updateAttendance() {
-    std::set<std::string> buyers;
-    for (const auto& transaction : ctx_.log().entries()) {
-        if (isBuy(transaction->type()) && !transaction->playerId().empty()) {
-            buyers.insert(transaction->playerId());
-        }
-    }
-    attendanceValue_->setText(QString::number(static_cast<int>(buyers.size())));
+    attendanceValue_->setText(QString::number(
+        static_cast<int>(ctx_.players().attendance().uniquePlayerCount())));
 }
 
 void CashMainPage::updateClock() {
@@ -1054,14 +1045,10 @@ void CashMainPage::updateHeader() {
     const bool loaded = !playerId_.empty();
     filterRow_->setVisible(!loaded);
     playerChip_->setVisible(loaded);
-    activityCount_->setVisible(loaded);
-    if (auto* idle = findChild<QLabel*>(QStringLiteral("idleCount"))) {
-        idle->setVisible(!loaded);
+    if (loaded) {
+        playerChipText_->setText(displayName());
+        playerChip_->setMinimumWidth(playerChip_->sizeHint().width());
     }
-        if (loaded) {
-            playerChipText_->setText(displayName());
-            playerChip_->setMinimumWidth(playerChip_->sizeHint().width());
-        }
     for (int i = 0; i < 5; ++i) {
         filterButtons_[i]->setProperty("on", i == filter_);
         filterButtons_[i]->style()->unpolish(filterButtons_[i]);
@@ -1152,11 +1139,6 @@ void CashMainPage::rebuildList() {
         if (a->time() != b->time()) return a->time() > b->time();
         return a->id() > b->id();
     });
-
-    if (auto* idle = findChild<QLabel*>(QStringLiteral("idleCount"))) {
-        idle->setText(QStringLiteral("%1 entries").arg(rows.size()));
-    }
-    activityCount_->setText(QStringLiteral("%1 entries").arg(rows.size()));
 
     QSet<qlonglong> keep;
     for (int index = 0; index < static_cast<int>(rows.size()); ++index) {
