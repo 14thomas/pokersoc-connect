@@ -1,11 +1,9 @@
 #include "ui/MainWindow.h"
+#include "ui/PlayerSwipe.h"
+#include "ui/cash/CashMainPage.h"
 
-#include <QAbstractButton>
 #include <QCloseEvent>
-#include <QEvent>
 #include <QGraphicsDropShadowEffect>
-#include <QGraphicsOpacityEffect>
-#include <QMouseEvent>
 #include <QGridLayout>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -17,6 +15,7 @@
 #include <QShortcut>
 #include <QStackedWidget>
 #include <QTableWidget>
+#include <QTime>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -89,7 +88,8 @@ QString activityType(const Transaction& transaction) {
 MainWindow::MainWindow(std::unique_ptr<SessionContext> context, QWidget* parent)
     : QMainWindow(parent), ctx_(std::move(context)) {
     setAttribute(Qt::WA_DeleteOnClose);
-    resize(1080, 720);
+    if (ctx_->isTournament()) resize(1080, 720);
+    else resize(1920, 1080);
 
     if (ctx_->isTournament()) {
         clock_ = new TournamentClock(this);
@@ -102,9 +102,54 @@ MainWindow::MainWindow(std::unique_ptr<SessionContext> context, QWidget* parent)
     auto* layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+
+    auto* top = new QWidget;
+    auto* topRow = new QHBoxLayout(top);
+    topRow->setContentsMargins(16, 10, 16, 6);
+    topRow->setSpacing(12);
+    auto* barHost = new QWidget;
+    barHost->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    auto* barLayout = new QHBoxLayout(barHost);
+    barLayout->setContentsMargins(0, 0, 0, 0);
+    if (ctx_->isTournament()) barLayout->addWidget(buildClockBar());
+    topRow->addWidget(barHost, 1);
+    wallClock_ = makeLabel(QString(), 22, true, "#1A1A1A", Qt::AlignRight | Qt::AlignVCenter);
+    wallClock_->setMinimumWidth(150);
+    topRow->addWidget(wallClock_, 0, Qt::AlignVCenter);
+    layout->addWidget(top);
+    chrome_ = top;
+    if (!ctx_->isTournament()) chrome_->hide();
+
     stack_ = new QStackedWidget;
-    layout->addWidget(stack_);
-    mainPage_ = buildMainPage();
+    layout->addWidget(stack_, 1);
+    if (ctx_->isTournament()) {
+        mainPage_ = buildMainPage();
+    } else {
+        cashPage_ = new CashMainPage(*ctx_);
+        mainPage_ = cashPage_;
+        connect(cashPage_, &CashMainPage::openPlayers, this, [this] { showScreen(new PlayersScreen(*ctx_)); });
+        connect(cashPage_, &CashMainPage::openLostChips, this, [this] { showScreen(new LostChipsScreen(*ctx_)); });
+        connect(cashPage_, &CashMainPage::openShop, this, [this] { openFood(); });
+        connect(cashPage_, &CashMainPage::openCashbox, this, [this] { showScreen(new CashboxScreen(*ctx_)); });
+        connect(cashPage_, &CashMainPage::openSettings, this, [this] { openSettings(); });
+        connect(cashPage_, &CashMainPage::openBuyIn, this, [this](const QString& id) {
+            auto* screen = new BuyInScreen(*ctx_, toStd(id));
+            showScreen(screen);
+            connect(screen, &Screen::closed, this, [this](bool done) {
+                if (done && cashPage_) cashPage_->afterMoneyTransaction();
+            });
+        });
+        connect(cashPage_, &CashMainPage::openCashOut, this, [this](const QString& id) {
+            auto* screen = new CashOutScreen(*ctx_, toStd(id));
+            showScreen(screen);
+            connect(screen, &Screen::closed, this, [this](bool done) {
+                if (done && cashPage_) cashPage_->afterMoneyTransaction();
+            });
+        });
+        connect(cashPage_, &CashMainPage::openEntry, this, [this](qlonglong id) {
+            showScreen(new BreakdownScreen(*ctx_, id));
+        });
+    }
     stack_->addWidget(mainPage_);
     buildCloseOverlay();
 
@@ -112,6 +157,14 @@ MainWindow::MainWindow(std::unique_ptr<SessionContext> context, QWidget* parent)
     expiry_->setSingleShot(true);
     expiry_->setInterval(kExpiryMs);
     connect(expiry_, &QTimer::timeout, this, [this] { clearPlayer(); });
+
+    auto* wallTimer = new QTimer(this);
+    connect(wallTimer, &QTimer::timeout, this, [this] {
+        const QTime now = QTime::currentTime();
+        wallClock_->setText(now.toString(QStringLiteral("h:mm AP")));
+    });
+    wallTimer->start(1000);
+    wallClock_->setText(QTime::currentTime().toString(QStringLiteral("h:mm AP")));
 
     auto* fullscreen = new QShortcut(QKeySequence(Qt::Key_F11), this);
     fullscreen->setContext(Qt::WindowShortcut);
@@ -169,9 +222,8 @@ void MainWindow::showEvent(QShowEvent* event) {
 QWidget* MainWindow::buildMainPage() {
     auto* page = new QWidget;
     auto* root = new QVBoxLayout(page);
-    root->setContentsMargins(16, 16, 16, 16);
+    root->setContentsMargins(16, 8, 16, 16);
     root->setSpacing(12);
-    if (ctx_->isTournament()) root->addWidget(buildClockBar());
 
     auto* columns = new QHBoxLayout;
     columns->setContentsMargins(0, 0, 0, 0);
@@ -219,6 +271,7 @@ QWidget* MainWindow::buildMainPage() {
 
 QFrame* MainWindow::buildClockBar() {
     clockBar_ = makePanel("#F3E5F5", "#8E24AA", 2, 8, 10);
+    clockBar_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     auto* row = new QHBoxLayout;
     row->setContentsMargins(0, 0, 0, 0);
     row->setSpacing(10);
@@ -259,18 +312,15 @@ QFrame* MainWindow::buildClockBar() {
 
 QFrame* MainWindow::buildPlayerPanel() {
     QFrame* panel = makePanel(color::LightBlue, color::Gray, 2, 0, 10);
-    panel->installEventFilter(this);
     QVBoxLayout* layout = panelLayout(panel);
     QLabel* title = makeLabel("Current Player (Scan ID or Press Enter)", 14, true);
     title->setContentsMargins(0, 8, 0, 5);
-    title->installEventFilter(this);
 
     auto* row = new QHBoxLayout;
     row->setSpacing(8);
     idBox_ = new QLineEdit;
     idBox_->setFont(uiFont(16));
     idBox_->setMinimumHeight(64);
-    idBox_->installEventFilter(this);
     setIdBoxState("white", false);
     row->addWidget(idBox_, 1);
     editButton_ = boldButton("Edit", "#FFE0B2", 18, "14px 22px");
@@ -291,7 +341,6 @@ QFrame* MainWindow::buildPlayerPanel() {
 
     // New player: age step, then (tournaments) membership step.
     newPlayerPanel_ = makeInlinePanel(color::LightYellow, color::Orange);
-    newPlayerPanel_->installEventFilter(this);
     ageStep_ = new QWidget;
     auto* age = new QVBoxLayout(ageStep_);
     age->setContentsMargins(0, 0, 0, 0);
@@ -340,7 +389,6 @@ QFrame* MainWindow::buildPlayerPanel() {
 
     // Edit membership of the current player.
     editPanel_ = makeInlinePanel("#FFF3E0", "#E65100");
-    editPanel_->installEventFilter(this);
     QLabel* editTitle = makeLabel("Edit Membership Type", 14, true, "#E65100");
     editTitle->setContentsMargins(0, 0, 0, 5);
     panelLayout(editPanel_)->addWidget(editTitle);
@@ -356,7 +404,6 @@ QFrame* MainWindow::buildPlayerPanel() {
     layout->addWidget(editPanel_);
 
     underagePanel_ = makeInlinePanel("#FFDDDD", color::Red);
-    underagePanel_->installEventFilter(this);
     QLabel* underageTitle =
         makeLabel(QStringLiteral("🚫 UNDERAGE PLAYER"), 14, true, color::Red, Qt::AlignCenter);
     underageTitle->setContentsMargins(0, 0, 0, 3);
@@ -366,7 +413,6 @@ QFrame* MainWindow::buildPlayerPanel() {
     layout->addWidget(underagePanel_);
 
     infoPanel_ = makeInlinePanel("#E8F4FD", "#4A90D9", 8);
-    infoPanel_->installEventFilter(this);
     infoLayout_ = panelLayout(infoPanel_);
     layout->addWidget(infoPanel_);
 
@@ -377,7 +423,14 @@ QFrame* MainWindow::buildPlayerPanel() {
     for (QFrame* inline_ : {newPlayerPanel_, editPanel_, underagePanel_, infoPanel_}) {
         layout->setStretchFactor(inline_, 0);
     }
-    for (QLabel* label : panel->findChildren<QLabel*>()) label->installEventFilter(this);
+    playerSwipe_ = new PlayerSwipe(
+        panel,
+        [this] {
+            return verified_ || !currentId_.empty() || !pendingId_.empty() ||
+                   (idBox_ && !idBox_->text().trimmed().isEmpty());
+        },
+        [this] { clearPlayer(); }, this);
+    playerSwipe_->watch(panel);
     return panel;
 }
 
@@ -516,6 +569,7 @@ void MainWindow::applySessionModeUi() {
         refreshClockBar();
     } else {
         setWindowTitle(QStringLiteral("pokersoc-connect — Cash Game"));
+        if (!infoTile_) return;
         infoTile_->setEnabled(false);
         styleTile(infoTile_, "#ECEFF1", color::LightGray);
         infoTile_->setFaded(true);
@@ -656,7 +710,7 @@ void MainWindow::showPlayerInfo(const std::string& id) {
         {"Name", toQ(player->name())},
         {"Degree", toQ(player->degree())},
         {"Year", toQ(player->studyYear())},
-        {"Student #", toQ(player->studentNumber())},
+        {"Student", toQ(player->studentNumber())},
         {"Email", toQ(player->email())},
         {"ARC Member", arc},
         {"Membership", membershipTypeLabel(player->membership())},
@@ -669,11 +723,11 @@ void MainWindow::showPlayerInfo(const std::string& id) {
         QLabel* line = makeLabel(QStringLiteral("<b>%1:</b> %2").arg(label, trimmed.toHtmlEscaped()), 12);
         line->setTextFormat(Qt::RichText);
         line->setWordWrap(true);
-        line->installEventFilter(this);
         line->setContentsMargins(0, 1, 0, 1);
         infoLayout_->addWidget(line);
     }
     infoPanel_->setVisible(any);
+    if (playerSwipe_) playerSwipe_->watch(infoPanel_);
 }
 
 void MainWindow::verifyAdult() {
@@ -770,6 +824,7 @@ void MainWindow::cancelEdit() {
 }
 
 void MainWindow::clearPlayer() {
+    if (cashPage_) return;
     expiry_->stop();
     currentId_.clear();
     pendingId_.clear();
@@ -781,81 +836,6 @@ void MainWindow::clearPlayer() {
     idBox_->setFocus();
     updatePlayerButtons();
     refreshActivity();
-}
-
-void MainWindow::beginPlayerSwipe() {
-    if (swipeDragging_ || !playerPanel_) return;
-    swipeDragging_ = true;
-    QWidget* host = playerPanel_->parentWidget();
-    if (!host) return;
-    swipeGhost_ = new QLabel(host);
-    swipeGhost_->setPixmap(playerPanel_->grab());
-    swipeGhost_->setAttribute(Qt::WA_TransparentForMouseEvents);
-    swipeGhost_->setFixedSize(playerPanel_->size());
-    swipeOrigin_ = playerPanel_->pos();
-    swipeGhost_->move(swipeOrigin_);
-    swipeGhost_->show();
-    swipeGhost_->raise();
-    auto* fade = new QGraphicsOpacityEffect(playerPanel_);
-    fade->setOpacity(0);
-    playerPanel_->setGraphicsEffect(fade);
-}
-
-void MainWindow::finishPlayerSwipe(bool dismiss) {
-    swipeTracking_ = false;
-    swipeDragging_ = false;
-    if (swipeGhost_) {
-        swipeGhost_->hide();
-        swipeGhost_->deleteLater();
-        swipeGhost_ = nullptr;
-    }
-    if (playerPanel_) playerPanel_->setGraphicsEffect(nullptr);
-    if (dismiss) clearPlayer();
-}
-
-bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
-    if (!playerPanel_ || qobject_cast<QAbstractButton*>(watched)) {
-        return QMainWindow::eventFilter(watched, event);
-    }
-    const bool press = event->type() == QEvent::MouseButtonPress;
-    const bool move = event->type() == QEvent::MouseMove;
-    const bool release = event->type() == QEvent::MouseButtonRelease;
-    if (!press && !move && !release) return QMainWindow::eventFilter(watched, event);
-
-    auto* mouse = static_cast<QMouseEvent*>(event);
-    if (press) {
-        if (mouse->button() != Qt::LeftButton) return QMainWindow::eventFilter(watched, event);
-        // Moving the box used to retarget the finger and start a new drag, which is why it froze.
-        if (swipeTracking_) return true;
-        const bool occupied = verified_ || !currentId_.empty() || !pendingId_.empty() ||
-                              !idBox_->text().trimmed().isEmpty();
-        swipeTracking_ = occupied;
-        swipeDragging_ = false;
-        swipeStart_ = mouse->globalPosition().toPoint();
-        return QMainWindow::eventFilter(watched, event);
-    }
-    if (!swipeTracking_) return QMainWindow::eventFilter(watched, event);
-
-    const QPoint delta = mouse->globalPosition().toPoint() - swipeStart_;
-    if (move) {
-        if (!swipeDragging_) {
-            if (delta.y() > -8 || qAbs(delta.x()) > qAbs(delta.y())) {
-                return QMainWindow::eventFilter(watched, event);
-            }
-            beginPlayerSwipe();
-        }
-        if (swipeGhost_) {
-            const int lift = qBound(0, -delta.y(), qMax(playerPanel_->height(), height()));
-            swipeGhost_->move(swipeOrigin_.x(), swipeOrigin_.y() - lift);
-            swipeGhost_->raise();
-        }
-        return true;
-    }
-
-    const bool dragged = swipeDragging_;
-    const bool dismiss = dragged && -delta.y() >= 90;
-    finishPlayerSwipe(dismiss);
-    return dragged;
 }
 
 void MainWindow::updatePlayerButtons() {
@@ -878,6 +858,10 @@ void MainWindow::updatePlayerButtons() {
 void MainWindow::startExpiry() { expiry_->start(); }
 
 void MainWindow::focusIdBoxIfEmpty() {
+    if (cashPage_) {
+        if (stack_->currentWidget() == mainPage_) cashPage_->focusScanner();
+        return;
+    }
     if (stack_->currentWidget() == mainPage_ && !verified_) idBox_->setFocus();
 }
 
@@ -885,6 +869,10 @@ void MainWindow::focusIdBoxIfEmpty() {
 // Activity log and screens
 
 void MainWindow::refreshActivity() {
+    if (cashPage_) {
+        cashPage_->refresh();
+        return;
+    }
     const bool filter = verified_ && !currentId_.empty();
     const auto entries = ctx_->reports().activity(filter ? currentId_ : std::string());
     activityHeader_->setText(filter ? QStringLiteral("Activity Log — %1").arg(toQ(currentId_))
@@ -904,6 +892,8 @@ void MainWindow::refreshActivity() {
 }
 
 void MainWindow::showScreen(Screen* screen) {
+    if (chrome_) chrome_->show();
+    if (clockBar_) clockBar_->setVisible(false);
     closeOverlay_->hide();
     stack_->addWidget(screen);
     stack_->setCurrentWidget(screen);
@@ -917,6 +907,16 @@ void MainWindow::showScreen(Screen* screen) {
 }
 
 void MainWindow::showMain(bool changed) {
+    if (cashPage_) {
+        if (chrome_) chrome_->hide();
+        cashPage_->refresh();
+        cashPage_->focusScanner();
+        return;
+    }
+    if (clockBar_) {
+        if (chrome_) chrome_->show();
+        clockBar_->setVisible(true);
+    }
     if (verified_ && !currentId_.empty()) {
         if (const Player* player = ctx_->players().find(currentId_)) {
             underage_ = player->isUnderage();
@@ -987,7 +987,8 @@ void MainWindow::openBoardControls() {
 }
 
 void MainWindow::openFood() {
-    auto* screen = new FoodScreen(*ctx_, currentId_);
+    const std::string id = cashPage_ ? cashPage_->loadedId() : currentId_;
+    auto* screen = new FoodScreen(*ctx_, id);
     connect(screen, &FoodScreen::openSettings, this, [this, screen] {
         emit screen->closed(true);
         openSettings();

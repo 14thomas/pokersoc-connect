@@ -70,7 +70,7 @@ endif()
 # ---- Qt Widgets front end ----
 # MinGW kit example:
 #   cmake -S . -B build-gui -G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.9.2/mingw_64 -DCMAKE_BUILD_TYPE=Release
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Svg)
 
 add_executable(pokersoc_gui WIN32
     src/ui/main.cpp
@@ -79,6 +79,8 @@ add_executable(pokersoc_gui WIN32
     src/ui/Widgets.cpp
     src/ui/StartWindow.cpp
     src/ui/MainWindow.cpp
+    src/ui/PlayerSwipe.cpp
+    src/ui/cash/CashMainPage.cpp
     src/ui/SettingsChrome.cpp
     src/ui/screens/BuyInScreen.cpp
     src/ui/screens/CashOutScreen.cpp
@@ -93,6 +95,8 @@ add_executable(pokersoc_gui WIN32
     src/ui/board/TournamentClock.cpp
     src/ui/board/TournamentBoardWindow.cpp
     src/ui/MainWindow.h
+    src/ui/PlayerSwipe.h
+    src/ui/cash/CashMainPage.h
     src/ui/SessionContext.h
     src/ui/StartWindow.h
     src/ui/Style.h
@@ -103,7 +107,7 @@ add_executable(pokersoc_gui WIN32
     src/ui/board/TournamentBoardWindow.h
 )
 set_target_properties(pokersoc_gui PROPERTIES AUTOMOC ON)
-target_link_libraries(pokersoc_gui PRIVATE pokersoc_core Qt6::Widgets)
+target_link_libraries(pokersoc_gui PRIVATE pokersoc_core Qt6::Widgets Qt6::Svg)
 
 file(GLOB_RECURSE POKERSOC_ASSET_FILES CONFIGURE_DEPENDS
     LIST_DIRECTORIES false

@@ -27,6 +27,8 @@ class SessionContext;
 class TileButton;
 class TournamentBoardWindow;
 class TournamentClock;
+class CashMainPage;
+class PlayerSwipe;
 
 /// The session window: current player + activity log on the left, the eight
 /// big action tiles on the right. Every other screen replaces this page until
@@ -48,7 +50,6 @@ signals:
 protected:
     void closeEvent(QCloseEvent* event) override;
     void showEvent(QShowEvent* event) override;
-    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     QWidget* buildMainPage();
@@ -74,8 +75,6 @@ private:
     void setMembership(domain::MembershipType membership);
     void cancelEdit();
     void clearPlayer();
-    void beginPlayerSwipe();
-    void finishPlayerSwipe(bool dismiss);
     void hidePlayerPanels();
     void setIdBoxState(const QString& background, bool readOnly);
     void updatePlayerButtons();
@@ -106,11 +105,7 @@ private:
     QWidget* mainPage_ = nullptr;
 
     QFrame* playerPanel_ = nullptr;
-    QLabel* swipeGhost_ = nullptr;
-    bool swipeTracking_ = false;
-    bool swipeDragging_ = false;
-    QPoint swipeStart_;
-    QPoint swipeOrigin_;
+    PlayerSwipe* playerSwipe_ = nullptr;
 
     QLineEdit* idBox_ = nullptr;
     QPushButton* editButton_ = nullptr;
@@ -135,6 +130,8 @@ private:
     TileButton* lostChipsTile_ = nullptr;
 
     Overlay* closeOverlay_ = nullptr;
+    QWidget* chrome_ = nullptr;
+    CashMainPage* cashPage_ = nullptr;
 
     TournamentClock* clock_ = nullptr;
     QPointer<TournamentBoardWindow> board_;
@@ -145,6 +142,7 @@ private:
     QPushButton* clockStart_ = nullptr;
     QPushButton* clockPause_ = nullptr;
     QPushButton* boardButton_ = nullptr;
+    QLabel* wallClock_ = nullptr;
 };
 
 } // namespace pokersoc::ui
