@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -73,11 +74,15 @@ private:
     bool proceedToCash();
     void refreshCash();
     void toAmountPage();
+    void openAmountPage();
     void refreshAmount();
     void amountKey(const QString& key);
     void confirm();
     void process();
     void back();
+    void buildNotice();
+    void showNotice(const QString& message, std::function<void()> after = {});
+    QString buyInLimitNotice() const;
 
     /// Cash-game default (and maximum) buy-in: remaining session cap, clamped
     /// by cash received and the per-buy-in maximum so Confirm can succeed.
@@ -125,6 +130,10 @@ private:
     QLabel* buyInAmount_ = nullptr;
     Numpad* numpad_ = nullptr;
     TileButton* confirmButton_ = nullptr;
+
+    Overlay* notice_ = nullptr;
+    QLabel* noticeText_ = nullptr;
+    std::function<void()> noticeAfter_;
 };
 
 // ---------------------------------------------------------------------------
@@ -253,18 +262,17 @@ public:
     explicit LostChipsScreen(SessionContext& context, QWidget* parent = nullptr);
 
 private:
-    void refresh();
-    void showConfirmation();
+    void refreshChips();
+    void submit();
 
     Counts chips_;
-    std::vector<std::pair<std::int64_t, int>> history_; // denomination, count before
-    QVBoxLayout* rows_ = nullptr;
-    QLabel* total_ = nullptr;
-    std::vector<std::pair<std::int64_t, QLabel*>> countLabels_;
-    MultiplierBar* multipliers_ = nullptr;
-    Overlay* confirm_ = nullptr;
-    QLabel* confirmText_ = nullptr;
+    std::vector<std::pair<std::int64_t, int>> history_;
     bool changed_ = false;
+
+    CountTable* chipTable_ = nullptr;
+    QLabel* chipTotal_ = nullptr;
+    TileButton* submitButton_ = nullptr;
+    ChipPad* pad_ = nullptr;
 };
 
 // ---------------------------------------------------------------------------

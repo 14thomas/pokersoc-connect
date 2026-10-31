@@ -1,8 +1,10 @@
 #include <cmath>
+#include <functional>
 
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QStackedWidget>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -65,6 +67,7 @@ BuyInScreen::BuyInScreen(SessionContext& context, std::string playerId, QWidget*
     } else {
         pages_->setCurrentWidget(cashPage_);
     }
+    buildNotice();
 }
 
 // ---------------------------------------------------------------------------
@@ -394,16 +397,26 @@ void BuyInScreen::refreshCash() {
 void BuyInScreen::toAmountPage() {
     const std::int64_t total = totalCents(cash_);
     if (!tournament_ && total <= 0) {
-        QMessageBox::information(this, QString(), "Please add at least one coin/note.");
+        showNotice(QStringLiteral("Please add at least one coin/note."));
         return;
     }
     if (tournament_ && fixedCents_ > 0 && total < fixedCents_) {
-        QMessageBox::information(this, QString(),
-                                 QStringLiteral("Cash received is less than the buy-in amount (%1).")
-                                     .arg(money(fixedCents_)));
+        showNotice(QStringLiteral("Cash received is less than the buy-in amount (%1).")
+                       .arg(money(fixedCents_)));
         return;
     }
+    if (!tournament_) {
+        if (const auto max = ctx_.cashGame().config().ceiling(ctx_.buyIns().history(playerId_))) {
+            if (total > max->cents()) {
+                showNotice(buyInLimitNotice(), [this] { openAmountPage(); });
+                return;
+            }
+        }
+    }
+    openAmountPage();
+}
 
+void BuyInScreen::openAmountPage() {
     amountCents_ = defaultAmountCents();
     amountText_ = QString::number(amountCents_ / 100.0, 'f', 2);
     amountEditButtons_->setVisible(!tournament_);
@@ -456,21 +469,28 @@ void BuyInScreen::amountKey(const QString& key) {
 void BuyInScreen::confirm() {
     const std::int64_t total = totalCents(cash_);
     if (tournament_ ? amountCents_ < 0 : amountCents_ <= 0) {
-        QMessageBox::information(this, QString(), "Please enter a valid buy-in amount.");
+        showNotice(QStringLiteral("Please enter a valid buy-in amount."));
         return;
     }
     if (amountCents_ > total) {
-        QMessageBox::information(this, QString(), "Buy-in amount cannot exceed cash received.");
+        showNotice(QStringLiteral("Buy-in amount cannot exceed cash received."));
         return;
     }
     const Player* player = ctx_.players().find(playerId_);
     if (!player) {
-        QMessageBox::warning(this, "Buy-in", "Unknown player.");
+        showNotice(QStringLiteral("Unknown player."));
         return;
     }
     const BuyInQuote quote = ctx_.buyIns().preview(*player, Money(amountCents_));
     if (!quote.allowed) {
-        QMessageBox::warning(this, "Buy-in", toQ(quote.message));
+        if (!tournament_) {
+            const auto max = ctx_.cashGame().config().ceiling(ctx_.buyIns().history(playerId_));
+            if (max && Money(amountCents_) > *max) {
+                showNotice(buyInLimitNotice());
+                return;
+            }
+        }
+        showNotice(toQ(quote.message));
         return;
     }
     process();
@@ -482,10 +502,60 @@ void BuyInScreen::process() {
     const auto result = ctx_.buyIns().buyIn(*player, toCurrencyCount(cash_, ctx_.table()),
                                             Money(amountCents_));
     if (!result.success) {
-        QMessageBox::warning(this, "Buy-in", toQ(result.message));
+        showNotice(toQ(result.message));
         return;
     }
     emit closed(true);
+}
+
+void BuyInScreen::buildNotice() {
+    notice_ = new Overlay(this);
+    notice_->card()->setMinimumWidth(640);
+    notice_->card()->setMaximumWidth(720);
+    QVBoxLayout* card = notice_->cardLayout();
+    noticeText_ = makeLabel(QString(), 18, false, QString(), Qt::AlignCenter);
+    noticeText_->setWordWrap(true);
+    noticeText_->setMinimumWidth(560);
+    card->addWidget(noticeText_);
+    card->addSpacing(36);
+    QPushButton* agree = makeButton("Agree", color::LightGreen, 22, true);
+    agree->setStyleSheet(buttonStyle(color::LightGreen, "#707070", "1px", "padding:18px 48px;"));
+    agree->setMinimumSize(220, 72);
+    card->addWidget(agree, 0, Qt::AlignCenter);
+    connect(agree, &QPushButton::clicked, this, [this] {
+        notice_->hide();
+        auto next = std::move(noticeAfter_);
+        noticeAfter_ = nullptr;
+        if (next) next();
+    });
+}
+
+void BuyInScreen::showNotice(const QString& message, std::function<void()> after) {
+    const bool rich = message.startsWith(QLatin1String("<"));
+    noticeText_->setTextFormat(rich ? Qt::RichText : Qt::PlainText);
+    noticeText_->setText(message);
+    noticeAfter_ = std::move(after);
+    notice_->open();
+}
+
+QString BuyInScreen::buyInLimitNotice() const {
+    const CashGameConfig& config = ctx_.cashGame().config();
+    const BuyInHistory history = ctx_.buyIns().history(playerId_);
+    const auto max = config.ceiling(history);
+    const QString amount = money(max ? *max : Money{});
+    const bool perBuyInTighter =
+        config.hasMaxBuyIn() &&
+        (!config.hasSessionCap() || config.maxBuyIn <= config.remaining(history));
+    const QString because = perBuyInTighter ? QStringLiteral("the single buyin limit.")
+                                            : QStringLiteral("the daily limit.");
+
+    const auto line = [](const QString& text) {
+        return QStringLiteral("<div align=\"center\">%1</div>").arg(text);
+    };
+    return line(QStringLiteral("The player can only buyin for")) +
+           line(QStringLiteral("<span style=\"font-size:28pt\"><b>%1 maximum.</b></span>")
+                    .arg(amount.toHtmlEscaped())) +
+           line(QStringLiteral("This is because of %1").arg(because));
 }
 
 std::int64_t BuyInScreen::defaultAmountCents() const {

@@ -6,15 +6,6 @@ BuyInQuote CashGameMode::quoteBuyIn(const Player& /*player*/,
                                     Money requested,
                                     const BuyInHistory& history) const {
     const bool isRebuy = history.count > 0;
-    const bool capped = config_.hasSessionCap();
-    const Money room = config_.remaining(history);
-
-    if (capped && !config_.hasRoom(history)) {
-        return BuyInQuote::deny("Player has reached the session buy-in cap of " +
-                                    config_.sessionLimit.toString() + ".",
-                                isRebuy);
-    }
-
     const auto maxThis = config_.ceiling(history);
     Money minThis = config_.minBuyIn;
     if (maxThis && minThis > *maxThis) {
@@ -27,15 +18,17 @@ BuyInQuote CashGameMode::quoteBuyIn(const Player& /*player*/,
                                 isRebuy);
     }
     if (maxThis && requested > *maxThis) {
-        if (capped && requested > room) {
-            return BuyInQuote::deny("Buy-in " + requested.toString() +
-                                        " would exceed the session cap of " +
-                                        config_.sessionLimit.toString() + ". Remaining: " +
-                                        room.toString() + ".",
+        // Name the bound that actually sets the ceiling. A $15 per-buy-in max
+        // beats a $45 daily cap; $5 left on the daily cap beats a $15 max.
+        const bool perBuyInTighter =
+            config_.hasMaxBuyIn() &&
+            (!config_.hasSessionCap() || config_.maxBuyIn <= config_.remaining(history));
+        if (perBuyInTighter) {
+            return BuyInQuote::deny("The per buy-in limit is " + config_.maxBuyIn.toString() + ".",
                                     isRebuy);
         }
-        return BuyInQuote::deny("Buy-in " + requested.toString() +
-                                    " is above the maximum " + config_.maxBuyIn.toString() + ".",
+        return BuyInQuote::deny("The daily limit is " + config_.remaining(history).toString() +
+                                    " remaining.",
                                 isRebuy);
     }
 

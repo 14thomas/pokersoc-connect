@@ -959,7 +959,11 @@ void MainWindow::openCashOut() {
         openBoardControls();
         return;
     }
-    showScreen(new CashOutScreen(*ctx_, currentId_));
+    auto* screen = new CashOutScreen(*ctx_, currentId_);
+    showScreen(screen);
+    connect(screen, &Screen::closed, this, [this](bool cashedOut) {
+        if (cashedOut) clearPlayer();
+    });
 }
 
 void MainWindow::openBoardControls() {
