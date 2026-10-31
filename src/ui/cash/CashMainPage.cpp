@@ -1292,7 +1292,7 @@ void CashMainPage::rebuildPlayer() {
     const bool known = knownPlayer();
     auto* body = new QWidget;
     auto* column = new QVBoxLayout(body);
-    column->setContentsMargins(26, 22, 24, 22);
+    column->setContentsMargins(26, 14, 14, 22);
     column->setSpacing(0);
 
     auto* header = new QHBoxLayout;
@@ -1431,12 +1431,22 @@ void CashMainPage::rebuildPlayer() {
     }
     header->addLayout(nameBlock, 1);
 
-    auto* clear = iconTextButton(QStringLiteral("clearButton"), QStringLiteral("x"), 24, QColor("#DCE3EA"),
-                                 QStringLiteral("Clear"), ui(20, QFont::Bold), 64,
-                                 QStringLiteral("background:%1; color:%2; border:1px solid #2F3843; border-radius:16px; padding:0 20px;")
-                                     .arg(kRaised, kText));
-    connect(clear, &QPushButton::clicked, this, [this] { clearPlayer(); });
-    header->addWidget(clear, 0, Qt::AlignVCenter);
+    auto* clear = new TapFrame;
+    clear->setObjectName(QStringLiteral("clearButton"));
+    clear->setFixedHeight(52);
+    clear->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    clear->setStyleSheet(QStringLiteral(
+        "#clearButton { background:%1; border:1px solid #2F3843; border-radius:26px; }"
+        "#clearButton[pressed=\"true\"] { background:#232A32; }").arg(kRaised));
+    auto* clearRow = new QHBoxLayout(clear);
+    clearRow->setContentsMargins(16, 0, 18, 0);
+    clearRow->setSpacing(8);
+    clearRow->addWidget(iconLabel(QStringLiteral("x"), 22, QColor("#DCE3EA")));
+    clearRow->addWidget(txt(QStringLiteral("Clear"), ui(20, QFont::Bold), kText));
+    clear->setMinimumWidth(clear->sizeHint().width());
+    passClicks(clear);
+    connect(clear, &TapFrame::clicked, this, [this] { clearPlayer(); });
+    header->addWidget(clear, 0, Qt::AlignTop);
     column->addLayout(header);
 
     if (minor) {
@@ -1535,20 +1545,16 @@ void CashMainPage::updateActions() {
     const bool active = loaded && !minor;
     int buyIns = 0;
     int rebuys = 0;
-    Money bought;
-    const Transaction* last = nullptr;
     if (loaded) {
         for (const auto& transaction : ctx_.log().entries()) {
             if (transaction->playerId() != playerId_ || !isBuy(transaction->type())) continue;
             if (transaction->type() == TransactionType::BuyIn) ++buyIns;
             else ++rebuys;
-            bought += transaction->amount();
-            if (!last || transaction->time() > last->time()) last = transaction.get();
         }
     }
     const bool rebuy = buyIns + rebuys > 0;
-
-    const bool capped = active && !ctx_.cashGame().config().hasRoom(ctx_.buyIns().history(playerId_));
+    const BuyInHistory history = loaded ? ctx_.buyIns().history(playerId_) : BuyInHistory{};
+    const bool capped = active && !ctx_.cashGame().config().hasRoom(history);
     const auto paint = [&](Action& action, bool in, bool enabled, const QString& label, const QString& sub,
                            const QString& iconName) {
         const QString bg = !enabled ? (in ? "#1C1F28" : "#232521") : (in ? "#9FA2E5" : "#E5E29F");
@@ -1569,15 +1575,6 @@ void CashMainPage::updateActions() {
         action.sub->setVisible(!sub.isEmpty());
         action.sub->setStyleSheet(QStringLiteral("color:%1; background:transparent; border:none;").arg(subColor));
         action.button->setGraphicsEffect(nullptr);
-        if (enabled) {
-            auto* shadow = new QGraphicsDropShadowEffect(action.button);
-            shadow->setBlurRadius(40);
-            shadow->setOffset(0, 18);
-            QColor glow(in ? "#9FA2E5" : "#E5E29F");
-            glow.setAlpha(in ? 150 : 110);
-            shadow->setColor(glow);
-            action.button->setGraphicsEffect(shadow);
-        }
     };
 
     QString buySub;
@@ -1585,14 +1582,11 @@ void CashMainPage::updateActions() {
         buySub = QStringLiteral("Locked for this player");
     } else if (capped) {
         buySub = QStringLiteral("Daily maximum reached");
-    } else if (active && rebuy && last) {
-        const QString kind = last->type() == TransactionType::Rebuy ? QStringLiteral("rebuy")
-                                                                    : QStringLiteral("buy-in");
-        buySub = QStringLiteral("Last %1 %2 at %3")
-                     .arg(kind, money(last->amount()), clock12(localFromUtc(last->time())));
+    } else if (active) {
+        const auto ceiling = ctx_.cashGame().config().ceiling(history);
+        buySub = ceiling ? QStringLiteral("Up to %1").arg(money(*ceiling)) : QStringLiteral("No limit");
     }
-    const QString cashSub = minor ? QStringLiteral("Locked for this player")
-                                  : (active ? QStringLiteral("In for %1 tonight").arg(money(bought)) : QString());
+    const QString cashSub = minor ? QStringLiteral("Locked for this player") : QString();
     paint(buy_, true, active && !capped, active && rebuy ? QStringLiteral("Rebuy") : QStringLiteral("Buy-in"),
           buySub, QStringLiteral("arrow-down-to-line"));
     paint(cash_, false, active, QStringLiteral("Cash-out"), cashSub, QStringLiteral("arrow-up-from-line"));
@@ -1821,22 +1815,23 @@ void CashMainPage::chooseMembership() {
     dim_->setStyleSheet(QStringLiteral("#scrim { background:rgba(0,0,0,0.62); }"));
     auto* card = new QFrame(dim_);
     card->setObjectName(QStringLiteral("memberDialog"));
-    card->setFixedWidth(520);
+    card->setFixedWidth(680);
     card->setStyleSheet(QStringLiteral(
         "#memberDialog { background:%1; border:1px solid %2; border-radius:18px; }").arg(kPanel, kBorder));
     auto* column = new QVBoxLayout(card);
-    column->setContentsMargins(24, 24, 24, 24);
-    column->setSpacing(12);
-    column->addWidget(txt(QStringLiteral("Membership"), ui(28, QFont::Bold), kText));
+    column->setContentsMargins(28, 28, 28, 28);
+    column->setSpacing(16);
+    column->addWidget(txt(QStringLiteral("Membership"), ui(32, QFont::Bold), kText));
     const MembershipType types[] = {MembershipType::Bronze, MembershipType::Silver, MembershipType::Gold,
                                     MembershipType::Platinum, MembershipType::Diamond};
     for (MembershipType type : types) {
         auto* button = bareButton();
-        button->setFixedHeight(64);
+        button->setFixedHeight(96);
         button->setText(membershipTypeLabel(type));
-        button->setFont(ui(22, QFont::Bold));
+        button->setFont(ui(28, QFont::Bold));
         button->setStyleSheet(QStringLiteral(
-            "QPushButton { background:%1; color:%2; border:1px solid #2F3843; border-radius:16px; }").arg(kRaised, kText));
+            "QPushButton { background:%1; color:%2; border:1px solid #2F3843; border-radius:18px; min-height:96px; }")
+                                  .arg(kRaised, kText));
         connect(button, &QPushButton::clicked, this, [this, type] {
             ctx_.players().setMembership(playerId_, type);
             closeOverlay();
@@ -1846,10 +1841,11 @@ void CashMainPage::chooseMembership() {
         column->addWidget(button);
     }
     auto* cancel = bareButton();
-    cancel->setFixedHeight(56);
+    cancel->setFixedHeight(80);
     cancel->setText(QStringLiteral("Cancel"));
-    cancel->setFont(ui(18, QFont::DemiBold));
-    cancel->setStyleSheet(QStringLiteral("QPushButton { color:%1; }").arg(kMuted));
+    cancel->setFont(ui(22, QFont::DemiBold));
+    cancel->setStyleSheet(QStringLiteral(
+        "QPushButton { color:%1; border:1px solid #2F3843; border-radius:18px; min-height:80px; }").arg(kMuted));
     connect(cancel, &QPushButton::clicked, this, [this] {
         closeOverlay();
         focusScanner();
