@@ -338,24 +338,11 @@ public:
 
 private:
     void refresh();
-    void lookup();
-    void setAge(bool underage);
     void importPlayers();
     void exportPlayers();
-    void buildNotification();
-    void showNotification(const QString& icon, const QString& title, const QString& message,
-                          bool success);
 
     QLabel* subtitle_ = nullptr;
-    QLineEdit* idBox_ = nullptr;
-    QPushButton* adultButton_ = nullptr;
-    QPushButton* underageButton_ = nullptr;
     QTableWidget* grid_ = nullptr;
-    PasswordOverlay* password_ = nullptr;
-    Overlay* notification_ = nullptr;
-    QLabel* notificationIcon_ = nullptr;
-    QLabel* notificationTitle_ = nullptr;
-    QLabel* notificationText_ = nullptr;
     bool changed_ = false;
 };
 

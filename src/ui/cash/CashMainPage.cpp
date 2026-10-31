@@ -705,10 +705,13 @@ void CashMainPage::buildActivity(QWidget* host) {
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(QStringLiteral("#logScroll { background:transparent; border:none; }"));
+    scroll->setStyleSheet(QStringLiteral(
+        "#logScroll, #logScroll > QWidget { background:transparent; border:none; }"));
+    scroll->viewport()->setAutoFillBackground(false);
     auto* list = new QWidget;
     list->setObjectName(QStringLiteral("logList"));
-    list->setStyleSheet(QStringLiteral("#logList { background:%1; }").arg(kPanel));
+    list->setAutoFillBackground(false);
+    list->setStyleSheet(QStringLiteral("#logList { background:transparent; }"));
     listLayout_ = new QVBoxLayout(list);
     listLayout_->setContentsMargins(0, 0, 0, 0);
     listLayout_->setSpacing(0);
